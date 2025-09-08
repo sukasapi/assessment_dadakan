@@ -114,17 +114,17 @@
                     <div class="mt-4 flex gap-3">
                     <button 
                         type="submit" 
-                        class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                        onclick="setAction('final')"
-                    >
-                        Simpan Final
-                    </button>
-                    <button 
-                        type="submit" 
                         class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                         onclick="setAction('draft')"
                     >
                         Simpan Sementara
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        onclick="setAction('final')"
+                    >
+                        Simpan Final
                     </button>
                     
                     </div>

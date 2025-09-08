@@ -39,7 +39,15 @@
                 @switch($assessment->jenis)
                     @case('in_tray')
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Daftar Memo</h2>
-                        <!--<p class="text-sm text-gray-600 mb-4">Urutkan kartu dari prioritas tertinggi (atas) ke terendah (bawah). Anda juga bisa tekan tombol “Lihat Detail” pada tiap kartu.</p> -->
+                        <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                            <p class="font-semibold mb-2">Petunjuk:</p>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
+                                <li>Saat jumlah kartu banyak, gulir area daftar. Saat sedang menarik kartu dan mendekati tepi atas/bawah, daftar akan <span class="font-medium">auto-scroll</span>.</li>
+                                <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo dan <span class="font-medium">mengisi Disposisi</span>.</li>
+                                <li>Setelah Disposisi disimpan, ringkasannya muncul di bawah kartu pada baris <span class="italic">Disposisi</span>.</li>
+                            </ul>
+                        </div>
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3">
                             @foreach($memos as $memo)
                                 <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-move" data-id="{{ $memo->id }}" data-content='@json($memo->konten_memo)'>
@@ -51,7 +59,7 @@
                                                 <span class="memo-prioritas-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 m-2">1</span>
                                             </div>
                                         </div>
-                                        <button type="button" class="memo-detail inline-flex items-center px-2 py-1 text-xs border border-gray-300 rounded-md bg-white hover:bg-gray-50">Lihat Detail</button>
+                                        <button type="button" title="Lihat detail memo dan isi Disposisi" class="memo-detail inline-flex items-center px-2 py-1 text-xs border border-gray-300 rounded-md bg-white hover:bg-gray-50">Lihat Detail</button>
                                     </div>
                                     <div class="text-sm text-gray-700 mb-3" style="display:-webkit-box; -webkit-line-clamp:4; line-clamp:4; -webkit-box-orient: vertical; overflow:hidden;">
                                         {!! $memo->konten_memo !!}
@@ -67,7 +75,7 @@
                                 </div>
                             @endforeach
                         </div>
-
+                        
                         <form id="inTrayForm" class="mt-6">
                             @csrf
                             <div class="flex gap-3">
