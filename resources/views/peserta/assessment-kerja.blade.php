@@ -266,11 +266,124 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Inisialisasi CKEditor 5 Classic basic untuk studi kasus
-    let jawabanInit = `{!! addslashes($existingJawaban ?? '') !!}`;
-    ClassicEditor.create(document.getElementById('jawaban'), { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
-        .then(ed => { window.jawabanEditor = ed; if (jawabanInit) { ed.setData(jawabanInit); } })
-        .catch(err => console.error(err));
+    // URL simpan In-Tray
+    const IN_TRAY_SAVE_URL = "{{ route('penilaian.in-tray.save', $assessment->id) }}";
+    const CSRF_TOKEN = document.querySelector('#inTrayForm input[name="_token"]')?.value || '{{ csrf_token() }}';
+
+    function collectInTrayAnswers() {
+        const container = document.getElementById('inTrayBoard');
+        if (!container) return [];
+        const cards = Array.from(container.querySelectorAll('.memo-card'));
+        return cards.map((card, idx) => {
+            return {
+                latihan_in_tray_id: parseInt(card.getAttribute('data-id'), 10),
+                urutan_prioritas: idx + 1,
+                disposisi: (card.querySelector('.memo-disposisi')?.value || '').trim()
+            };
+        });
+    }
+
+    async function submitInTray(status) {
+        const saveDraftBtn = document.getElementById('saveInTrayDraft');
+        const saveFinalBtn = document.getElementById('saveInTrayFinal');
+        const disable = (v) => { if (saveDraftBtn) saveDraftBtn.disabled = v; if (saveFinalBtn) saveFinalBtn.disabled = v; };
+        try {
+            disable(true);
+            const jawaban = collectInTrayAnswers();
+            if (!jawaban.length) {
+                showPopup('Tidak ada memo untuk disimpan.', 'error', false);
+                disable(false);
+                return;
+            }
+            const res = await fetch(IN_TRAY_SAVE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ jawaban, status })
+            });
+            if (!res.ok) {
+                let msg = 'Gagal menyimpan in-tray.';
+                try { const data = await res.json(); if (data && data.error) msg = data.error; if (data && data.message) msg = data.message; } catch (_) {}
+                showPopup(msg, 'error', false);
+                return;
+            }
+            const data = await res.json();
+            const isFinal = status === 'final';
+            showPopup(data.message || (isFinal ? 'Simpan final berhasil.' : 'Simpan sementara berhasil.'), 'success', isFinal);
+        } catch (err) {
+            showPopup('Terjadi kesalahan jaringan. Coba lagi.', 'error', false);
+        } finally {
+            disable(false);
+        }
+    }
+
+    const btnDraft = document.getElementById('saveInTrayDraft');
+    if (btnDraft) btnDraft.addEventListener('click', () => submitInTray('draft'));
+    const btnFinal = document.getElementById('saveInTrayFinal');
+    if (btnFinal) btnFinal.addEventListener('click', () => submitInTray('final'));
+
+    // Inisialisasi CKEditor 5 Classic basic untuk studi kasus (hanya jika elemen tersedia)
+    const jawabanEl = document.getElementById('jawaban');
+    if (jawabanEl) {
+        let jawabanInit = `{!! addslashes($existingJawaban ?? '') !!}`;
+        ClassicEditor.create(jawabanEl, { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
+            .then(ed => { window.jawabanEditor = ed; if (jawabanInit) { ed.setData(jawabanInit); } })
+            .catch(err => console.error(err));
+    }
+
+    // Inisialisasi CKEditor untuk Roleplay dan FGD agar konsisten
+    const roleplayEl = document.getElementById('roleplayText');
+    if (roleplayEl) {
+        const initVal = `{!! addslashes($existingRoleplay ?? '') !!}`;
+        ClassicEditor.create(roleplayEl, { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
+            .then(ed => { window.roleplayEditor = ed; if (initVal) ed.setData(initVal); })
+            .catch(err => console.error(err));
+    }
+    const fgdEl = document.getElementById('fgdText');
+    if (fgdEl) {
+        const initVal = `{!! addslashes($existingFgd ?? '') !!}`;
+        ClassicEditor.create(fgdEl, { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
+            .then(ed => { window.fgdEditor = ed; if (initVal) ed.setData(initVal); })
+            .catch(err => console.error(err));
+    }
+
+    // Submit sederhana untuk Roleplay/FGD (draft/final)
+    window.submitSimple = async function(kind, status) {
+        try {
+            const isRoleplay = kind === 'roleplay';
+            const editor = isRoleplay ? window.roleplayEditor : window.fgdEditor;
+            const textareaId = isRoleplay ? 'roleplayText' : 'fgdText';
+            const val = editor ? editor.getData() : (document.getElementById(textareaId)?.value || '');
+            const url = isRoleplay
+                ? "{{ route('penilaian.roleplay.save', $assessment->id) }}"
+                : "{{ route('penilaian.fgd.save', $assessment->id) }}";
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ catatan: val, status })
+            });
+            if (!res.ok) {
+                let msg = 'Gagal menyimpan catatan.';
+                try { const data = await res.json(); if (data && data.error) msg = data.error; if (data && data.message) msg = data.message; } catch(_) {}
+                showPopup(msg, 'error', false);
+                return;
+            }
+            const data = await res.json();
+            const isFinal = status === 'final';
+            showPopup((data && data.message) || (isFinal ? 'Simpan final berhasil.' : 'Simpan sementara berhasil.'), 'success', isFinal);
+        } catch (e) {
+            showPopup('Terjadi kesalahan jaringan. Coba lagi.', 'error', false);
+        }
+    }
 
     // Countdown timer dll tetap sama (ada di bawah)
 });
