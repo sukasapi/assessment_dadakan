@@ -78,17 +78,17 @@
                         @break
                     @case('roleplay')
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Catatan Saya</h2>
-                     <!--   @if(isset($items) && $items->count())
-                            <div class="space-y-4 mb-6">
-                                @foreach($items as $q)
-                                    <div class="border border-gray-200 rounded-md p-4 bg-gray-50">
-                                        <h4 class="font-semibold text-gray-800 mb-1">{{ $q->judul }}</h4>
-                                        <div class="text-gray-700">{!! $q->konten !!}</div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif -->
-                        <textarea id="roleplayText" rows="10" class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="Tuliskan jawaban Anda di sini..."></textarea>
+                        <!--   @if(isset($items) && $items->count())
+                             <div class="space-y-4 mb-6">
+                                 @foreach($items as $q)
+                                     <div class="border border-gray-200 rounded-md p-4 bg-gray-50">
+                                         <h4 class="font-semibold text-gray-800 mb-1">{{ $q->judul }}</h4>
+                                         <div class="text-gray-700">{!! $q->konten !!}</div>
+                                     </div>
+                                 @endforeach
+                             </div>
+                         @endif -->
+                        <textarea id="roleplayText" rows="10" class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="Tuliskan jawaban Anda di sini...">{!! $existingRoleplay ?? '' !!}</textarea>
                         <div class="mt-4 flex gap-3">
                             <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-md" onclick="submitSimple('roleplay','draft')">Simpan Sementara</button>
                             <button type="button" class="px-4 py-2 bg-green-600 text-white rounded-md" onclick="submitSimple('roleplay','final')">Simpan Final</button>
@@ -97,17 +97,17 @@
 
                     @case('fgd')
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Catatan Saya</h2>
-                       <!-- @if(isset($items) && $items->count())
-                            <div class="space-y-4 mb-6">
-                                @foreach($items as $q)
-                                    <div class="border border-gray-200 rounded-md p-4 bg-gray-50">
-                                        <h4 class="font-semibold text-gray-800 mb-1">{{ $q->judul }}</h4>
-                                        <div class="text-gray-700">{!! $q->konten !!}</div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif -->
-                        <textarea id="fgdText" rows="10" class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="Tuliskan jawaban Anda di sini..."></textarea>
+                        <!-- @if(isset($items) && $items->count())
+                             <div class="space-y-4 mb-6">
+                                 @foreach($items as $q)
+                                     <div class="border border-gray-200 rounded-md p-4 bg-gray-50">
+                                         <h4 class="font-semibold text-gray-800 mb-1">{{ $q->judul }}</h4>
+                                         <div class="text-gray-700">{!! $q->konten !!}</div>
+                                     </div>
+                                 @endforeach
+                             </div>
+                         @endif -->
+                        <textarea id="fgdText" rows="10" class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="Tuliskan jawaban Anda di sini...">{!! $existingFgd ?? '' !!}</textarea>
                         <div class="mt-4 flex gap-3">
                             <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-md" onclick="submitSimple('fgd','draft')">Simpan Sementara</button>
                             <button type="button" class="px-4 py-2 bg-green-600 text-white rounded-md" onclick="submitSimple('fgd','final')">Simpan Final</button>
@@ -138,6 +138,11 @@
     </div>
 </div>
 
+<style>
+.ck-editor__editable[role="textbox"] { min-height: 12rem; }
+.ck-content ul { list-style: disc !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
+.ck-content ol { list-style: decimal !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
+</style>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
 // Util Popup global (auto-close 3 detik, opsi redirect dashboard)
@@ -227,209 +232,62 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Inisialisasi CKEditor 5 Classic untuk roleplay & fgd (toolbar basic)
-    window.editorInstances = {};
-    const basicToolbar = ['bold','italic','link','bulletedList','numberedList','undo','redo'];
-    if (document.getElementById('roleplayText')) {
-        ClassicEditor.create(document.getElementById('roleplayText'), { toolbar: basicToolbar })
-            .then(ed => { window.editorInstances['roleplayText'] = ed; })
-            .catch(err => console.error(err));
-    }
-    if (document.getElementById('fgdText')) {
-        ClassicEditor.create(document.getElementById('fgdText'), { toolbar: basicToolbar })
-            .then(ed => { window.editorInstances['fgdText'] = ed; })
-            .catch(err => console.error(err));
-    }
+    // Inisialisasi CKEditor 5 Classic basic untuk studi kasus
+    let jawabanInit = `{!! addslashes($existingJawaban ?? '') !!}`;
+    ClassicEditor.create(document.getElementById('jawaban'), { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
+        .then(ed => { window.jawabanEditor = ed; if (jawabanInit) { ed.setData(jawabanInit); } })
+        .catch(err => console.error(err));
 
-    function collectPayload(status) {
-        const payload = [];
-        const cards = document.querySelectorAll('#inTrayBoard .memo-card');
-        cards.forEach((card, idx) => {
-            payload.push({
-                latihan_in_tray_id: card.dataset.id,
-                urutan_prioritas: idx + 1,
-                disposisi: card.querySelector('.memo-disposisi')?.value || ''
-            });
-        });
-        return {
-            _token: '{{ csrf_token() }}',
-            status: status,
-            jawaban: payload
-        };
-    }
+    // Countdown timer dll tetap sama (ada di bawah)
+});
 
-    function submitInTray(status) {
-        const data = collectPayload(status);
-        fetch(`{{ route('penilaian.in-tray.save', $assessment->id) }}` , {
+// Auto-save draft setiap 30 detik (ambil dari ClassicEditor)
+let autoSaveTimer;
+const formEl = document.getElementById('assessmentForm');
+let isSubmitting = false;
+let hasChanges = false;
+
+function scheduleAutoSave() {
+    hasChanges = true;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(function() {
+        const formData = new FormData();
+        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('jawaban', window.jawabanEditor ? window.jawabanEditor.getData() : (document.getElementById('jawaban')?.value || ''));
+        formData.append('assessment_action', 'draft');
+        fetch("{{ route('peserta.assessment.studi-kasus.store', $assessment->id) }}", {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             },
-            credentials: 'same-origin',
-            body: JSON.stringify(data)
-        }).then(async (res) => {
-            if (!res.ok) throw new Error(await res.text());
-            return res.json();
-        }).then(() => {
-            if (status === 'final') {
-                showPopup('Jawaban final berhasil disimpan. Mengalihkan ke dashboard...', 'success', true);
-            } else {
-                showToast('Draft tersimpan', 'success');
-            }
-        }).catch(err => {
-            console.error(err);
-            if (status === 'final') {
-                showPopup('Gagal menyimpan jawaban final. Silakan coba lagi.', 'error', false);
-            } else {
-                showToast('Gagal menyimpan jawaban', 'error');
-            }
-        });
+            body: formData
+        }).then(r => r.json()).then(() => {}).catch(() => {});
+    }, 30000);
+}
+
+setTimeout(() => {
+    if (window.jawabanEditor) {
+        window.jawabanEditor.model.document.on('change:data', scheduleAutoSave);
     }
+}, 500);
 
-    const draftBtn = document.getElementById('saveInTrayDraft');
-    const finalBtn = document.getElementById('saveInTrayFinal');
-    if (draftBtn) draftBtn.addEventListener('click', () => submitInTray('draft'));
-    if (finalBtn) finalBtn.addEventListener('click', () => submitInTray('final'));
-
-    // Timer init tanpa directive Blade di dalam JS
-    var remainingTime = parseInt('{{ isset($sesiAssessment) && (int) $sesiAssessment->durasi_default > 0 ? (int) $sesiAssessment->durasi_default * 60 : 0 }}', 10) || 0;
-    if (remainingTime > 0) {
-        function updateTimer() {
-            if (remainingTime <= 0) {
-                const t = document.getElementById('timer');
-                if (t) t.textContent = '00:00';
-                alert('Waktu pengerjaan assessment telah habis!');
-                return;
-            }
-            var minutes = Math.floor(remainingTime / 60);
-            var seconds = remainingTime % 60;
-            const t = document.getElementById('timer');
-            if (t) t.textContent = minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
-            remainingTime--;
-        }
-        updateTimer();
-        setInterval(updateTimer, 1000);
+// Konfirmasi sebelum meninggalkan halaman jika ada perubahan
+window.addEventListener('beforeunload', function(e) {
+    if (isSubmitting) {
+        return;
+    }
+    const currentVal = window.jawabanEditor ? window.jawabanEditor.getData() : (document.getElementById('jawaban')?.value || '');
+    if (hasChanges && currentVal.trim() !== `{{ old('jawaban', $existingJawaban ?? '') }}`.trim()) {
+        e.preventDefault();
+        e.returnValue = 'Anda memiliki perubahan yang belum disimpan. Apakah Anda yakin ingin meninggalkan halaman ini?';
     }
 });
 
-// Modal sederhana untuk detail memo
-let currentMemoCard = null;
-function openMemoModal(html, card) {
-    currentMemoCard = card;
-    let modal = document.getElementById('memoModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'memoModal';
-        modal.className = 'fixed inset-0 z-50 hidden';
-        modal.innerHTML = `
-            <div class="absolute inset-0 bg-black bg-opacity-60"></div>
-            <div class="relative w-full h-full bg-white flex flex-col">
-                <div class="flex items-center justify-between px-4 py-3 border-b">
-                    <h3 class="text-base md:text-lg font-semibold">Detail Memo</h3>
-                    <div class="flex items-center gap-2">
-                        <button id="memoModalClose" class="px-3 py-1.5 text-sm border rounded hover:bg-gray-50">Tutup</button>
-                    </div>
-                </div>
-                <div class="flex-1 overflow-y-auto p-4 md:p-6">
-                    <div id="memoModalContent" class="prose max-w-none mb-6"></div>
-                    <hr class="my-8 border-gray-200">
-                    <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div class="p-4 md:p-5">
-                            <label class="block text-sm font-medium text-gray-800 mb-2">Disposisi</label>
-                            <textarea id="memoModalDisposisi" rows="4" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="contoh: delegasi ke sekretaris, arsip, tindak lanjut, dll"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-
-        // Close handler
-        document.getElementById('memoModalClose').addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
-
-        // Input sync handler
-        document.addEventListener('input', (evt) => {
-            if (evt.target && evt.target.id === 'memoModalDisposisi' && currentMemoCard) {
-                const hidden = currentMemoCard.querySelector('.memo-disposisi');
-                if (hidden) hidden.value = evt.target.value;
-                const textValue = currentMemoCard.querySelector('.memo-disposisi-text-value');
-                if (textValue) {
-                    const v = (evt.target.value || '').trim();
-                    textValue.textContent = v.length ? v : 'belum dimasukkan';
-                }
-            }
-        });
-    }
-
-    // Set content and initial disposisi
-    const contentEl = document.getElementById('memoModalContent');
-    const disposisiEl = document.getElementById('memoModalDisposisi');
-    if (contentEl) contentEl.innerHTML = html;
-    const hidden = card.querySelector('.memo-disposisi');
-    if (disposisiEl) disposisiEl.value = hidden?.value || '';
-
-    modal.classList.remove('hidden');
-}
-
-// Tailwind toast helper
-function showToast(message, type = 'success') {
-    const el = document.getElementById('toast');
-    if (!el) return;
-    const color = type === 'success' ? 'green' : 'red';
-    el.className = `fixed top-6 right-6 z-50`;
-    el.innerHTML = `
-        <div class="rounded-md bg-${color}-50 border border-${color}-200 px-4 py-3 text-${color}-800 shadow">
-            <div class="flex items-center gap-2">
-                <span class="inline-block w-2 h-2 rounded-full bg-${color}-500"></span>
-                <span class="text-sm font-medium">${message}</span>
-            </div>
-        </div>`;
-    el.classList.remove('hidden');
-    setTimeout(() => { el.classList.add('hidden'); }, 2500);
-}
-
-// Submit sederhana untuk roleplay/fgd (ambil data dari ClassicEditor)
-function submitSimple(type, status) {
-    const isRoleplay = type === 'roleplay';
-    const instanceId = isRoleplay ? 'roleplayText' : 'fgdText';
-    const editor = (window.editorInstances || {})[instanceId];
-    const text = editor ? (editor.getData() || '') : (document.getElementById(instanceId)?.value || '');
-    if (!text.trim()) {
-        showToast('Teks belum diisi', 'error');
-        return;
-    }
-    const url = isRoleplay ? `{{ route('penilaian.roleplay.save', $assessment->id) }}`
-                            : `{{ route('penilaian.fgd.save', $assessment->id) }}`;
-    const body = { catatan: text, status };
-    fetch(url, {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify(body)
-    }).then(async (res) => {
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
-    }).then(() => {
-        if (status === 'final') {
-            showPopup('Simpan final berhasil. Mengalihkan ke dashboard...', 'success', true);
-        } else {
-            showToast(isRoleplay ? 'Catatan roleplay tersimpan' : 'Catatan FGD tersimpan', 'success');
-        }
-    }).catch(err => {
-        console.error(err);
-        if (status === 'final') {
-            showPopup('Gagal menyimpan final. Silakan coba lagi.', 'error', false);
-        } else {
-            showToast('Gagal menyimpan', 'error');
+if (formEl) {
+    formEl.addEventListener('submit', async function(e) {
+        if (window.jawabanEditor) {
+            document.getElementById('jawaban').value = window.jawabanEditor.getData();
         }
     });
 }

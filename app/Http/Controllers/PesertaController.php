@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Schema;
 use App\Models\LatihanInTray;
 use App\Models\JawabanInTray;
 use App\Models\ItemPenilaian;
+use App\Models\CatatanRoleplay;
+use App\Models\CatatanFgd;
 
 class PesertaController extends Controller
 {
@@ -418,6 +420,8 @@ class PesertaController extends Controller
         $memos = collect();
         $inTrayAnswers = collect();
         $items = collect();
+        $existingRoleplay = '';
+        $existingFgd = '';
         if ($assessment->jenis === 'in_tray') {
             $memos = LatihanInTray::where('penilaian_id', $assessment->id)
                 ->orderBy('urutan')
@@ -442,9 +446,21 @@ class PesertaController extends Controller
                 ->where('aktif', true)
                 ->orderBy('urutan')
                 ->get();
+            // Ambil catatan existing untuk pre-fill editor
+            if ($assessment->jenis === 'roleplay') {
+                $existingRoleplay = CatatanRoleplay::where('peserta_id', $pesertaId)
+                    ->where('penilaian_id', $assessment->id)
+                    ->orderByDesc('waktu_simpan')
+                    ->value('catatan') ?: '';
+            } elseif ($assessment->jenis === 'fgd') {
+                $existingFgd = CatatanFgd::where('peserta_id', $pesertaId)
+                    ->where('penilaian_id', $assessment->id)
+                    ->orderByDesc('waktu_simpan')
+                    ->value('catatan') ?: '';
+            }
         }
 
-        return view('peserta.assessment-kerja', compact('peserta', 'assessment', 'sesiAssessment', 'memos', 'inTrayAnswers', 'items'));
+        return view('peserta.assessment-kerja', compact('peserta', 'assessment', 'sesiAssessment', 'memos', 'inTrayAnswers', 'items', 'existingRoleplay', 'existingFgd'));
     }
 
     /**

@@ -101,7 +101,7 @@
                         <textarea 
                             name="jawaban" 
                             id="jawaban" 
-                            rows="12" 
+                            rows="8" 
                             class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                             placeholder="Tuliskan jawaban Anda untuk studi kasus ini di sini..."
                             required
@@ -111,17 +111,8 @@
                             <p class="text-red-600 text-sm">{{ $message }}</p>
                         @enderror
                     </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex justify-between items-center pt-6">
-                <button 
-                        type="submit" 
-                        class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                        onclick="setAction('final')"
-                    >
-                        Simpan Final
-                    </button>
+                    <div class="mt-4 flex gap-3">
+                    <button type="submit"  class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" onclick="setAction('final')"> Simpan Final</button>
                     <button 
                         type="submit" 
                         class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -129,9 +120,10 @@
                     >
                         Simpan Sementara
                     </button>
-                    
-                   
                 </div>
+                </div>
+               
+             
 
                 <!-- Hidden input untuk action -->
                 <input type="hidden" name="assessment_action" id="assessmentAction" value="draft">
@@ -152,6 +144,11 @@
     </div>
 </div>
 
+<style>
+.ck-editor__editable[role="textbox"] { min-height: 12rem; }
+.ck-content ul { list-style: disc !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
+.ck-content ol { list-style: decimal !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
+</style>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
 // Util Popup global (auto-close 3 detik, opsi redirect dashboard)
