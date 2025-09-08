@@ -65,32 +65,7 @@ class PenilaianSeeder extends Seeder
                 'aktif' => true
             ]);
 
-            // Buat item penilaian khusus untuk In-Tray Exercise
-            if ($data['jenis'] === 'in_tray') {
-                $memoData = [
-                    'Memo dari CEO tentang rapat darurat pukul 14:00',
-                    'Laporan keuangan bulanan yang harus diserahkan hari ini',
-                    'Komplain dari klien VIP yang membutuhkan penyelesaian segera',
-                    'Permintaan cuti dari 3 anggota tim untuk minggu depan',
-                    'Undangan workshop pelatihan kepemimpinan',
-                    'Laporan performa tim yang harus diserahkan ke HR',
-                    'Permintaan anggaran untuk proyek baru',
-                    'Jadwal maintenance server IT',
-                    'Undangan rapat koordinasi antar departemen',
-                    'Laporan audit internal yang membutuhkan review'
-                ];
-
-                foreach ($memoData as $index => $memo) {
-                    ItemPenilaian::create([
-                        'penilaian_id' => $penilaian->id,
-                        'judul' => 'Memo ' . ($index + 1),
-                        'konten' => $memo,
-                        'jenis' => 'in_tray',
-                        'urutan' => $index + 1,
-                        'aktif' => true
-                    ]);
-                }
-            }
+            // Item penilaian akan dibuat oleh ItemPenilaianSeeder
         }
     }
 }

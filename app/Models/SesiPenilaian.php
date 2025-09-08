@@ -5,14 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
 
 class SesiPenilaian extends Model
 {
     use HasFactory;
 
     protected $table = 'sesi_penilaian';
-
+    
     protected $fillable = [
         'nama',
         'status',
@@ -27,59 +26,52 @@ class SesiPenilaian extends Model
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
         'aktif' => 'boolean',
-        'durasi_menit' => 'integer',
     ];
 
-    // Relationships
-    public function penilaian(): HasMany
+    /**
+     * Get the assessments for this session
+     */
+    public function assessments(): HasMany
     {
-        return $this->hasMany(Penilaian::class);
+        return $this->hasMany(SesiAssessment::class, 'sesi_penilaian_id')->orderBy('urutan');
     }
 
-    // Methods
+    /**
+     * Get the participants for this session
+     */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(AssessmentParticipant::class, 'sesi_penilaian_id');
+    } 
+
+    /**
+     * Check if session is active
+     */
     public function isActive(): bool
     {
-        return $this->status === 'active' && $this->aktif;
+        return $this->status === 'active';
     }
 
-    public function getRemainingTime(): ?int
+    /**
+     * Check if session is draft
+     */
+    public function isDraft(): bool
     {
-        if (!$this->waktu_mulai || $this->status !== 'active') {
-            return null;
-        }
-
-        $endTime = $this->waktu_selesai ?? $this->waktu_mulai->addMinutes($this->durasi_menit);
-        $remaining = $endTime->diffInSeconds(now(), false);
-        
-        return $remaining > 0 ? $remaining : 0;
+        return $this->status === 'draft';
     }
 
-    public function startSession(): void
-    {
-        $this->update([
-            'status' => 'active',
-            'waktu_mulai' => now(),
-            'waktu_selesai' => now()->addMinutes($this->durasi_menit)
-        ]);
-    }
-
-    public function stopSession(): void
-    {
-        $this->update([
-            'status' => 'completed',
-            'waktu_selesai' => now()
-        ]);
-    }
-
-    // Accessors
-    public function getStatusTextAttribute(): string
+    /**
+     * Get status label in Indonesian
+     */
+    public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
+            'draft' => 'Draft',
             'pending' => 'Menunggu',
             'active' => 'Aktif',
             'paused' => 'Dijeda',
             'completed' => 'Selesai',
-            default => 'Unknown'
+            default => 'Tidak Diketahui'
         };
     }
 }

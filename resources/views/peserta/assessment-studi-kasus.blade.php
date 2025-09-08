@@ -1,0 +1,291 @@
+@extends('peserta.layouts.app')
+
+@section('title', 'Halaman Studi Kasus')
+
+@section('content')
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Halaman Studi Kasus</h1>
+            <p class="text-gray-600 mt-2">{{ $assessment->nama }}</p>
+        </div>
+
+        <!-- Tombol Kembali -->
+        <div class="flex justify-start mb-2">
+            <a href="{{ route('peserta.dashboard') }}" class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+                ← Kembali ke Dashboard
+            </a>
+        </div>
+
+        <!-- Form Assessment -->
+        <form action="{{ route('peserta.assessment.studi-kasus.store', $assessment->id) }}" method="POST" enctype="multipart/form-data" id="assessmentForm">
+            @csrf
+            <div class="space-y-8">
+                
+                <!-- Petunjuk Pengisian -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengisian:</h2>
+                    <div class="prose max-w-none">
+                        @if($sesiAssessment && $sesiAssessment->instruksi_khusus)
+                            {!! $sesiAssessment->instruksi_khusus !!}
+                        @elseif($assessment->petunjuk)
+                            {!! $assessment->petunjuk !!}
+                        @else
+                            <p class="text-gray-500 italic">Petunjuk pengisian belum tersedia.</p>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Deskripsi Soal -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Deskripsi Soal</h2>
+                    @if($assessment->file_pdf)
+                        @php
+                            $pdfUrl = route('assessment.pdf.view', ['penilaianId' => $assessment->id, 'filename' => $assessment->file_pdf]);
+                        @endphp
+                        <div class="w-full border rounded-md overflow-hidden">
+                            <div id="pdfInlineContainer" class="w-full h-[70vh] flex items-center justify-center text-gray-500">
+                                Memuat PDF...
+                            </div>
+                        </div>
+                        @push('scripts')
+                        <script>
+                        (function(){
+                            const url = "{{ $pdfUrl }}";
+                            const container = document.getElementById('pdfInlineContainer');
+                            fetch(url, {
+                                method: 'GET',
+                                headers: { 'Accept': 'application/pdf' },
+                                credentials: 'same-origin'
+                            }).then(async (res) => {
+                                if (!res.ok) throw new Error('Gagal memuat PDF');
+                                const blob = await res.blob();
+                                const blobUrl = URL.createObjectURL(blob);
+                                container.innerHTML = '';
+                                const embed = document.createElement('embed');
+                                embed.type = 'application/pdf';
+                                // Sembunyikan toolbar default browser
+                                embed.src = blobUrl + '#toolbar=0&navpanes=0&view=FitH&zoom=page-width';
+                                embed.className = 'w-full h-full';
+                                // Nonaktifkan klik kanan di area viewer
+                                embed.addEventListener('contextmenu', (e) => e.preventDefault());
+                                container.appendChild(embed);
+                                
+                                // Cegah shortcut simpan/cetak (Ctrl+S / Ctrl+P)
+                                document.addEventListener('keydown', function(e){
+                                    const isCtrl = e.ctrlKey || e.metaKey;
+                                    if (isCtrl && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'p')) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }
+                                });
+                            }).catch(() => {
+                                container.textContent = 'Tidak dapat menampilkan PDF. Silakan buka di tab baru.';
+                            });
+                        })();
+                        </script>
+                        @endpush
+                    @else
+                        <div class="flex flex-col items-center justify-center h-32 text-gray-500">
+                            <p class="text-lg font-medium">Deskripsi soal belum tersedia</p>
+                            <p class="text-sm">Silakan hubungi administrator untuk informasi lebih lanjut.</p>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Jawaban Peserta -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Jawaban Anda</h2>
+                    <div class="space-y-4">
+                        <textarea 
+                            name="jawaban" 
+                            id="jawaban" 
+                            rows="12" 
+                            class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            placeholder="Tuliskan jawaban Anda untuk studi kasus ini di sini..."
+                            required
+                        >{{ old('jawaban', $existingJawaban ?? '') }}</textarea>
+                        
+                        @error('jawaban')
+                            <p class="text-red-600 text-sm">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-between items-center pt-6">
+                <button 
+                        type="submit" 
+                        class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        onclick="setAction('final')"
+                    >
+                        Simpan Final
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        onclick="setAction('draft')"
+                    >
+                        Simpan Sementara
+                    </button>
+                    
+                   
+                </div>
+
+                <!-- Hidden input untuk action -->
+                <input type="hidden" name="assessment_action" id="assessmentAction" value="draft">
+            </div>
+        </form>
+        
+        @if($sesiAssessment && (int) $sesiAssessment->durasi_default > 0)
+            <div class="mt-8 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <div class="text-center">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Sisa Waktu</h3>
+                    <div class="text-4xl font-bold text-green-600 mb-2" id="timer">
+                        {{ (int) $sesiAssessment->durasi_default }}:00
+                    </div>
+                    <p class="text-sm text-gray-500">Gunakan waktu dengan bijak untuk menyelesaikan assessment ini</p>
+                </div>
+            </div>
+        @endif
+    </div>
+</div>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<script>
+// Util Popup global (auto-close 3 detik, opsi redirect dashboard)
+const DASHBOARD_URL = "{{ route('peserta.dashboard') }}";
+function showPopup(message, type = 'success', redirectToDashboard = false) {
+    let modal = document.getElementById('globalPopup');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'globalPopup';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden';
+        modal.innerHTML = `
+            <div class=\"bg-white w-11/12 md:w-2/3 lg:w-1/3 rounded-lg shadow p-5 border\">\n                <div id=\"globalPopupContent\" class=\"text-center text-gray-800\"></div>\n            </div>`;
+        document.body.appendChild(modal);
+    }
+    const color = type === 'success' ? 'text-green-700' : 'text-red-700';
+    const content = document.getElementById('globalPopupContent');
+    if (content) content.innerHTML = `<p class="${color} text-sm">${message}</p>`;
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        if (redirectToDashboard) {
+            window.location.href = DASHBOARD_URL;
+        }
+    }, 3000);
+}
+function setAction(action) {
+    document.getElementById('assessmentAction').value = action;
+}
+
+// Inisialisasi CKEditor 5 Classic basic untuk jawaban studi kasus
+let jawabanEditor = null;
+ClassicEditor.create(document.getElementById('jawaban'), {
+    toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo']
+}).then(ed => { jawabanEditor = ed; }).catch(err => console.error(err));
+
+// Auto-save draft setiap 30 detik (ambil dari ClassicEditor)
+let autoSaveTimer;
+const formEl = document.getElementById('assessmentForm');
+let isSubmitting = false;
+let hasChanges = false;
+
+function scheduleAutoSave() {
+    hasChanges = true;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(function() {
+        const formData = new FormData();
+        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('jawaban', jawabanEditor ? jawabanEditor.getData() : (document.getElementById('jawaban')?.value || ''));
+        formData.append('assessment_action', 'draft');
+        fetch("{{ route('peserta.assessment.studi-kasus.store', $assessment->id) }}", {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: formData
+        }).then(r => r.json()).then(() => {}).catch(() => {});
+    }, 30000);
+}
+
+// Trigger autosave on editor change
+setTimeout(() => {
+    if (jawabanEditor) {
+        jawabanEditor.model.document.on('change:data', scheduleAutoSave);
+    }
+}, 300);
+
+// Konfirmasi sebelum meninggalkan halaman jika ada perubahan
+window.addEventListener('beforeunload', function(e) {
+    if (isSubmitting) {
+        return;
+    }
+    const currentVal = jawabanEditor ? jawabanEditor.getData() : (document.getElementById('jawaban')?.value || '');
+    if (hasChanges && currentVal.trim() !== `{{ old('jawaban', $existingJawaban ?? '') }}`.trim()) {
+        e.preventDefault();
+        e.returnValue = 'Anda memiliki perubahan yang belum disimpan. Apakah Anda yakin ingin meninggalkan halaman ini?';
+    }
+});
+
+if (formEl) {
+    formEl.addEventListener('submit', async function(e) {
+        const action = document.getElementById('assessmentAction')?.value || 'draft';
+        if (jawabanEditor) {
+            document.getElementById('jawaban').value = jawabanEditor.getData();
+        }
+        if (action !== 'final') {
+            isSubmitting = true;
+            clearTimeout(autoSaveTimer);
+            return; // submit normal untuk draft
+        }
+        e.preventDefault();
+        isSubmitting = true;
+        clearTimeout(autoSaveTimer);
+        const formData = new FormData(formEl);
+        try {
+            const res = await fetch(formEl.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: formData,
+                credentials: 'same-origin'
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            if (data && data.success) {
+                showPopup('Simpan final berhasil. Mengalihkan ke dashboard...', 'success', true);
+            } else {
+                showPopup('Gagal menyimpan final. Silakan coba lagi.', 'error', false);
+                isSubmitting = false;
+            }
+        } catch (err) {
+            console.error(err);
+            showPopup('Gagal menyimpan final. Silakan coba lagi.', 'error', false);
+            isSubmitting = false;
+        }
+    });
+}
+
+// Countdown timer
+var remainingTime = parseInt("{{ $sesiAssessment && (int) $sesiAssessment->durasi_default > 0 ? (int) $sesiAssessment->durasi_default * 60 : 0 }}", 10) || 0;
+if (remainingTime > 0) {
+    function updateTimer() {
+        if (remainingTime <= 0) {
+            const t = document.getElementById('timer');
+            if (t) t.textContent = '00:00';
+            return;
+        }
+        var minutes = Math.floor(remainingTime / 60);
+        var seconds = remainingTime % 60;
+        const t = document.getElementById('timer');
+        if (t) t.textContent = minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
+        remainingTime--;
+    }
+    updateTimer();
+    setInterval(updateTimer, 1000);
+}
+</script>
+@endsection

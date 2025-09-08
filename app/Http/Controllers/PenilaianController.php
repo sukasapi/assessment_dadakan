@@ -64,11 +64,21 @@ class PenilaianController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        // Terima baik JSON maupun form-urlencoded
+        $payload = $request->all();
+        if (empty($payload) || !$request->has('jawaban')) {
+            $json = json_decode($request->getContent(), true);
+            if (is_array($json)) {
+                $payload = $json;
+                $request->merge($payload);
+            }
+        }
+
         $request->validate([
             'jawaban' => 'required|array',
             'jawaban.*.latihan_in_tray_id' => 'required|exists:latihan_in_tray,id',
             'jawaban.*.urutan_prioritas' => 'required|integer|min:1',
-            'jawaban.*.disposisi' => 'required|string',
+            'jawaban.*.disposisi' => 'nullable|string',
             'status' => 'required|in:draft,final'
         ]);
 
@@ -89,7 +99,7 @@ class PenilaianController extends Controller
                 'penilaian_id' => $penilaianId,
                 'latihan_in_tray_id' => $jawaban['latihan_in_tray_id'],
                 'urutan_prioritas' => $jawaban['urutan_prioritas'],
-                'disposisi' => $jawaban['disposisi'],
+                'disposisi' => $jawaban['disposisi'] ?? '',
                 'status' => $request->status,
                 'waktu_simpan' => now()
             ]);

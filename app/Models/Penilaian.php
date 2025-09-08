@@ -19,6 +19,7 @@ class Penilaian extends Model
         'jenis',
         'petunjuk',
         'konten',
+        'file_pdf',
         'durasi_menit',
         'urutan',
         'aktif'
@@ -41,6 +42,31 @@ class Penilaian extends Model
         return $this->hasMany(ItemPenilaian::class);
     }
 
+    public function assessmentParticipants(): HasMany
+    {
+        return $this->hasMany(AssessmentParticipant::class);
+    }
+
+    public function assignedPeserta()
+    {
+        return $this->assessmentParticipants()
+                   ->with(['peserta', 'sesiPenilaian'])
+                   ->orderBy('created_at');
+    }
+
+    public function sesiAssessments(): HasMany
+    {
+        return $this->hasMany(SesiAssessment::class);
+    }
+
+    public function activeSessions()
+    {
+        return $this->sesiAssessments()
+                   ->with('sesiPenilaian')
+                   ->aktif()
+                   ->ordered();
+    }
+
     public function jawabanStudiKasus(): HasMany
     {
         return $this->hasMany(JawabanStudiKasus::class);
@@ -49,6 +75,11 @@ class Penilaian extends Model
     public function jawabanInTray(): HasMany
     {
         return $this->hasMany(JawabanInTray::class);
+    }
+
+    public function latihanInTray(): HasMany
+    {
+        return $this->hasMany(LatihanInTray::class);
     }
 
     public function catatanRoleplay(): HasMany
@@ -84,8 +115,42 @@ class Penilaian extends Model
             'studi_kasus' => 'Studi Kasus',
             'in_tray' => 'In-Tray Exercise',
             'roleplay' => 'Role-Play',
-            'fgd' => 'FGD',
+            'fgd' => 'LGD',
             default => 'Unknown'
         };
+    }
+
+    // Scopes
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('urutan', 'asc');
+    }
+
+    // Methods
+    public function getNextAssessment()
+    {
+        return static::where('sesi_penilaian_id', $this->sesi_penilaian_id)
+            ->where('urutan', '>', $this->urutan)
+            ->ordered()
+            ->first();
+    }
+
+    public function getPreviousAssessment()
+    {
+        return static::where('sesi_penilaian_id', $this->sesi_penilaian_id)
+            ->where('urutan', '<', $this->urutan)
+            ->orderBy('urutan', 'desc')
+            ->first();
+    }
+
+    public function isFirstAssessment(): bool
+    {
+        return $this->urutan == 1;
+    }
+
+    public function isLastAssessment(): bool
+    {
+        $maxUrutan = static::where('sesi_penilaian_id', $this->sesi_penilaian_id)->max('urutan');
+        return $this->urutan == $maxUrutan;
     }
 }

@@ -18,7 +18,8 @@ class KemajuanPenilaian extends Model
         'status',
         'waktu_mulai',
         'waktu_selesai',
-        'aktivitas_terakhir'
+        'aktivitas_terakhir',
+        'jawaban'
     ];
 
     protected $casts = [
@@ -44,6 +45,7 @@ class KemajuanPenilaian extends Model
         return match($this->status) {
             'belum_mulai' => 'Belum Mulai',
             'sedang_berlangsung' => 'Sedang Berlangsung',
+            'draft' => 'Draft',
             'selesai' => 'Selesai',
             default => 'Unknown'
         };

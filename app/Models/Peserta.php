@@ -76,6 +76,27 @@ class Peserta extends Model
         return $this->hasMany(KemajuanPenilaian::class);
     }
 
+    public function assessmentParticipants(): HasMany
+    {
+        return $this->hasMany(AssessmentParticipant::class);
+    }
+
+    public function activeAssessments()
+    {
+        return $this->assessmentParticipants()
+                   ->with(['penilaian', 'sesiPenilaian'])
+                   ->aktif()
+                   ->orderBy('created_at');
+    }
+
+    public function completedAssessments()
+    {
+        return $this->assessmentParticipants()
+                   ->with(['penilaian', 'sesiPenilaian'])
+                   ->selesai()
+                   ->orderBy('waktu_selesai');
+    }
+
     // Accessors
     public function getJenisKelaminTextAttribute(): string
     {
