@@ -21,6 +21,7 @@
         <!-- Form Assessment -->
         <form action="{{ route('peserta.assessment.studi-kasus.store', $assessment->id) }}" method="POST" enctype="multipart/form-data" id="assessmentForm">
             @csrf
+            <input type="hidden" name="sesi" value="{{ request('sesi', $assessment->sesi_penilaian_id) }}">
             <div class="space-y-8">
                 
                 <!-- Petunjuk Pengisian -->
@@ -104,7 +105,6 @@
                             rows="8" 
                             class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                             placeholder="Tuliskan jawaban Anda untuk studi kasus ini di sini..."
-                            required
                         >{{ old('jawaban', $existingJawaban ?? '') }}</textarea>
                         
                         @error('jawaban')
@@ -112,7 +112,13 @@
                         @enderror
                     </div>
                     <div class="mt-4 flex gap-3">
-                    <button type="submit"  class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" onclick="setAction('final')"> Simpan Final</button>
+                    <button 
+                        type="submit" 
+                        class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        onclick="setAction('final')"
+                    >
+                        Simpan Final
+                    </button>
                     <button 
                         type="submit" 
                         class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -120,10 +126,15 @@
                     >
                         Simpan Sementara
                     </button>
+                    
+                    </div>
                 </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-between items-center pt-6">
+                
+                   
                 </div>
-               
-             
 
                 <!-- Hidden input untuk action -->
                 <input type="hidden" name="assessment_action" id="assessmentAction" value="draft">
@@ -198,6 +209,8 @@ function scheduleAutoSave() {
         formData.append('_token', '{{ csrf_token() }}');
         formData.append('jawaban', jawabanEditor ? jawabanEditor.getData() : (document.getElementById('jawaban')?.value || ''));
         formData.append('assessment_action', 'draft');
+        const sesiValAuto = document.querySelector('input[name="sesi"]')?.value || '';
+        formData.append('sesi', sesiValAuto);
         fetch("{{ route('peserta.assessment.studi-kasus.store', $assessment->id) }}", {
             method: 'POST',
             headers: {
@@ -234,33 +247,51 @@ if (formEl) {
         if (jawabanEditor) {
             document.getElementById('jawaban').value = jawabanEditor.getData();
         }
-        if (action !== 'final') {
-            isSubmitting = true;
-            clearTimeout(autoSaveTimer);
-            return; // submit normal untuk draft
+        const val = (jawabanEditor ? jawabanEditor.getData() : document.getElementById('jawaban').value || '').trim();
+        if (!val) {
+            e.preventDefault();
+            showPopup('Jawaban belum diisi.', 'error', false);
+            return;
         }
-        e.preventDefault();
+        // pastikan field sesi ikut terkirim
+        const sesiHidden = document.querySelector('input[name="sesi"]');
+        if (!sesiHidden) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'sesi';
+            input.value = new URLSearchParams(window.location.search).get('sesi') || '';
+            formEl.appendChild(input);
+        }
+        // TANDAI SEDANG SUBMIT (baik draft maupun final) supaya beforeunload tidak muncul
         isSubmitting = true;
         clearTimeout(autoSaveTimer);
-        const formData = new FormData(formEl);
+        if (action !== 'final') {
+            return; // submit normal untuk draft
+        }
+        // FINAL: kirim AJAX, lalu redirect ke dashboard saat sukses
+        e.preventDefault();
         try {
+            const formData = new FormData(formEl);
+            formData.set('assessment_action', 'final');
             const res = await fetch(formEl.action, {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
                 body: formData,
                 credentials: 'same-origin'
             });
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
-            if (data && data.success) {
-                showPopup('Simpan final berhasil. Mengalihkan ke dashboard...', 'success', true);
-            } else {
-                showPopup('Gagal menyimpan final. Silakan coba lagi.', 'error', false);
+            if (!res.ok) {
+                let msg = 'Gagal menyimpan final.';
+                try { const data = await res.json(); if (data && data.message) msg = data.message; } catch (_) {}
+                showPopup(msg, 'error', false);
                 isSubmitting = false;
+                return;
             }
+            showPopup('Simpan final berhasil. Mengarahkan ke dashboard...', 'success', true);
         } catch (err) {
-            console.error(err);
-            showPopup('Gagal menyimpan final. Silakan coba lagi.', 'error', false);
+            showPopup('Terjadi kesalahan jaringan. Coba lagi.', 'error', false);
             isSubmitting = false;
         }
     });

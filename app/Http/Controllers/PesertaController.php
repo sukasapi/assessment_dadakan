@@ -658,7 +658,8 @@ class PesertaController extends Controller
         }
 
         // Cek apakah peserta teregistrasi di sesi ini
-        $requestedSesiId = (int) request()->query('sesi');
+        // Ambil sesi dari query atau body (POST) agar tetap terbaca saat form tidak menyertakan query string
+        $requestedSesiId = (int) ($request->query('sesi') ?: $request->input('sesi'));
         $cekSesiId = $requestedSesiId ?: $assessment->sesi_penilaian_id;
         $isRegistered = \App\Models\AssessmentParticipant::where('sesi_penilaian_id', $cekSesiId)
             ->where('peserta_id', (int) $pesertaId)

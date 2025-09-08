@@ -53,7 +53,7 @@
                                         </div>
                                         <button type="button" class="memo-detail inline-flex items-center px-2 py-1 text-xs border border-gray-300 rounded-md bg-white hover:bg-gray-50">Lihat Detail</button>
                                     </div>
-                                    <div class="text-sm text-gray-700 mb-3" style="display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient: vertical; overflow:hidden;">
+                                    <div class="text-sm text-gray-700 mb-3" style="display:-webkit-box; -webkit-line-clamp:4; line-clamp:4; -webkit-box-orient: vertical; overflow:hidden;">
                                         {!! $memo->konten_memo !!}
                                     </div>
                                     
@@ -142,6 +142,9 @@
 .ck-editor__editable[role="textbox"] { min-height: 12rem; }
 .ck-content ul { list-style: disc !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
 .ck-content ol { list-style: decimal !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
+/* In-tray: memungkinkan scroll saat kartu banyak */
+#inTrayBoard { max-height: 65vh; overflow-y: auto; padding-right: 4px; }
+.memo-card { scroll-margin: 16px; }
 </style>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
@@ -202,6 +205,29 @@ function makeSortable(container) {
                 }
             }
         });
+    });
+
+    // Auto-scroll saat drag mendekati tepi atas/bawah kontainer
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const threshold = 60; // px dari tepi untuk mulai auto-scroll
+        const rect = container.getBoundingClientRect();
+        if (e.clientY < rect.top + threshold) {
+            container.scrollTop -= 12;
+        } else if (e.clientY > rect.bottom - threshold) {
+            container.scrollTop += 12;
+        }
+    });
+
+    // Izinkan drop ke area kosong kontainer (mis. di bawah kartu terakhir)
+    container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (!dragSrcEl) return;
+        const targetCard = e.target.closest('.memo-card');
+        if (!targetCard) {
+            container.appendChild(dragSrcEl);
+        }
+        updateMemoOrders(container);
     });
     updateMemoOrders(container);
 }
