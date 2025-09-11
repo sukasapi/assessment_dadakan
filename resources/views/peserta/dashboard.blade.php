@@ -119,23 +119,62 @@
                                  <div class="flex flex-wrap gap-2">
                                      @foreach($sesi->assessments->take(4) as $assessment)
                                          @php
-                                             $statusKemajuan = $progressMap[$assessment->penilaian->id] ?? null;
-                                             $isDraft = $statusKemajuan === 'sedang_berlangsung';
-                                             $isFinal = $statusKemajuan === 'selesai';
-                                             $warnaKelas = $isDraft ? 'border-yellow-300 text-yellow-800 bg-yellow-50 hover:bg-yellow-100'
-                                                 : ($isFinal ? 'border-green-300 text-green-800 bg-green-50 hover:bg-green-100'
-                                                 : 'border-red-300 text-red-800 bg-red-50 hover:bg-red-100');
+                                             $statusKemajuan = $progressMap[$assessment->penilaian->id . '_' . $sesi->id] ?? null;
+                                             $isSedangBerlangsung = $statusKemajuan === 'sedang_berlangsung';
+                                             $isSelesai = $statusKemajuan === 'selesai';
+                                             $belumMulai = $statusKemajuan === null || $statusKemajuan === 'belum_mulai';
+                                             
+                                             // Warna dan tooltip berdasarkan status
+                                             if ($isSelesai) {
+                                                 $warnaKelas = 'border-green-300 text-green-800 bg-green-50 hover:bg-green-100';
+                                                 $tooltipText = 'Assessment Selesai - Klik untuk melihat hasil';
+                                             } elseif ($isSedangBerlangsung) {
+                                                 $warnaKelas = 'border-yellow-300 text-yellow-800 bg-yellow-50 hover:bg-yellow-100';
+                                                 $tooltipText = 'Assessment Sedang Berlangsung - Klik untuk melanjutkan';
+                                             } else {
+                                                 // Belum mulai atau belum ada data
+                                                 $warnaKelas = 'border-blue-300 text-blue-800 bg-blue-50 hover:bg-blue-100';
+                                                 $tooltipText = 'Assessment Belum Dimulai - Klik untuk memulai';
+                                             }
                                          @endphp
                                          @if($sesi->status === 'active')
                                              @if($assessment->penilaian->jenis === 'studi_kasus')
                                                  <a href="{{ route('peserta.assessment.studi-kasus', ['id' => $assessment->penilaian->id, 'sesi' => $sesi->id]) }}"
-                                                    class="px-3 py-1 text-xs font-medium rounded-full border {{ $warnaKelas }} transition-colors duration-200 cursor-pointer">
-                                                     {{ $assessment->penilaian->jenis_text }}
+                                                    title="{{ $tooltipText }}"
+                                                    class="inline-flex items-center space-x-1 px-3 py-1 text-xs font-medium rounded-full border {{ $warnaKelas }} transition-colors duration-200 cursor-pointer">
+                                                     @if($isSelesai)
+                                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                         </svg>
+                                                     @elseif($isSedangBerlangsung)
+                                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                                         </svg>
+                                                     @else
+                                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                                         </svg>
+                                                     @endif
+                                                     <span>{{ $assessment->penilaian->jenis_text }}</span>
                                                  </a>
                                              @else
                                                  <a href="{{ route('peserta.assessment.kerja', ['id' => $assessment->penilaian->id, 'sesi' => $sesi->id]) }}"
-                                                    class="px-3 py-1 text-xs font-medium rounded-full border {{ $warnaKelas }} transition-colors duration-200 cursor-pointer">
-                                                     {{ $assessment->penilaian->jenis_text }}
+                                                    title="{{ $tooltipText }}"
+                                                    class="inline-flex items-center space-x-1 px-3 py-1 text-xs font-medium rounded-full border {{ $warnaKelas }} transition-colors duration-200 cursor-pointer">
+                                                     @if($isSelesai)
+                                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                         </svg>
+                                                     @elseif($isSedangBerlangsung)
+                                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                                         </svg>
+                                                     @else
+                                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                                         </svg>
+                                                     @endif
+                                                     <span>{{ $assessment->penilaian->jenis_text }}</span>
                                                  </a>
                                              @endif
                                          @else

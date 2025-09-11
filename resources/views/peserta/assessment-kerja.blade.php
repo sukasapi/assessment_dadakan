@@ -3,7 +3,7 @@
 @section('title', 'Pengerjaan Assessment')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-8">
+<div class="min-h-screen bg-gray-50 py-8" data-sesi-penilaian-id="{{ $effectiveSesiId }}">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="text-center mb-8">
@@ -269,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // URL simpan In-Tray
     const IN_TRAY_SAVE_URL = "{{ route('penilaian.in-tray.save', $assessment->id) }}";
     const CSRF_TOKEN = document.querySelector('#inTrayForm input[name="_token"]')?.value || '{{ csrf_token() }}';
+    const SESI_PENILAIAN_ID = parseInt(document.querySelector('[data-sesi-penilaian-id]').getAttribute('data-sesi-penilaian-id'));
 
     function collectInTrayAnswers() {
         const container = document.getElementById('inTrayBoard');
@@ -303,7 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     'X-CSRF-TOKEN': CSRF_TOKEN
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({ jawaban, status })
+                body: JSON.stringify({ 
+                    jawaban, 
+                    status, 
+                    sesi_penilaian_id: SESI_PENILAIAN_ID
+                })
             });
             if (!res.ok) {
                 let msg = 'Gagal menyimpan in-tray.';
@@ -369,7 +374,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({ catatan: val, status })
+                body: JSON.stringify({ 
+                    catatan: val, 
+                    status, 
+                    sesi_penilaian_id: SESI_PENILAIAN_ID 
+                })
             });
             if (!res.ok) {
                 let msg = 'Gagal menyimpan catatan.';
@@ -437,6 +446,66 @@ if (formEl) {
             document.getElementById('jawaban').value = window.jawabanEditor.getData();
         }
     });
+}
+
+// Modal sederhana untuk detail memo
+let currentMemoCard = null;
+function openMemoModal(html, card) {
+    currentMemoCard = card;
+    let modal = document.getElementById('memoModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'memoModal';
+        modal.className = 'fixed inset-0 z-50 hidden';
+        modal.innerHTML = `
+            <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+            <div class="relative w-full h-full bg-white flex flex-col">
+                <div class="flex items-center justify-between px-4 py-3 border-b">
+                    <h3 class="text-base md:text-lg font-semibold">Detail Memo</h3>
+                    <div class="flex items-center gap-2">
+                        <button id="memoModalClose" class="px-3 py-1.5 text-sm border rounded hover:bg-gray-50">Tutup</button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto p-4 md:p-6">
+                    <div id="memoModalContent" class="prose max-w-none mb-6"></div>
+                    <hr class="my-8 border-gray-200">
+                    <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm">
+                        <div class="p-4 md:p-5">
+                            <label class="block text-sm font-medium text-gray-800 mb-2">Disposisi</label>
+                            <textarea id="memoModalDisposisi" rows="4" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="contoh: delegasi ke sekretaris, arsip, tindak lanjut, dll"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        // Close handler
+        document.getElementById('memoModalClose').addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+
+        // Input sync handler
+        document.addEventListener('input', (evt) => {
+            if (evt.target && evt.target.id === 'memoModalDisposisi' && currentMemoCard) {
+                const hidden = currentMemoCard.querySelector('.memo-disposisi');
+                if (hidden) hidden.value = evt.target.value;
+                const textValue = currentMemoCard.querySelector('.memo-disposisi-text-value');
+                if (textValue) {
+                    const v = (evt.target.value || '').trim();
+                    textValue.textContent = v.length ? v : 'belum dimasukkan';
+                }
+            }
+        });
+    }
+
+    // Set content and initial disposisi
+    const contentEl = document.getElementById('memoModalContent');
+    const disposisiEl = document.getElementById('memoModalDisposisi');
+    if (contentEl) contentEl.innerHTML = html;
+    const hidden = card.querySelector('.memo-disposisi');
+    if (disposisiEl) disposisiEl.value = hidden?.value || '';
+
+    modal.classList.remove('hidden');
 }
 </script>
 @endsection

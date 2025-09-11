@@ -41,14 +41,22 @@ class PenilaianController extends Controller
             ]
         );
 
-        if ($request->status === 'final') {
-            KemajuanPenilaian::where('peserta_id', $pesertaId)
-                ->where('penilaian_id', $penilaianId)
-                ->update([
-                    'status' => 'selesai',
-                    'waktu_selesai' => now()
-                ]);
-        }
+        // Update status kemajuan penilaian
+        $statusKemajuan = $request->status === 'final' ? 'selesai' : 'sedang_berlangsung';
+        $sesiPenilaianId = $penilaian->sesi_penilaian_id;
+        
+        KemajuanPenilaian::updateOrCreate(
+            [
+                'peserta_id' => $pesertaId,
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId
+            ],
+            [
+                'status' => $statusKemajuan,
+                'waktu_selesai' => $request->status === 'final' ? now() : null,
+                'aktivitas_terakhir' => now()
+            ]
+        );
 
         return response()->json([
             'success' => true,
@@ -79,7 +87,8 @@ class PenilaianController extends Controller
             'jawaban.*.latihan_in_tray_id' => 'required|exists:latihan_in_tray,id',
             'jawaban.*.urutan_prioritas' => 'required|integer|min:1',
             'jawaban.*.disposisi' => 'nullable|string',
-            'status' => 'required|in:draft,final'
+            'status' => 'required|in:draft,final',
+            'sesi_penilaian_id' => 'required|integer|exists:sesi_penilaian,id'
         ]);
 
         $penilaian = Penilaian::findOrFail($penilaianId);
@@ -87,9 +96,24 @@ class PenilaianController extends Controller
             return response()->json(['error' => 'Penilaian tidak aktif'], 400);
         }
 
+        // Ambil sesi_penilaian_id dari request (sesi yang sedang diakses user)
+        $sesiPenilaianId = $request->sesi_penilaian_id;
+        
+        // Jika status adalah 'final', update semua jawaban existing menjadi 'final' terlebih dahulu
+        if ($request->status === 'final') {
+            JawabanInTray::where('peserta_id', $pesertaId)
+                ->where('penilaian_id', $penilaianId)
+                ->where('sesi_penilaian_id', $sesiPenilaianId)
+                ->update([
+                    'status' => 'final',
+                    'waktu_simpan' => now()
+                ]);
+        }
+
         // Hapus jawaban lama
         JawabanInTray::where('peserta_id', $pesertaId)
             ->where('penilaian_id', $penilaianId)
+            ->where('sesi_penilaian_id', $sesiPenilaianId)
             ->delete();
 
         // Simpan jawaban baru
@@ -97,6 +121,7 @@ class PenilaianController extends Controller
             JawabanInTray::create([
                 'peserta_id' => $pesertaId,
                 'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId,
                 'latihan_in_tray_id' => $jawaban['latihan_in_tray_id'],
                 'urutan_prioritas' => $jawaban['urutan_prioritas'],
                 'disposisi' => $jawaban['disposisi'] ?? '',
@@ -105,14 +130,34 @@ class PenilaianController extends Controller
             ]);
         }
 
-        if ($request->status === 'final') {
-            KemajuanPenilaian::where('peserta_id', $pesertaId)
-                ->where('penilaian_id', $penilaianId)
-                ->update([
-                    'status' => 'selesai',
-                    'waktu_selesai' => now()
-                ]);
+        // Update status kemajuan penilaian berdasarkan status semua jawaban In-Tray
+        // Cek semua jawaban In-Tray untuk peserta, penilaian, dan sesi ini
+        $allJawabanInTray = JawabanInTray::where('peserta_id', $pesertaId)
+            ->where('penilaian_id', $penilaianId)
+            ->where('sesi_penilaian_id', $sesiPenilaianId)
+            ->get();
+        
+        // Jika semua jawaban memiliki status 'final', maka kemajuan penilaian = 'selesai'
+        // Jika ada yang 'draft', maka kemajuan penilaian = 'sedang_berlangsung'
+        $statusKemajuan = 'sedang_berlangsung'; // default
+        if ($allJawabanInTray->isNotEmpty() && $allJawabanInTray->every(function($jawaban) {
+            return $jawaban->status === 'final';
+        })) {
+            $statusKemajuan = 'selesai';
         }
+        
+        KemajuanPenilaian::updateOrCreate(
+            [
+                'peserta_id' => $pesertaId,
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId
+            ],
+            [
+                'status' => $statusKemajuan,
+                'waktu_selesai' => $statusKemajuan === 'selesai' ? now() : null,
+                'aktivitas_terakhir' => now()
+            ]
+        );
 
         return response()->json([
             'success' => true,
@@ -129,7 +174,8 @@ class PenilaianController extends Controller
 
         $request->validate([
             'catatan' => 'required|string',
-            'status' => 'required|in:draft,final'
+            'status' => 'required|in:draft,final',
+            'sesi_penilaian_id' => 'required|integer|exists:sesi_penilaian,id'
         ]);
 
         $penilaian = Penilaian::findOrFail($penilaianId);
@@ -137,10 +183,12 @@ class PenilaianController extends Controller
             return response()->json(['error' => 'Penilaian tidak aktif'], 400);
         }
 
+        $sesiPenilaianId = $request->sesi_penilaian_id;
         $catatan = CatatanRoleplay::updateOrCreate(
             [
                 'peserta_id' => $pesertaId,
-                'penilaian_id' => $penilaianId
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId
             ],
             [
                 'catatan' => $request->catatan,
@@ -149,14 +197,21 @@ class PenilaianController extends Controller
             ]
         );
 
-        if ($request->status === 'final') {
-            KemajuanPenilaian::where('peserta_id', $pesertaId)
-                ->where('penilaian_id', $penilaianId)
-                ->update([
-                    'status' => 'selesai',
-                    'waktu_selesai' => now()
-                ]);
-        }
+        // Update status kemajuan penilaian
+        $statusKemajuan = $request->status === 'final' ? 'selesai' : 'sedang_berlangsung';
+        
+        KemajuanPenilaian::updateOrCreate(
+            [
+                'peserta_id' => $pesertaId,
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId
+            ],
+            [
+                'status' => $statusKemajuan,
+                'waktu_selesai' => $request->status === 'final' ? now() : null,
+                'aktivitas_terakhir' => now()
+            ]
+        );
 
         return response()->json([
             'success' => true,
@@ -174,7 +229,8 @@ class PenilaianController extends Controller
 
         $request->validate([
             'catatan' => 'required|string',
-            'status' => 'required|in:draft,final'
+            'status' => 'required|in:draft,final',
+            'sesi_penilaian_id' => 'required|integer|exists:sesi_penilaian,id'
         ]);
 
         $penilaian = Penilaian::findOrFail($penilaianId);
@@ -182,10 +238,12 @@ class PenilaianController extends Controller
             return response()->json(['error' => 'Penilaian tidak aktif'], 400);
         }
 
+        $sesiPenilaianId = $request->sesi_penilaian_id;
         $catatan = CatatanFgd::updateOrCreate(
             [
                 'peserta_id' => $pesertaId,
-                'penilaian_id' => $penilaianId
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId
             ],
             [
                 'catatan' => $request->catatan,
@@ -194,14 +252,21 @@ class PenilaianController extends Controller
             ]
         );
 
-        if ($request->status === 'final') {
-            KemajuanPenilaian::where('peserta_id', $pesertaId)
-                ->where('penilaian_id', $penilaianId)
-                ->update([
-                    'status' => 'selesai',
-                    'waktu_selesai' => now()
-                ]);
-        }
+        // Update status kemajuan penilaian
+        $statusKemajuan = $request->status === 'final' ? 'selesai' : 'sedang_berlangsung';
+        
+        KemajuanPenilaian::updateOrCreate(
+            [
+                'peserta_id' => $pesertaId,
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId
+            ],
+            [
+                'status' => $statusKemajuan,
+                'waktu_selesai' => $request->status === 'final' ? now() : null,
+                'aktivitas_terakhir' => now()
+            ]
+        );
 
         return response()->json([
             'success' => true,

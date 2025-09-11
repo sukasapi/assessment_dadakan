@@ -79,10 +79,14 @@ class PesertaController extends Controller
         ->orderBy('created_at', 'desc')
         ->get();
 
-        // Ambil status kemajuan per penilaian untuk peserta ini
+        // Ambil status kemajuan per penilaian untuk peserta ini dengan sesi_penilaian_id
         $kemajuanList = KemajuanPenilaian::where('peserta_id', $pesertaId)
-            ->get(['penilaian_id', 'status']);
-        $progressMap = $kemajuanList->pluck('status', 'penilaian_id');
+            ->get(['penilaian_id', 'sesi_penilaian_id', 'status']);
+        
+        // Buat map dengan key kombinasi penilaian_id dan sesi_penilaian_id
+        $progressMap = $kemajuanList->mapWithKeys(function ($item) {
+            return [$item->penilaian_id . '_' . $item->sesi_penilaian_id => $item->status];
+        });
 
         return view('peserta.dashboard', compact('peserta', 'sesiList', 'progressMap'));
     }
@@ -145,7 +149,8 @@ class PesertaController extends Controller
         KemajuanPenilaian::updateOrCreate(
             [
                 'peserta_id' => $pesertaId,
-                'penilaian_id' => $penilaianId
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiAssessment->sesi_penilaian_id
             ],
             [
                 'status' => 'sedang_berlangsung',
@@ -408,7 +413,8 @@ class PesertaController extends Controller
         KemajuanPenilaian::updateOrCreate(
             [
                 'peserta_id' => $pesertaId,
-                'penilaian_id' => $id
+                'penilaian_id' => $id,
+                'sesi_penilaian_id' => $effectiveSesiId
             ],
             [
                 'status' => 'sedang_berlangsung',
@@ -429,6 +435,7 @@ class PesertaController extends Controller
 
             $inTrayAnswers = JawabanInTray::where('peserta_id', $pesertaId)
                 ->where('penilaian_id', $id)
+                ->where('sesi_penilaian_id', $effectiveSesiId)
                 ->orderBy('urutan_prioritas')
                 ->get()
                 ->keyBy('latihan_in_tray_id');
@@ -450,17 +457,19 @@ class PesertaController extends Controller
             if ($assessment->jenis === 'roleplay') {
                 $existingRoleplay = CatatanRoleplay::where('peserta_id', $pesertaId)
                     ->where('penilaian_id', $assessment->id)
+                    ->where('sesi_penilaian_id', $effectiveSesiId)
                     ->orderByDesc('waktu_simpan')
                     ->value('catatan') ?: '';
             } elseif ($assessment->jenis === 'fgd') {
                 $existingFgd = CatatanFgd::where('peserta_id', $pesertaId)
                     ->where('penilaian_id', $assessment->id)
+                    ->where('sesi_penilaian_id', $effectiveSesiId)
                     ->orderByDesc('waktu_simpan')
                     ->value('catatan') ?: '';
             }
         }
 
-        return view('peserta.assessment-kerja', compact('peserta', 'assessment', 'sesiAssessment', 'memos', 'inTrayAnswers', 'items', 'existingRoleplay', 'existingFgd'));
+        return view('peserta.assessment-kerja', compact('peserta', 'assessment', 'sesiAssessment', 'memos', 'inTrayAnswers', 'items', 'existingRoleplay', 'existingFgd', 'effectiveSesiId'));
     }
 
     /**
@@ -563,13 +572,15 @@ class PesertaController extends Controller
             // Ambil jawaban yang sudah ada (jika ada)
             $existingJawaban = KemajuanPenilaian::where('peserta_id', $pesertaId)
                 ->where('penilaian_id', $assessment->id)
+                ->where('sesi_penilaian_id', $cekSesiId)
                 ->value('jawaban');
 
             // Buat atau update progress
             KemajuanPenilaian::updateOrCreate(
                 [
                     'peserta_id' => $pesertaId,
-                    'penilaian_id' => $assessment->id
+                    'penilaian_id' => $assessment->id,
+                    'sesi_penilaian_id' => $cekSesiId
                 ],
                 [
                     'status' => 'sedang_berlangsung',
@@ -677,7 +688,8 @@ class PesertaController extends Controller
         KemajuanPenilaian::updateOrCreate(
             [
                 'peserta_id' => $pesertaId,
-                'penilaian_id' => $id
+                'penilaian_id' => $id,
+                'sesi_penilaian_id' => $cekSesiId
             ],
             [
                 'jawaban' => $request->jawaban,

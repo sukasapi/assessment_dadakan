@@ -15,6 +15,7 @@ class JawabanInTray extends Model
     protected $fillable = [
         'peserta_id',
         'penilaian_id',
+        'sesi_penilaian_id',
         'latihan_in_tray_id',
         'urutan_prioritas',
         'disposisi',

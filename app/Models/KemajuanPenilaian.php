@@ -15,6 +15,7 @@ class KemajuanPenilaian extends Model
     protected $fillable = [
         'peserta_id',
         'penilaian_id',
+        'sesi_penilaian_id',
         'status',
         'waktu_mulai',
         'waktu_selesai',

@@ -15,6 +15,7 @@ class CatatanFgd extends Model
     protected $fillable = [
         'peserta_id',
         'penilaian_id',
+        'sesi_penilaian_id',
         'catatan',
         'status',
         'waktu_simpan'
