@@ -40,6 +40,11 @@ class KemajuanPenilaian extends Model
         return $this->belongsTo(Penilaian::class);
     }
 
+    public function sesiPenilaian(): BelongsTo
+    {
+        return $this->belongsTo(SesiPenilaian::class);
+    }
+
     // Accessors
     public function getStatusTextAttribute(): string
     {

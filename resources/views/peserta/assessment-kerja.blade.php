@@ -49,33 +49,41 @@
                             </ul>
                         </div>
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3">
-                            @foreach($memos as $memo)
-                                <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-move" data-id="{{ $memo->id }}" data-content='@json($memo->konten_memo)'>
-                                    <div class="flex items-start justify-between mb-2">
-                                        <div class="flex items-center gap-3">
-                                            <div class="pt-1">
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-blue-100 text-blue-800 border border-blue-200">Prioritas Memo M-{{$memo->id}}</span>
-                                                <input type="number" min="1" class="memo-prioritas hidden w-20 border-black-300 m-2 rounded-md shadow-sm focus:ring-blue-500 focus:border-black-500 bg-white-100" value="1" readonly>
-                                                <span class="memo-prioritas-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 m-2">1</span>
+                            @if($memos->count() > 0)
+                                @foreach($memos as $memo)
+                                    <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-move" data-id="{{ $memo->id }}" data-content='@json($memo->konten_memo)'>
+                                        <div class="flex items-start justify-between mb-2">
+                                            <div class="flex items-center gap-3">
+                                                <div class="pt-1">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-blue-100 text-blue-800 border border-blue-200">Prioritas Memo M-{{$memo->id}}</span>
+                                                    <input type="number" min="1" class="memo-prioritas hidden w-20 border-black-300 m-2 rounded-md shadow-sm focus:ring-blue-500 focus:border-black-500 bg-white-100" value="1" readonly>
+                                                    <span class="memo-prioritas-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 m-2">1</span>
+                                                </div>
                                             </div>
+                                            <button type="button" title="Lihat detail memo dan isi Disposisi" class="memo-detail inline-flex items-center px-2 py-1 text-xs border border-gray-300 rounded-md bg-white hover:bg-gray-50">Lihat Detail</button>
                                         </div>
-                                        <button type="button" title="Lihat detail memo dan isi Disposisi" class="memo-detail inline-flex items-center px-2 py-1 text-xs border border-gray-300 rounded-md bg-white hover:bg-gray-50">Lihat Detail</button>
-                                    </div>
-                                    <div class="text-sm text-gray-700 mb-3" style="display:-webkit-box; -webkit-line-clamp:4; line-clamp:4; -webkit-box-orient: vertical; overflow:hidden;">
-                                        {!! $memo->konten_memo !!}
-                                    </div>
-                                    
+                                        <div class="text-sm text-gray-700 mb-3" style="display:-webkit-box; -webkit-line-clamp:4; line-clamp:4; -webkit-box-orient: vertical; overflow:hidden;">
+                                            {!! $memo->konten_memo !!}
+                                        </div>
+                                        
 
-                                    <input type="hidden" class="memo-disposisi" value="{{ optional($inTrayAnswers->get($memo->id))->disposisi }}">
-                                    @php $__disp = optional($inTrayAnswers->get($memo->id))->disposisi; @endphp
-                                    <div class="memo-disposisi-text text-xxs text-gray-600 mt-1">
-                                        <span class="font-medium">Disposisi:</span>
-                                        <span class="memo-disposisi-text-value">{{ $__disp ? $__disp : 'belum dimasukkan' }}</span>
+                                        <input type="hidden" class="memo-disposisi" value="{{ optional($inTrayAnswers->get($memo->id))->disposisi }}">
+                                        @php $__disp = optional($inTrayAnswers->get($memo->id))->disposisi; @endphp
+                                        <div class="memo-disposisi-text text-xxs text-gray-600 mt-1">
+                                            <span class="font-medium">Disposisi:</span>
+                                            <span class="memo-disposisi-text-value">{{ $__disp ? $__disp : 'belum dimasukkan' }}</span>
+                                        </div>
                                     </div>
+                                @endforeach
+                            @else
+                                <div class="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                    <div class="text-gray-500 text-lg font-medium mb-2">Belum ada memo</div>
+                                    <div class="text-gray-400 text-sm">Admin belum menambahkan memo untuk sesi ini</div>
                                 </div>
-                            @endforeach
+                            @endif
                         </div>
                         
+                        @if($memos->count() > 0)
                         <form id="inTrayForm" class="mt-6">
                             @csrf
                             <div class="flex gap-3">
@@ -83,6 +91,7 @@
                                 <button type="button" id="saveInTrayFinal" class="px-4 py-2 bg-green-600 text-white rounded-md">Simpan Final</button>
                             </div>
                         </form>
+                        @endif
                         @break
                     @case('roleplay')
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Catatan Saya</h2>

@@ -87,6 +87,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/review/roleplay/export', [AdminController::class, 'exportRoleplay'])->name('review.roleplay.export');
     Route::get('/review/fgd/export', [AdminController::class, 'exportFgd'])->name('review.fgd.export');
     
+    // Assessment Inputs Management
+    Route::get('/assessment-inputs', [App\Http\Controllers\Admin\AssessmentInputController::class, 'index'])->name('assessment-inputs.index');
+    Route::get('/assessment-inputs/export', [App\Http\Controllers\Admin\AssessmentInputController::class, 'export'])->name('assessment-inputs.export');
+    
+    
     // Manajemen Urutan Assessment
 
 
@@ -149,6 +154,7 @@ Route::get('/debug/studi-kasus/{id}', [PesertaController::class, 'testStudiKasus
 
 // Test route untuk debugging showStudiKasus tanpa middleware
 Route::get('/debug/show-studi-kasus/{id}', [PesertaController::class, 'showStudiKasus'])->name('debug.show-studi-kasus');
+
 
 // Route test sederhana untuk debugging view
 Route::get('/simple-test/{id}', function($id) {

@@ -31,6 +31,7 @@
                     <a href="{{ route('admin.sesi.index') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Sesi</a>
                     <a href="{{ route('admin.peserta.index') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Peserta</a>
                     <a href="{{ route('admin.progress.index') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Progress</a>
+                    <a href="{{ route('admin.assessment-inputs.index') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Input Assessment</a>
                     <a href="{{ route('admin.petunjuk') }}" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Petunjuk Penggunaan</a>
                     <div class="relative group">
                         <button class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium flex items-center">

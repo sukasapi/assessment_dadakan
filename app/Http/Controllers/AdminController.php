@@ -691,13 +691,11 @@ class AdminController extends Controller
     /**
      * Tampilkan daftar progress
      */
-    public function progressIndex()
+    public function progressIndex() 
     {
-        $progressList = KemajuanPenilaian::with(['peserta', 'penilaian'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('admin.progress.index', compact('progressList'));
+        // Progress sudah dihitung langsung di view dengan logika yang sama seperti dashboard user
+        // Tidak perlu mengirim data progressList karena view sudah mengambil data sendiri
+        return view('admin.progress.index');
     }
 
     /**
@@ -1057,12 +1055,16 @@ class AdminController extends Controller
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
                         $memos = $assessment['memos'] ?? [];
                         if (is_array($memos) && count(array_filter($memos, fn($m) => trim((string)$m) !== '')) > 0) {
-                            LatihanInTray::where('penilaian_id', $assessment['penilaian_id'])->delete();
+                            // Hapus memo lama untuk sesi penilaian ini
+                            LatihanInTray::where('sesi_penilaian_id', $sesi->id)
+                                ->where('penilaian_id', $assessment['penilaian_id'])
+                                ->delete();
                             $order = 1;
                             foreach ($memos as $memo) {
                                 if (trim((string)$memo) === '') continue;
                                 LatihanInTray::create([
                                     'penilaian_id' => $assessment['penilaian_id'],
+                                    'sesi_penilaian_id' => $sesi->id,
                                     'konten_memo' => $memo,
                                     'urutan' => $order++,
                                     'aktif' => true,
@@ -1118,10 +1120,11 @@ class AdminController extends Controller
         $existingAssessments = $sesi->assessments
             ->sortBy('urutan')
             ->values()
-            ->map(function ($sesiAssessment) {
+            ->map(function ($sesiAssessment) use ($sesi) {
                 $memos = [];
                 if ($sesiAssessment->penilaian && $sesiAssessment->penilaian->jenis === 'in_tray') {
                     $memos = \App\Models\LatihanInTray::select('urutan', 'konten_memo')
+                        ->where('sesi_penilaian_id', $sesi->id)
                         ->where('penilaian_id', $sesiAssessment->penilaian_id)
                         ->orderBy('urutan')
                         ->get()
@@ -1192,13 +1195,16 @@ class AdminController extends Controller
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
                         $memos = $assessment['memos'] ?? [];
                         if (is_array($memos) && count(array_filter($memos, fn($m) => trim((string)$m) !== '')) > 0) {
-                            // hapus data lama untuk penilaian ini
-                            LatihanInTray::where('penilaian_id', $assessment['penilaian_id'])->delete();
+                            // hapus data lama untuk sesi penilaian ini
+                            LatihanInTray::where('sesi_penilaian_id', $sesi->id)
+                                ->where('penilaian_id', $assessment['penilaian_id'])
+                                ->delete();
                             $order = 1;
                             foreach ($memos as $memo) {
                                 if (trim((string)$memo) === '') continue;
                                 LatihanInTray::create([
                                     'penilaian_id' => $assessment['penilaian_id'],
+                                    'sesi_penilaian_id' => $sesi->id,
                                     'konten_memo' => $memo,
                                     'urutan' => $order++,
                                     'aktif' => true,

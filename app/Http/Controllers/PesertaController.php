@@ -429,9 +429,22 @@ class PesertaController extends Controller
         $existingRoleplay = '';
         $existingFgd = '';
         if ($assessment->jenis === 'in_tray') {
-            $memos = LatihanInTray::where('penilaian_id', $assessment->id)
+            // Ambil memo berdasarkan sesi penilaian
+            $memos = LatihanInTray::where('sesi_penilaian_id', $effectiveSesiId)
+                ->where('penilaian_id', $assessment->id)
+                ->where('aktif', true)
                 ->orderBy('urutan')
                 ->get();
+            
+            // Jika tidak ada memo untuk sesi ini, coba fallback ke memo yang tidak memiliki sesi_penilaian_id
+            // (untuk data lama yang belum diupdate)
+            if ($memos->isEmpty()) {
+                $memos = LatihanInTray::where('penilaian_id', $assessment->id)
+                    ->whereNull('sesi_penilaian_id') // Hanya ambil memo yang tidak memiliki sesi_penilaian_id
+                    ->where('aktif', true)
+                    ->orderBy('urutan')
+                    ->get();
+            }
 
             $inTrayAnswers = JawabanInTray::where('peserta_id', $pesertaId)
                 ->where('penilaian_id', $id)

@@ -15,6 +15,7 @@ class LatihanInTray extends Model
 
     protected $fillable = [
         'penilaian_id',
+        'sesi_penilaian_id',
         'konten_memo',
         'urutan',
         'aktif'
@@ -29,6 +30,11 @@ class LatihanInTray extends Model
     public function penilaian(): BelongsTo
     {
         return $this->belongsTo(Penilaian::class);
+    }
+
+    public function sesiPenilaian(): BelongsTo
+    {
+        return $this->belongsTo(SesiPenilaian::class);
     }
 
     public function jawabanInTray(): HasMany
