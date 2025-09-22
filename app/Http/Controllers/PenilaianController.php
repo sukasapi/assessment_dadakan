@@ -87,6 +87,8 @@ class PenilaianController extends Controller
             'jawaban.*.latihan_in_tray_id' => 'required|exists:latihan_in_tray,id',
             'jawaban.*.urutan_prioritas' => 'required|integer|min:1',
             'jawaban.*.disposisi' => 'nullable|string',
+            'jawaban.*.kategori_prioritas' => 'nullable|in:mendesak_penting,mendesak_tidak_penting,tidak_mendesak_penting,tidak_mendesak_tidak_penting',
+            'jawaban.*.jawaban_pertanyaan' => 'nullable|string',
             'status' => 'required|in:draft,final',
             'sesi_penilaian_id' => 'required|integer|exists:sesi_penilaian,id'
         ]);
@@ -118,7 +120,7 @@ class PenilaianController extends Controller
 
         // Simpan jawaban baru
         foreach ($request->jawaban as $jawaban) {
-            JawabanInTray::create([
+            $jawabanInTray = JawabanInTray::create([
                 'peserta_id' => $pesertaId,
                 'penilaian_id' => $penilaianId,
                 'sesi_penilaian_id' => $sesiPenilaianId,
@@ -126,8 +128,18 @@ class PenilaianController extends Controller
                 'urutan_prioritas' => $jawaban['urutan_prioritas'],
                 'disposisi' => $jawaban['disposisi'] ?? '',
                 'status' => $request->status,
-                'waktu_simpan' => now()
+                'waktu_simpan' => now(),
+                'model_assessment' => $penilaian->model_in_tray ?? 'urutan',
+                'jawaban_pertanyaan' => $jawaban['jawaban_pertanyaan'] ?? null
             ]);
+
+            // Simpan prioritas jika menggunakan model prioritas
+            if (isset($jawaban['kategori_prioritas']) && !empty($jawaban['kategori_prioritas'])) {
+                \App\Models\PrioritasMemo::updateOrCreate(
+                    ['jawaban_in_tray_id' => $jawabanInTray->id],
+                    ['kategori_prioritas' => $jawaban['kategori_prioritas']]
+                );
+            }
         }
 
         // Update status kemajuan penilaian berdasarkan status semua jawaban In-Tray

@@ -73,9 +73,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     // Progress Monitoring
     Route::get('/progress', [AdminController::class, 'progressIndex'])->name('progress.index');
+    Route::get('/progress/data', [AdminController::class, 'getProgressData'])->name('progress.data');
+    Route::get('/progress/export', [AdminController::class, 'exportProgress'])->name('progress.export');
+    
+    // Progress Answers (must be before /progress/{pesertaId} to avoid route conflict)
+    Route::get('/progress/answers', [AdminController::class, 'progressAnswers'])->name('progress.answers');
+    Route::get('/progress/export-answers', [AdminController::class, 'exportAnswers'])->name('progress.export-answers');
+    Route::get('/progress/answer-detail', [AdminController::class, 'getAnswerDetail'])->name('progress.answer-detail');
+    
+    // Progress Individual (must be after specific routes)
     Route::get('/progress/{pesertaId}', [AdminController::class, 'progressPeserta'])->name('progress.peserta');
     Route::put('/progress/{kemajuanId}/status', [AdminController::class, 'updateProgressStatus'])->name('progress.update-status');
-    Route::get('/progress/export', [AdminController::class, 'exportProgress'])->name('progress.export');
     
     // Review Jawaban
     Route::get('/review/studi-kasus', [AdminController::class, 'reviewStudiKasus'])->name('review.studi-kasus');

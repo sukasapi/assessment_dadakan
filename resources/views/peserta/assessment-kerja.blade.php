@@ -51,11 +51,11 @@
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3">
                             @if($memos->count() > 0)
                                 @foreach($memos as $memo)
-                                    <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-move" data-id="{{ $memo->id }}" data-content='@json($memo->konten_memo)'>
+                                    <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-move" data-id="{{ $memo->id }}" data-content='@json(['konten_memo' => $memo->konten_memo, 'pertanyaan' => $memo->pertanyaan])'>
                                         <div class="flex items-start justify-between mb-2">
                                             <div class="flex items-center gap-3">
                                                 <div class="pt-1">
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-blue-100 text-blue-800 border border-blue-200">Prioritas Memo M-{{$memo->id}}</span>
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-blue-100 text-blue-800 border border-blue-200">Memo M-{{$memo->id}}</span>
                                                     <input type="number" min="1" class="memo-prioritas hidden w-20 border-black-300 m-2 rounded-md shadow-sm focus:ring-blue-500 focus:border-black-500 bg-white-100" value="1" readonly>
                                                     <span class="memo-prioritas-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 m-2">1</span>
                                                 </div>
@@ -66,13 +66,57 @@
                                             {!! $memo->konten_memo !!}
                                         </div>
                                         
-
+                                        <!-- Hidden inputs for data storage -->
                                         <input type="hidden" class="memo-disposisi" value="{{ optional($inTrayAnswers->get($memo->id))->disposisi }}">
-                                        @php $__disp = optional($inTrayAnswers->get($memo->id))->disposisi; @endphp
+                                        <input type="hidden" class="memo-priority-select" value="{{ optional($inTrayAnswers->get($memo->id))->prioritasMemo->kategori_prioritas ?? '' }}">
+                                        <input type="hidden" class="memo-question-answer" value="{{ optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '' }}">
+                                        
+                                        <!-- Display current values -->
+                                        @php 
+                                            $__disp = optional($inTrayAnswers->get($memo->id))->disposisi;
+                                            $__prioritas = optional($inTrayAnswers->get($memo->id))->prioritasMemo->kategori_prioritas ?? '';
+                                            $__jawaban = optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '';
+                                        @endphp
+                                        
                                         <div class="memo-disposisi-text text-xxs text-gray-600 mt-1">
                                             <span class="font-medium">Disposisi:</span>
                                             <span class="memo-disposisi-text-value">{{ $__disp ? $__disp : 'belum dimasukkan' }}</span>
                                         </div>
+                                        
+                                        @if($intrayModel === 'prioritas')
+                                        <div class="memo-priority-text text-xxs text-gray-600 mt-1">
+                                            <span class="font-medium">Prioritas:</span>
+                                            <span class="memo-priority-text-value">
+                                                @if($__prioritas)
+                                                    @switch($__prioritas)
+                                                        @case('mendesak_penting')
+                                                            Mendesak - Penting
+                                                            @break
+                                                        @case('mendesak_tidak_penting')
+                                                            Mendesak - Tidak Penting
+                                                            @break
+                                                        @case('tidak_mendesak_penting')
+                                                            Tidak Mendesak - Penting
+                                                            @break
+                                                        @case('tidak_mendesak_tidak_penting')
+                                                            Tidak Mendesak - Tidak Penting
+                                                            @break
+                                                        @default
+                                                            Belum dipilih
+                                                    @endswitch
+                                                @else
+                                                    belum dipilih
+                                                @endif
+                                            </span>
+                                        </div>
+                                        @endif
+                                        
+                                        @if($memo->pertanyaan && $__jawaban)
+                                        <div class="memo-question-text text-xxs text-gray-600 mt-1">
+                                            <span class="font-medium">Jawaban:</span>
+                                            <span class="memo-question-text-value">{{ Str::limit($__jawaban, 50) }}</span>
+                                        </div>
+                                        @endif
                                     </div>
                                 @endforeach
                             @else
@@ -269,11 +313,15 @@ document.addEventListener('DOMContentLoaded', () => {
         board.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('memo-detail')) {
                 const card = e.target.closest('.memo-card');
-                const html = JSON.parse(card.getAttribute('data-content'));
+                const memoData = JSON.parse(card.getAttribute('data-content'));
+                const html = memoData.konten_memo || '';
                 openMemoModal(html, card);
             }
         });
     }
+
+    // Initialize model based on assessment type
+    initializeInTrayModel('{{ $intrayModel ?? "urutan" }}');
 
     // URL simpan In-Tray
     const IN_TRAY_SAVE_URL = "{{ route('penilaian.in-tray.save', $assessment->id) }}";
@@ -285,11 +333,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return [];
         const cards = Array.from(container.querySelectorAll('.memo-card'));
         return cards.map((card, idx) => {
-            return {
+            const answer = {
                 latihan_in_tray_id: parseInt(card.getAttribute('data-id'), 10),
                 urutan_prioritas: idx + 1,
                 disposisi: (card.querySelector('.memo-disposisi')?.value || '').trim()
             };
+
+            // Add priority selection if using priority model
+            const prioritySelect = card.querySelector('.memo-priority-select');
+            if (prioritySelect) {
+                answer.kategori_prioritas = prioritySelect.value;
+            }
+
+            // Add question answer if available
+            const questionAnswer = card.querySelector('.memo-question-answer');
+            if (questionAnswer) {
+                answer.jawaban_pertanyaan = questionAnswer.value.trim();
+            }
+
+            return answer;
         });
     }
 
@@ -478,6 +540,32 @@ function openMemoModal(html, card) {
                 <div class="flex-1 overflow-y-auto p-4 md:p-6">
                     <div id="memoModalContent" class="prose max-w-none mb-6"></div>
                     <hr class="my-8 border-gray-200">
+                    
+                    <!-- Priority Selection Section -->
+                    <div id="memoModalPrioritySection" class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm" style="display: none;">
+                        <div class="p-4 md:p-5">
+                            <label class="block text-sm font-medium text-gray-800 mb-2">Pilih Prioritas</label>
+                            <select id="memoModalPriority" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Pilih Prioritas</option>
+                                <option value="mendesak_penting">Mendesak - Penting</option>
+                                <option value="mendesak_tidak_penting">Mendesak - Tidak Penting</option>
+                                <option value="tidak_mendesak_penting">Tidak Mendesak - Penting</option>
+                                <option value="tidak_mendesak_tidak_penting">Tidak Mendesak - Tidak Penting</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Question Section -->
+                    <div id="memoModalQuestionSection" class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm" style="display: none;">
+                        <div class="p-4 md:p-5">
+                            <label class="block text-sm font-medium text-gray-800 mb-2">Pertanyaan</label>
+                            <div id="memoModalQuestion" class="text-sm text-gray-600 bg-gray-50 p-3 rounded-md mb-3"></div>
+                            <label class="block text-sm font-medium text-gray-800 mb-2">Jawaban Anda</label>
+                            <textarea id="memoModalQuestionAnswer" rows="3" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Jawaban Anda..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Disposisi Section -->
                     <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm">
                         <div class="p-4 md:p-5">
                             <label class="block text-sm font-medium text-gray-800 mb-2">Disposisi</label>
@@ -495,7 +583,9 @@ function openMemoModal(html, card) {
 
         // Input sync handler
         document.addEventListener('input', (evt) => {
-            if (evt.target && evt.target.id === 'memoModalDisposisi' && currentMemoCard) {
+            if (!currentMemoCard) return;
+            
+            if (evt.target && evt.target.id === 'memoModalDisposisi') {
                 const hidden = currentMemoCard.querySelector('.memo-disposisi');
                 if (hidden) hidden.value = evt.target.value;
                 const textValue = currentMemoCard.querySelector('.memo-disposisi-text-value');
@@ -504,17 +594,178 @@ function openMemoModal(html, card) {
                     textValue.textContent = v.length ? v : 'belum dimasukkan';
                 }
             }
+            
+            if (evt.target && evt.target.id === 'memoModalPriority') {
+                const prioritySelect = currentMemoCard.querySelector('.memo-priority-select');
+                if (prioritySelect) prioritySelect.value = evt.target.value;
+                
+                // Update priority display text
+                const priorityTextValue = currentMemoCard.querySelector('.memo-priority-text-value');
+                if (priorityTextValue) {
+                    const priorityValue = evt.target.value;
+                    let priorityLabel = 'belum dipilih';
+                    
+                    switch(priorityValue) {
+                        case 'mendesak_penting':
+                            priorityLabel = 'Mendesak - Penting';
+                            break;
+                        case 'mendesak_tidak_penting':
+                            priorityLabel = 'Mendesak - Tidak Penting';
+                            break;
+                        case 'tidak_mendesak_penting':
+                            priorityLabel = 'Tidak Mendesak - Penting';
+                            break;
+                        case 'tidak_mendesak_tidak_penting':
+                            priorityLabel = 'Tidak Mendesak - Tidak Penting';
+                            break;
+                    }
+                    
+                    priorityTextValue.textContent = priorityLabel;
+                }
+            }
+            
+            if (evt.target && evt.target.id === 'memoModalQuestionAnswer') {
+                const questionAnswer = currentMemoCard.querySelector('.memo-question-answer');
+                if (questionAnswer) questionAnswer.value = evt.target.value;
+                
+                // Update question answer display text
+                const questionTextValue = currentMemoCard.querySelector('.memo-question-text-value');
+                if (questionTextValue) {
+                    const v = (evt.target.value || '').trim();
+                    questionTextValue.textContent = v.length ? v.substring(0, 50) + (v.length > 50 ? '...' : '') : '';
+                }
+            }
         });
     }
 
-    // Set content and initial disposisi
+    // Set content and initial values
     const contentEl = document.getElementById('memoModalContent');
     const disposisiEl = document.getElementById('memoModalDisposisi');
+    const priorityEl = document.getElementById('memoModalPriority');
+    const questionEl = document.getElementById('memoModalQuestion');
+    const questionAnswerEl = document.getElementById('memoModalQuestionAnswer');
+    const prioritySection = document.getElementById('memoModalPrioritySection');
+    const questionSection = document.getElementById('memoModalQuestionSection');
+    
     if (contentEl) contentEl.innerHTML = html;
-    const hidden = card.querySelector('.memo-disposisi');
-    if (disposisiEl) disposisiEl.value = hidden?.value || '';
+    
+    // Set disposisi value from hidden input
+    const hiddenDisposisi = card.querySelector('.memo-disposisi');
+    if (disposisiEl) disposisiEl.value = hiddenDisposisi?.value || '';
+    
+    // Set priority value from hidden input
+    const hiddenPriority = card.querySelector('.memo-priority-select');
+    if (priorityEl && hiddenPriority) {
+        priorityEl.value = hiddenPriority.value || '';
+    }
+    
+    // Set question and answer from hidden input
+    const hiddenQuestionAnswer = card.querySelector('.memo-question-answer');
+    if (questionAnswerEl && hiddenQuestionAnswer) {
+        questionAnswerEl.value = hiddenQuestionAnswer.value || '';
+    }
+    
+    // Show/hide sections based on model
+    const intrayModel = '{{ $intrayModel ?? "urutan" }}';
+    
+    if (prioritySection) {
+        prioritySection.style.display = intrayModel === 'prioritas' ? 'block' : 'none';
+    }
+    
+    if (questionSection) {
+        // Check if memo has question
+        const memoId = card.getAttribute('data-id');
+        const hasQuestion = card.querySelector('.memo-question-text');
+        questionSection.style.display = hasQuestion ? 'block' : 'none';
+        
+        if (questionEl && hasQuestion) {
+            // Get question from memo data
+            const memoData = card.getAttribute('data-content');
+            if (memoData) {
+                try {
+                    const memo = JSON.parse(memoData);
+                    if (memo.pertanyaan) {
+                        questionEl.innerHTML = memo.pertanyaan;
+                    }
+                } catch (e) {
+                    console.error('Error parsing memo data:', e);
+                }
+            }
+        }
+    }
 
     modal.classList.remove('hidden');
+}
+
+// Initialize in-tray model based on assessment configuration
+function initializeInTrayModel(model = 'urutan') {
+    if (model === 'prioritas') {
+        // Enable priority model
+        enablePriorityModel();
+    } else {
+        // Enable order model (default)
+        enableOrderModel();
+    }
+}
+
+// Enable priority model
+function enablePriorityModel() {
+    const board = document.getElementById('inTrayBoard');
+    if (!board) return;
+    
+    const cards = board.querySelectorAll('.memo-card');
+    cards.forEach(card => {
+        // Hide order badge
+        const orderBadge = card.querySelector('.memo-prioritas-badge');
+        if (orderBadge) {
+            orderBadge.style.display = 'none';
+        }
+        
+        // Make card non-draggable
+        card.setAttribute('draggable', 'false');
+        card.classList.remove('cursor-move');
+    });
+    
+    // Disable sortable functionality
+    board.classList.remove('sortable');
+}
+
+// Enable order model
+function enableOrderModel() {
+    const board = document.getElementById('inTrayBoard');
+    if (!board) return;
+    
+    const cards = board.querySelectorAll('.memo-card');
+    cards.forEach(card => {
+        // Show order badge
+        const orderBadge = card.querySelector('.memo-prioritas-badge');
+        if (orderBadge) {
+            orderBadge.style.display = 'inline-flex';
+        }
+        
+        // Make card draggable
+        card.setAttribute('draggable', 'true');
+        card.classList.add('cursor-move');
+    });
+    
+    // Enable sortable functionality
+    board.classList.add('sortable');
+    makeSortable(board);
+}
+
+// Toggle between models (for testing purposes)
+function toggleInTrayModel() {
+    const board = document.getElementById('inTrayBoard');
+    if (!board) return;
+    
+    const prioritySections = document.querySelectorAll('.memo-priority-section');
+    const hasPriorityModel = prioritySections.length > 0 && prioritySections[0].style.display !== 'none';
+    
+    if (hasPriorityModel) {
+        enableOrderModel();
+    } else {
+        enablePriorityModel();
+    }
 }
 </script>
 @endsection

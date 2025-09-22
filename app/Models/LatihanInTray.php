@@ -18,7 +18,8 @@ class LatihanInTray extends Model
         'sesi_penilaian_id',
         'konten_memo',
         'urutan',
-        'aktif'
+        'aktif',
+        'pertanyaan'
     ];
 
     protected $casts = [
@@ -40,5 +41,29 @@ class LatihanInTray extends Model
     public function jawabanInTray(): HasMany
     {
         return $this->hasMany(JawabanInTray::class);
+    }
+
+    // Helper methods
+    public function hasQuestion(): bool
+    {
+        return !empty($this->pertanyaan);
+    }
+
+    public function getQuestionAttribute()
+    {
+        return $this->pertanyaan ?? 'Tidak ada pertanyaan';
+    }
+
+    // Scopes
+    public function scopeWithQuestions($query)
+    {
+        return $query->whereNotNull('pertanyaan')->where('pertanyaan', '!=', '');
+    }
+
+    public function scopeWithoutQuestions($query)
+    {
+        return $query->where(function($q) {
+            $q->whereNull('pertanyaan')->orWhere('pertanyaan', '');
+        });
     }
 }

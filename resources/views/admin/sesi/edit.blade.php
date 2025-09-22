@@ -232,6 +232,21 @@
             </div>
         </div>
         
+        <!-- Model In-Tray Selection -->
+        <div class="mt-3 intray-model-section" style="display: none;">
+            <label class="block text-sm font-medium text-gray-700">Model Assessment In-Tray *</label>
+            <select name="assessments[INDEX][model_in_tray]" 
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    required>
+                <option value="urutan">Model Urutan (Drag-Drop)</option>
+                <option value="prioritas">Model Prioritas (4 Kategori)</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-500">
+                <strong>Model Urutan:</strong> Peserta mengurutkan memo dengan drag-drop<br>
+                <strong>Model Prioritas:</strong> Peserta memilih prioritas untuk setiap memo (Mendesak-Penting, Mendesak-Tidak Penting, Tidak Mendesak-Penting, Tidak Mendesak-Tidak Penting)
+            </p>
+        </div>
+
         <!-- Memos untuk In-Tray -->
         <div class="mt-4 memo-section" style="display:none;">
             <div class="flex items-center justify-between">
@@ -489,6 +504,7 @@ function togglePdfUpload(selectElement) {
     const assessmentItem = selectElement.closest('.assessment-item');
     const pdfSection = assessmentItem.querySelector('.pdf-upload-section');
     const memoSection = assessmentItem.querySelector('.memo-section');
+    const intrayModelSection = assessmentItem.querySelector('.intray-model-section');
     const selectedOption = selectElement.options[selectElement.selectedIndex];
     
     if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus') {
@@ -496,6 +512,7 @@ function togglePdfUpload(selectElement) {
         // Check if there's existing PDF
         checkExistingPdf(assessmentItem, selectedOption.value, selectedOption.dataset.file);
         if (memoSection) memoSection.style.display = 'none';
+        if (intrayModelSection) intrayModelSection.style.display = 'none';
     } else {
         pdfSection.style.display = 'none';
         // Clear PDF input when hiding
@@ -507,8 +524,10 @@ function togglePdfUpload(selectElement) {
 
     if (selectedOption && selectedOption.dataset.jenis === 'in_tray') {
         if (memoSection) memoSection.style.display = 'block';
+        if (intrayModelSection) intrayModelSection.style.display = 'block';
     } else {
         if (memoSection) memoSection.style.display = 'none';
+        if (intrayModelSection) intrayModelSection.style.display = 'none';
     }
 }
 

@@ -482,7 +482,10 @@ class PesertaController extends Controller
             }
         }
 
-        return view('peserta.assessment-kerja', compact('peserta', 'assessment', 'sesiAssessment', 'memos', 'inTrayAnswers', 'items', 'existingRoleplay', 'existingFgd', 'effectiveSesiId'));
+        // Tentukan model in-tray yang digunakan
+        $intrayModel = $assessment->model_in_tray ?? 'urutan';
+        
+        return view('peserta.assessment-kerja', compact('peserta', 'assessment', 'sesiAssessment', 'memos', 'inTrayAnswers', 'items', 'existingRoleplay', 'existingFgd', 'effectiveSesiId', 'intrayModel'));
     }
 
     /**

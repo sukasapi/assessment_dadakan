@@ -699,6 +699,133 @@ class AdminController extends Controller
     }
 
     /**
+     * Get progress data with pagination and filters
+     */
+    public function getProgressData(\Illuminate\Http\Request $request)
+    {
+        try {
+            $perPage = $request->get('per_page', 10);
+            $page = $request->get('page', 1);
+            
+            // Build query
+            $query = \App\Models\SesiPenilaian::with(['participants.peserta', 'assessments.penilaian']);
+            
+            // Apply universal search first
+            if ($request->has('universal_search') && $request->universal_search) {
+                $searchTerm = $request->universal_search;
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('nama', 'like', '%' . $searchTerm . '%')
+                      ->orWhereHas('participants.peserta', function($subQ) use ($searchTerm) {
+                          $subQ->where('nama_lengkap', 'like', '%' . $searchTerm . '%')
+                               ->orWhere('instansi', 'like', '%' . $searchTerm . '%')
+                               ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                      });
+                });
+            }
+            
+            // Apply specific filters
+            if ($request->has('session') && $request->session) {
+                $query->where('nama', 'like', '%' . $request->session . '%');
+            }
+            
+            if ($request->has('participant_name') && $request->participant_name) {
+                $query->whereHas('participants.peserta', function($q) use ($request) {
+                    $q->where('nama_lengkap', 'like', '%' . $request->participant_name . '%');
+                });
+            }
+            
+            if ($request->has('institution') && $request->institution) {
+                $query->whereHas('participants.peserta', function($q) use ($request) {
+                    $q->where('instansi', 'like', '%' . $request->institution . '%');
+                });
+            }
+            
+            $sessions = $query->orderBy('created_at', 'desc')->get();
+            
+            // Flatten data for pagination
+            $allData = [];
+            foreach ($sessions as $session) {
+                foreach ($session->participants as $participant) {
+                    $peserta = $participant->peserta;
+                    
+                    // Get assessment types for this session
+                    $mapJenis = ['studi_kasus' => null, 'in_tray' => null, 'roleplay' => null, 'role_play' => null, 'fgd' => null];
+                    foreach ($session->assessments as $sa) {
+                        $mapJenis[$sa->penilaian->jenis] = $sa->penilaian->id;
+                    }
+                    
+                    
+                    // Get status badges
+                    $statusBadge = function($penilaianId) use($peserta, $session) {
+                        if (!$penilaianId) return '<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 border">tidak tersedia</span>';
+                        
+                        $prog = \App\Models\KemajuanPenilaian::where('peserta_id', $peserta->id)
+                            ->where('penilaian_id', $penilaianId)
+                            ->where('sesi_penilaian_id', $session->id)
+                            ->first();
+                        
+                        $status = $prog->status ?? 'belum';
+                        $color = match($status) {
+                            'sedang_berlangsung' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                            'selesai' => 'bg-green-100 text-green-800 border-green-200',
+                            default => 'bg-gray-100 text-gray-700 border-gray-200'
+                        };
+                        $text = $status === 'sedang_berlangsung' ? 'draft' : ($status === 'selesai' ? 'selesai' : 'belum');
+                        return "<span class=\"px-2 py-0.5 rounded-full text-xs {$color} border\">{$text}</span>";
+                    };
+                    
+                    // Get in-tray model info
+                    $inTrayModel = '';
+                    if ($mapJenis['in_tray']) {
+                        $inTrayPenilaian = \App\Models\Penilaian::find($mapJenis['in_tray']);
+                        if ($inTrayPenilaian) {
+                            $model = $inTrayPenilaian->model_in_tray ?? 'urutan';
+                            $inTrayModel = $model === 'prioritas' ? ' (Prioritas)' : ' (Urutan)';
+                        }
+                    }
+
+                    $allData[] = [
+                        'sesi_id' => $session->id,
+                        'sesi_nama' => $session->nama,
+                        'peserta_id' => $peserta->id,
+                        'peserta_nama' => $peserta->nama_lengkap,
+                        'peserta_email' => $peserta->email,
+                        'peserta_instansi' => $peserta->instansi,
+                        'peserta_jabatan' => $peserta->jabatan,
+                        'studi_kasus_status' => $statusBadge($mapJenis['studi_kasus']),
+                        'in_tray_status' => $statusBadge($mapJenis['in_tray']) . $inTrayModel,
+                        'roleplay_status' => $statusBadge($mapJenis['roleplay'] ?? $mapJenis['role_play']),
+                        'fgd_status' => $statusBadge($mapJenis['fgd'])
+                    ];
+                }
+            }
+            
+            // Manual pagination
+            $total = count($allData);
+            $offset = ($page - 1) * $perPage;
+            $data = array_slice($allData, $offset, $perPage);
+            
+            $lastPage = ceil($total / $perPage);
+            $from = $total > 0 ? $offset + 1 : 0;
+            $to = min($offset + $perPage, $total);
+            
+            return response()->json([
+                'data' => $data,
+                'current_page' => (int) $page,
+                'last_page' => $lastPage,
+                'per_page' => (int) $perPage,
+                'total' => $total,
+                'from' => $from,
+                'to' => $to
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting progress data: ' . $e->getMessage());
+            return response()->json(['error' => 'Terjadi kesalahan saat mengambil data'], 500);
+        }
+    }
+
+    /**
      * Tampilkan progress per peserta
      */
     public function progressPeserta($pesertaId)
@@ -735,9 +862,43 @@ class AdminController extends Controller
     public function exportProgress(\Illuminate\Http\Request $request)
     {
         try {
-            $progressList = KemajuanPenilaian::with(['peserta', 'penilaian'])
-                ->orderBy('created_at', 'desc')
-                ->get();
+            $query = KemajuanPenilaian::with(['peserta', 'penilaian', 'sesiPenilaian']);
+            
+            // Apply universal search first
+            if ($request->has('universal_search') && $request->universal_search) {
+                $searchTerm = $request->universal_search;
+                $query->where(function($q) use ($searchTerm) {
+                    $q->whereHas('sesiPenilaian', function($subQ) use ($searchTerm) {
+                        $subQ->where('nama', 'like', '%' . $searchTerm . '%');
+                    })->orWhereHas('peserta', function($subQ) use ($searchTerm) {
+                        $subQ->where('nama_lengkap', 'like', '%' . $searchTerm . '%')
+                             ->orWhere('instansi', 'like', '%' . $searchTerm . '%')
+                             ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                    });
+                });
+            }
+            
+            // Apply specific filters
+            if ($request->has('session') && $request->session) {
+                $query->whereHas('sesiPenilaian', function($q) use ($request) {
+                    $q->where('nama', 'like', '%' . $request->session . '%');
+                });
+            }
+            
+            
+            if ($request->has('participant_name') && $request->participant_name) {
+                $query->whereHas('peserta', function($q) use ($request) {
+                    $q->where('nama_lengkap', 'like', '%' . $request->participant_name . '%');
+                });
+            }
+            
+            if ($request->has('institution') && $request->institution) {
+                $query->whereHas('peserta', function($q) use ($request) {
+                    $q->where('instansi', 'like', '%' . $request->institution . '%');
+                });
+            }
+            
+            $progressList = $query->orderBy('created_at', 'desc')->get();
 
             $delimiterParam = $request->get('delimiter', ',');
             $delimiter = ($delimiterParam === ';' || $delimiterParam === 'semicolon') ? ';' : ',';
@@ -754,6 +915,7 @@ class AdminController extends Controller
                 
                 // Header CSV
                 fputcsv($file, [
+                    'Nama Sesi',
                     'Nama Peserta',
                     'Email',
                     'Assessment',
@@ -768,11 +930,20 @@ class AdminController extends Controller
 
                 // Data
                 foreach ($progressList as $progress) {
+                    $jenis = $progress->penilaian->jenis;
+                    
+                    // Add model info for in-tray
+                    if ($jenis === 'in_tray') {
+                        $model = $progress->penilaian->model_in_tray ?? 'urutan';
+                        $jenis = $jenis . ' (' . ($model === 'prioritas' ? 'Prioritas' : 'Urutan') . ')';
+                    }
+                    
                     fputcsv($file, [
+                        $progress->sesiPenilaian->nama ?? '-',
                         $progress->peserta->nama_lengkap,
                         $progress->peserta->email,
                         $progress->penilaian->nama_penilaian,
-                        $progress->penilaian->jenis,
+                        $jenis,
                         $progress->status,
                         $progress->waktu_mulai ? $progress->waktu_mulai->format('Y-m-d H:i:s') : '-',
                         $progress->waktu_selesai ? $progress->waktu_selesai->format('Y-m-d H:i:s') : '-',
@@ -790,6 +961,437 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             Log::error('Error exporting progress: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat export data.');
+        }
+    }
+
+    /**
+     * Tampilkan halaman jawaban peserta
+     */
+    public function progressAnswers(\Illuminate\Http\Request $request)
+    {
+        $query = \App\Models\SesiPenilaian::with(['participants.peserta', 'assessments.penilaian']);
+        
+        // Apply filters
+        if ($request->has('session') && $request->session) {
+            $query->where('nama', 'like', '%' . $request->session . '%');
+        }
+        
+        if ($request->has('assessment_type') && $request->assessment_type) {
+            $assessmentType = $request->assessment_type;
+            if ($assessmentType === 'in_tray') {
+                // Filter untuk semua model in-tray
+                $query->whereHas('assessments.penilaian', function($q) {
+                    $q->where('jenis', 'in_tray');
+                });
+            } else if ($assessmentType === 'in_tray_urutan') {
+                // Filter untuk model urutan - tampilkan data yang memiliki jawaban in-tray dengan format urutan
+                $query->whereHas('assessments.penilaian', function($q) {
+                    $q->where('jenis', 'in_tray');
+                })->whereHas('participants.peserta.jawabanInTray', function($q) {
+                    // Cari jawaban yang tidak memiliki prioritas (format urutan)
+                    $q->whereDoesntHave('prioritasMemo');
+                });
+            } else if ($assessmentType === 'in_tray_prioritas') {
+                // Filter untuk model prioritas - tampilkan data yang memiliki jawaban in-tray dengan format prioritas
+                $query->whereHas('assessments.penilaian', function($q) {
+                    $q->where('jenis', 'in_tray');
+                })->whereHas('participants.peserta.jawabanInTray', function($q) {
+                    // Cari jawaban yang memiliki prioritas (format prioritas)
+                    $q->whereHas('prioritasMemo');
+                });
+            } else {
+                // Filter untuk jenis assessment lainnya
+                $query->whereHas('assessments.penilaian', function($q) use ($assessmentType) {
+                    $q->where('jenis', $assessmentType);
+                });
+            }
+        }
+        
+        if ($request->has('participant_name') && $request->participant_name) {
+            $query->whereHas('participants.peserta', function($q) use ($request) {
+                $q->where('nama_lengkap', 'like', '%' . $request->participant_name . '%');
+            });
+        }
+        
+        if ($request->has('institution') && $request->institution) {
+            $query->whereHas('participants.peserta', function($q) use ($request) {
+                $q->where('instansi', 'like', '%' . $request->institution . '%');
+            });
+        }
+        
+        if ($request->has('universal_search') && $request->universal_search) {
+            $searchTerm = $request->universal_search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('nama', 'like', '%' . $searchTerm . '%')
+                  ->orWhereHas('participants.peserta', function($subQ) use ($searchTerm) {
+                      $subQ->where('nama_lengkap', 'like', '%' . $searchTerm . '%')
+                           ->orWhere('email', 'like', '%' . $searchTerm . '%')
+                           ->orWhere('instansi', 'like', '%' . $searchTerm . '%');
+                  });
+            });
+        }
+        
+        if ($request->has('peserta_id') && $request->peserta_id) {
+            $query->whereHas('participants', function($q) use ($request) {
+                $q->where('peserta_id', $request->peserta_id);
+            });
+        }
+        
+        if ($request->has('sesi_id') && $request->sesi_id) {
+            $query->where('id', $request->sesi_id);
+        }
+        
+        // Pagination
+        $perPage = $request->get('per_page', 10);
+        $sessions = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        
+        // Get assessment types for filter
+        $assessmentTypes = \App\Models\Penilaian::distinct()->pluck('jenis');
+        
+        return view('admin.progress.answers', compact('sessions', 'assessmentTypes'));
+    }
+
+    /**
+     * Export jawaban peserta
+     */
+    public function exportAnswers(\Illuminate\Http\Request $request)
+    {
+        try {
+            $query = \App\Models\SesiPenilaian::with(['participants.peserta', 'assessments.penilaian']);
+            
+            // Apply filters
+            if ($request->has('session') && $request->session) {
+                $query->where('nama', 'like', '%' . $request->session . '%');
+            }
+            
+            if ($request->has('assessment_type') && $request->assessment_type) {
+                $assessmentType = $request->assessment_type;
+                if ($assessmentType === 'in_tray') {
+                    // Filter untuk semua model in-tray
+                    $query->whereHas('assessments.penilaian', function($q) {
+                        $q->where('jenis', 'in_tray');
+                    });
+                } else if ($assessmentType === 'in_tray_urutan') {
+                    // Filter untuk model urutan - tampilkan data yang memiliki jawaban in-tray dengan format urutan
+                    $query->whereHas('assessments.penilaian', function($q) {
+                        $q->where('jenis', 'in_tray');
+                    })->whereHas('participants.peserta.jawabanInTray', function($q) {
+                        // Cari jawaban yang tidak memiliki prioritas (format urutan)
+                        $q->whereDoesntHave('prioritasMemo');
+                    });
+                } else if ($assessmentType === 'in_tray_prioritas') {
+                    // Filter untuk model prioritas - tampilkan data yang memiliki jawaban in-tray dengan format prioritas
+                    $query->whereHas('assessments.penilaian', function($q) {
+                        $q->where('jenis', 'in_tray');
+                    })->whereHas('participants.peserta.jawabanInTray', function($q) {
+                        // Cari jawaban yang memiliki prioritas (format prioritas)
+                        $q->whereHas('prioritasMemo');
+                    });
+                } else {
+                    // Filter untuk jenis assessment lainnya
+                    $query->whereHas('assessments.penilaian', function($q) use ($assessmentType) {
+                        $q->where('jenis', $assessmentType);
+                    });
+                }
+            }
+            
+            if ($request->has('participant_name') && $request->participant_name) {
+                $query->whereHas('participants.peserta', function($q) use ($request) {
+                    $q->where('nama_lengkap', 'like', '%' . $request->participant_name . '%');
+                });
+            }
+            
+            if ($request->has('institution') && $request->institution) {
+                $query->whereHas('participants.peserta', function($q) use ($request) {
+                    $q->where('instansi', 'like', '%' . $request->institution . '%');
+                });
+            }
+            
+            if ($request->has('universal_search') && $request->universal_search) {
+                $searchTerm = $request->universal_search;
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('nama', 'like', '%' . $searchTerm . '%')
+                      ->orWhereHas('participants.peserta', function($subQ) use ($searchTerm) {
+                          $subQ->where('nama_lengkap', 'like', '%' . $searchTerm . '%')
+                               ->orWhere('email', 'like', '%' . $searchTerm . '%')
+                               ->orWhere('instansi', 'like', '%' . $searchTerm . '%');
+                      });
+                });
+            }
+            
+            if ($request->has('peserta_id') && $request->peserta_id) {
+                $query->whereHas('participants', function($q) use ($request) {
+                    $q->where('peserta_id', $request->peserta_id);
+                });
+            }
+            
+            if ($request->has('sesi_id') && $request->sesi_id) {
+                $query->where('id', $request->sesi_id);
+            }
+            
+            $sessions = $query->orderBy('created_at', 'desc')->get();
+            
+            $filename = "jawaban_peserta_" . date('Y-m-d_H-i-s') . ".csv";
+            
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename={$filename}",
+            ];
+
+            $callback = function() use ($sessions) {
+                $file = fopen('php://output', 'w');
+                
+                // Header CSV
+                fputcsv($file, [
+                    'Nama Sesi',
+                    'Nama Peserta',
+                    'Email',
+                    'Jenis Assessment',
+                    'Nama Assessment',
+                    'Status Progress',
+                    'Jawaban/Data',
+                    'Waktu Mulai',
+                    'Waktu Selesai'
+                ]);
+
+                // Data
+                foreach ($sessions as $session) {
+                    foreach ($session->participants as $participant) {
+                        $peserta = $participant->peserta;
+                        
+                        foreach ($session->assessments as $sessionAssessment) {
+                            $penilaian = $sessionAssessment->penilaian;
+                            
+                            // Get progress
+                            $progress = \App\Models\KemajuanPenilaian::where('peserta_id', $peserta->id)
+                                ->where('penilaian_id', $penilaian->id)
+                                ->where('sesi_penilaian_id', $session->id)
+                                ->first();
+                            
+                            // Get answers based on assessment type
+                            $jawaban = $this->getAnswersByType($penilaian->jenis, $peserta->id, $penilaian->id, $session->id);
+                            
+                            fputcsv($file, [
+                                $session->nama,
+                                $peserta->nama_lengkap,
+                                $peserta->email,
+                                $penilaian->jenis,
+                                $penilaian->nama_penilaian,
+                                $progress ? $progress->status : 'belum_mulai',
+                                $jawaban,
+                                $progress && $progress->waktu_mulai ? $progress->waktu_mulai->format('Y-m-d H:i:s') : '-',
+                                $progress && $progress->waktu_selesai ? $progress->waktu_selesai->format('Y-m-d H:i:s') : '-'
+                            ]);
+                        }
+                    }
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+
+        } catch (\Exception $e) {
+            Log::error('Error exporting answers: ' . $e->getMessage());
+            return response()->json(['error' => 'Terjadi kesalahan saat export jawaban'], 500);
+        }
+    }
+
+    /**
+     * Get answers by assessment type
+     */
+    private function getAnswersByType($jenis, $pesertaId, $penilaianId, $sesiId)
+    {
+        switch ($jenis) {
+            case 'studi_kasus':
+                $jawaban = \App\Models\JawabanStudiKasus::where('peserta_id', $pesertaId)
+                    ->where('penilaian_id', $penilaianId)
+                    ->where('sesi_penilaian_id', $sesiId)
+                    ->first();
+                return $jawaban ? strip_tags($jawaban->jawaban) : '-';
+                
+        case 'in_tray':
+            $jawaban = \App\Models\JawabanInTray::where('peserta_id', $pesertaId)
+                ->where('penilaian_id', $penilaianId)
+                ->where('sesi_penilaian_id', $sesiId)
+                ->orderBy('urutan_prioritas', 'asc')
+                ->get();
+            
+            if ($jawaban->count() > 0) {
+                // Cek model yang digunakan
+                $penilaian = \App\Models\Penilaian::find($penilaianId);
+                $model = $penilaian->model_in_tray ?? 'urutan';
+                
+                if ($model === 'prioritas') {
+                    $result = [];
+                    foreach ($jawaban as $jawab) {
+                        $memoId = $jawab->latihan_in_tray_id;
+                        $prioritas = $jawab->prioritasMemo;
+                        $prioritasLabel = $prioritas ? $prioritas->priority_label : 'Belum dipilih';
+                        $disposisi = $jawab->disposisi ?: 'Belum ada disposisi';
+                        
+                        $memoInfo = '• memo-' . $memoId . ' | ' . $prioritasLabel . ' | ' . $disposisi;
+                        
+                        // Tambahkan jawaban pertanyaan jika ada
+                        if ($jawab->jawaban_pertanyaan) {
+                            $memoInfo .= ' | Jawaban: ' . strip_tags($jawab->jawaban_pertanyaan);
+                        }
+                        
+                        $result[] = $memoInfo;
+                    }
+                    return implode("\n", $result);
+                } else {
+                    $memoIds = $jawaban->pluck('latihan_in_tray_id')->toArray();
+                    return 'memo-' . implode(', memo-', $memoIds);
+                }
+            }
+            return '-';
+                
+            case 'roleplay':
+                $catatan = \App\Models\CatatanRoleplay::where('peserta_id', $pesertaId)
+                    ->where('penilaian_id', $penilaianId)
+                    ->where('sesi_penilaian_id', $sesiId)
+                    ->first();
+                return $catatan ? strip_tags($catatan->catatan) : '-';
+                
+            case 'fgd':
+                $catatan = \App\Models\CatatanFgd::where('peserta_id', $pesertaId)
+                    ->where('penilaian_id', $penilaianId)
+                    ->where('sesi_penilaian_id', $sesiId)
+                    ->first();
+                return $catatan ? strip_tags($catatan->catatan) : '-';
+                
+            default:
+                return '-';
+        }
+    }
+
+    /**
+     * Get detailed answer for modal
+     */
+    public function getAnswerDetail(\Illuminate\Http\Request $request)
+    {
+        try {
+            $jenis = $request->get('jenis');
+            $pesertaId = $request->get('peserta_id');
+            $penilaianId = $request->get('penilaian_id');
+            $sesiId = $request->get('sesi_id');
+            
+            $peserta = \App\Models\Peserta::find($pesertaId);
+            $penilaian = \App\Models\Penilaian::find($penilaianId);
+            $sesi = \App\Models\SesiPenilaian::find($sesiId);
+            
+            $content = '<div class="space-y-4">';
+            $content .= '<div class="grid grid-cols-2 gap-4 text-sm">';
+            $content .= '<div><strong>Nama Peserta:</strong> ' . $peserta->nama_lengkap . '</div>';
+            $content .= '<div><strong>Email:</strong> ' . ($peserta->email ?? '-') . '</div>';
+            $content .= '<div><strong>Nama Sesi:</strong> ' . $sesi->nama . '</div>';
+            $content .= '<div><strong>Jenis Assessment:</strong> ' . ucfirst(str_replace('_', ' ', $penilaian->jenis)) . '</div>';
+            $content .= '</div>';
+            
+            $content .= '<div class="border-t pt-4">';
+            $content .= '<h4 class="font-medium text-gray-900 mb-2">Jawaban/Data:</h4>';
+            
+            switch ($jenis) {
+                case 'studi_kasus':
+                    $jawaban = \App\Models\JawabanStudiKasus::where('peserta_id', $pesertaId)
+                        ->where('penilaian_id', $penilaianId)
+                        ->where('sesi_penilaian_id', $sesiId)
+                        ->first();
+                    if ($jawaban) {
+                        $content .= '<div class="bg-gray-50 p-4 rounded-md">';
+                        $content .= '<pre class="whitespace-pre-wrap text-sm">' . htmlspecialchars($jawaban->jawaban) . '</pre>';
+                        $content .= '</div>';
+                    } else {
+                        $content .= '<p class="text-gray-500">Belum ada jawaban</p>';
+                    }
+                    break;
+                    
+        case 'in_tray':
+            $jawaban = \App\Models\JawabanInTray::where('peserta_id', $pesertaId)
+                ->where('penilaian_id', $penilaianId)
+                ->where('sesi_penilaian_id', $sesiId)
+                ->orderBy('urutan_prioritas', 'asc')
+                ->get();
+            if ($jawaban->count() > 0) {
+                $content .= '<div class="bg-gray-50 p-4 rounded-md">';
+                
+                // Cek model yang digunakan
+                $penilaian = \App\Models\Penilaian::find($penilaianId);
+                $model = $penilaian->model_in_tray ?? 'urutan';
+                
+                if ($model === 'prioritas') {
+                    $content .= '<div class="font-medium text-sm mb-2">Prioritas Memo:</div>';
+                    foreach ($jawaban as $jawab) {
+                        $memoId = $jawab->latihan_in_tray_id;
+                        $prioritas = $jawab->prioritasMemo;
+                        $prioritasLabel = $prioritas ? $prioritas->priority_label : 'Belum dipilih';
+                        $disposisi = $jawab->disposisi ?: 'Belum ada disposisi';
+                        
+                        $content .= '<div class="text-sm mb-2 p-2 bg-white rounded border-l-4 border-blue-400">';
+                        $content .= '<div class="font-medium text-blue-600">• memo-' . $memoId . '</div>';
+                        $content .= '<div class="text-gray-700 mt-1"><strong>Prioritas:</strong> ' . $prioritasLabel . '</div>';
+                        $content .= '<div class="text-gray-700"><strong>Disposisi:</strong> ' . htmlspecialchars($disposisi) . '</div>';
+                        
+                        // Tampilkan jawaban pertanyaan jika ada
+                        if ($jawab->jawaban_pertanyaan) {
+                            $content .= '<div class="text-gray-600 mt-2 p-2 bg-gray-50 rounded"><strong>Jawaban Pertanyaan:</strong><br>' . htmlspecialchars($jawab->jawaban_pertanyaan) . '</div>';
+                        }
+                        
+                        $content .= '</div>';
+                    }
+                } else {
+                    $content .= '<div class="font-medium text-sm mb-2">Urutan Memo yang Dipilih:</div>';
+                    $memoIds = $jawaban->pluck('latihan_in_tray_id')->toArray();
+                    $content .= '<div class="text-sm">memo-' . implode(', memo-', $memoIds) . '</div>';
+                }
+                
+                $content .= '</div>';
+            } else {
+                $content .= '<p class="text-gray-500">Belum ada jawaban</p>';
+            }
+            break;
+                    
+                case 'roleplay':
+                    $catatan = \App\Models\CatatanRoleplay::where('peserta_id', $pesertaId)
+                        ->where('penilaian_id', $penilaianId)
+                        ->where('sesi_penilaian_id', $sesiId)
+                        ->first();
+                    if ($catatan) {
+                        $content .= '<div class="bg-gray-50 p-4 rounded-md">';
+                        $content .= '<pre class="whitespace-pre-wrap text-sm">' . htmlspecialchars($catatan->catatan) . '</pre>';
+                        $content .= '</div>';
+                    } else {
+                        $content .= '<p class="text-gray-500">Belum ada catatan</p>';
+                    }
+                    break;
+                    
+                case 'fgd':
+                    $catatan = \App\Models\CatatanFgd::where('peserta_id', $pesertaId)
+                        ->where('penilaian_id', $penilaianId)
+                        ->where('sesi_penilaian_id', $sesiId)
+                        ->first();
+                    if ($catatan) {
+                        $content .= '<div class="bg-gray-50 p-4 rounded-md">';
+                        $content .= '<pre class="whitespace-pre-wrap text-sm">' . htmlspecialchars($catatan->catatan) . '</pre>';
+                        $content .= '</div>';
+                    } else {
+                        $content .= '<p class="text-gray-500">Belum ada catatan</p>';
+                    }
+                    break;
+                    
+                default:
+                    $content .= '<p class="text-gray-500">Jenis assessment tidak dikenali</p>';
+            }
+            
+            $content .= '</div>';
+            $content .= '</div>';
+            
+            return response()->json(['content' => $content]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting answer detail: ' . $e->getMessage());
+            return response()->json(['content' => '<p class="text-red-500">Error loading answer details</p>'], 500);
         }
     }
 
@@ -1023,7 +1625,11 @@ class AdminController extends Controller
             'assessments.*.urutan' => 'required|integer|min:1',
             'assessments.*.durasi_default' => 'nullable|integer|min:1',
             'assessments.*.instruksi_khusus' => 'nullable|string',
-            'assessments.*.file_pdf' => 'nullable|file|mimes:pdf|max:10240'
+            'assessments.*.file_pdf' => 'nullable|file|mimes:pdf|max:10240',
+            'assessments.*.model_in_tray' => 'nullable|in:urutan,prioritas',
+            'assessments.*.memos' => 'nullable|array',
+            'assessments.*.memos.*.konten_memo' => 'nullable|string',
+            'assessments.*.memos.*.pertanyaan' => 'nullable|string'
         ]);
 
         try {
@@ -1053,6 +1659,11 @@ class AdminController extends Controller
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
+                        // Update model in-tray di tabel penilaian
+                        if (isset($assessment['model_in_tray'])) {
+                            $penilaian->update(['model_in_tray' => $assessment['model_in_tray']]);
+                        }
+                        
                         $memos = $assessment['memos'] ?? [];
                         if (is_array($memos) && count(array_filter($memos, fn($m) => trim((string)$m) !== '')) > 0) {
                             // Hapus memo lama untuk sesi penilaian ini
@@ -1160,7 +1771,11 @@ class AdminController extends Controller
             'assessments.*.penilaian_id' => 'required|exists:penilaian,id',
             'assessments.*.urutan' => 'required|integer|min:1',
             'assessments.*.durasi_default' => 'nullable|integer|min:1',
-            'assessments.*.instruksi_khusus' => 'nullable|string'
+            'assessments.*.instruksi_khusus' => 'nullable|string',
+            'assessments.*.model_in_tray' => 'nullable|in:urutan,prioritas',
+            'assessments.*.memos' => 'nullable|array',
+            'assessments.*.memos.*.konten_memo' => 'nullable|string',
+            'assessments.*.memos.*.pertanyaan' => 'nullable|string'
         ]);
 
         try {
@@ -1193,6 +1808,11 @@ class AdminController extends Controller
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
+                        // Update model in-tray di tabel penilaian
+                        if (isset($assessment['model_in_tray'])) {
+                            $penilaian->update(['model_in_tray' => $assessment['model_in_tray']]);
+                        }
+                        
                         $memos = $assessment['memos'] ?? [];
                         if (is_array($memos) && count(array_filter($memos, fn($m) => trim((string)$m) !== '')) > 0) {
                             // hapus data lama untuk sesi penilaian ini

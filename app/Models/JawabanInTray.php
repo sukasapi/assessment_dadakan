@@ -20,7 +20,10 @@ class JawabanInTray extends Model
         'urutan_prioritas',
         'disposisi',
         'status',
-        'waktu_simpan'
+        'waktu_simpan',
+        'model_assessment',
+        'pertanyaan',
+        'jawaban_pertanyaan'
     ];
 
     protected $casts = [
@@ -42,5 +45,35 @@ class JawabanInTray extends Model
     public function latihanInTray(): BelongsTo
     {
         return $this->belongsTo(LatihanInTray::class);
+    }
+
+    public function prioritasMemo()
+    {
+        return $this->hasOne(PrioritasMemo::class);
+    }
+
+    // Constants for assessment models
+    const MODEL_URUTAN = 'urutan';
+    const MODEL_PRIORITAS = 'prioritas';
+
+    // Get assessment model options
+    public static function getModelOptions()
+    {
+        return [
+            self::MODEL_URUTAN => 'Model Urutan (Drag-Drop)',
+            self::MODEL_PRIORITAS => 'Model Prioritas (4 Kategori)',
+        ];
+    }
+
+    // Check if using priority model
+    public function isPriorityModel()
+    {
+        return $this->model_assessment === self::MODEL_PRIORITAS;
+    }
+
+    // Check if using order model
+    public function isOrderModel()
+    {
+        return $this->model_assessment === self::MODEL_URUTAN;
     }
 }

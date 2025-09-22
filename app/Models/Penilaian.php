@@ -22,7 +22,8 @@ class Penilaian extends Model
         'file_pdf',
         'durasi_menit',
         'urutan',
-        'aktif'
+        'aktif',
+        'model_in_tray'
     ];
 
     protected $casts = [
@@ -152,5 +153,30 @@ class Penilaian extends Model
     {
         $maxUrutan = static::where('sesi_penilaian_id', $this->sesi_penilaian_id)->max('urutan');
         return $this->urutan == $maxUrutan;
+    }
+
+    // Constants for in-tray models
+    const MODEL_URUTAN = 'urutan';
+    const MODEL_PRIORITAS = 'prioritas';
+
+    // Get in-tray model options
+    public static function getInTrayModelOptions()
+    {
+        return [
+            self::MODEL_URUTAN => 'Model Urutan (Drag-Drop)',
+            self::MODEL_PRIORITAS => 'Model Prioritas (4 Kategori)',
+        ];
+    }
+
+    // Check if using priority model for in-tray
+    public function isInTrayPriorityModel()
+    {
+        return $this->jenis === 'in_tray' && $this->model_in_tray === self::MODEL_PRIORITAS;
+    }
+
+    // Check if using order model for in-tray
+    public function isInTrayOrderModel()
+    {
+        return $this->jenis === 'in_tray' && $this->model_in_tray === self::MODEL_URUTAN;
     }
 }
