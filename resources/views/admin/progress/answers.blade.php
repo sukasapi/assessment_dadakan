@@ -29,6 +29,7 @@
             </div>
             </div>
             
+            
             <!-- Filter Fields -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-2 sm:mb-3">
                 <!-- Left Column -->
@@ -36,12 +37,20 @@
                     <!-- Filter Sesi -->
                     <div>
                         <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nama Sesi</label>
-                        <select id="sessionFilter" class="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select id="sessionFilter" 
+                                class="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {{ request('sesi_id') ? 'bg-gray-100 cursor-not-allowed' : '' }}"
+                                {{ request('sesi_id') ? 'disabled' : '' }}>
                             <option value="">Semua Sesi</option>
                             @foreach(\App\Models\SesiPenilaian::orderBy('nama')->get() as $sesi)
-                                <option value="{{ $sesi->nama }}" {{ request('session') == $sesi->nama ? 'selected' : '' }}>{{ $sesi->nama }}</option>
+                                <option value="{{ $sesi->nama }}" 
+                                        {{ (request('sesi_id') && request('sesi_id') == $sesi->id) || request('session') == $sesi->nama ? 'selected' : '' }}>
+                                    {{ $sesi->nama }}
+                                </option>
                             @endforeach
                         </select>
+                        @if(request('sesi_id'))
+                            <p class="mt-1 text-xs text-gray-500">Filter dinonaktifkan karena sesi sudah dipilih</p>
+                        @endif
                     </div>
                     
                     <!-- Filter Jenis Assessment -->
@@ -67,7 +76,12 @@
                         <input type="text" 
                                id="participantNameFilter" 
                                placeholder="Masukkan nama peserta..."
-                               class="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                               value="{{ request('peserta_id') ? \App\Models\Peserta::find(request('peserta_id'))->nama_lengkap ?? '' : '' }}"
+                               class="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {{ request('peserta_id') ? 'bg-gray-100 cursor-not-allowed' : '' }}"
+                               {{ request('peserta_id') ? 'readonly' : '' }}>
+                        @if(request('peserta_id'))
+                            <p class="mt-1 text-xs text-gray-500">Filter dinonaktifkan karena peserta sudah dipilih</p>
+                        @endif
                     </div>
                     
                     <!-- Filter Instansi -->
@@ -120,7 +134,16 @@
                 <tbody id="answersTableBody" class="bg-white divide-y divide-gray-200 text-sm">
                     @php $row = 1; @endphp
                     @foreach($sessions as $session)
-                        @foreach($session->participants as $participant)
+                        @php
+                            // Filter participants based on request parameters
+                            $filteredParticipants = $session->participants;
+                            
+                            // If peserta_id is specified, only show that participant
+                            if (request('peserta_id')) {
+                                $filteredParticipants = $filteredParticipants->where('peserta_id', request('peserta_id'));
+                            }
+                        @endphp
+                        @foreach($filteredParticipants as $participant)
                             @php $peserta = $participant->peserta; @endphp
                             @foreach($session->assessments as $sessionAssessment)
                                 @php 

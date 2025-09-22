@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PesertaController;
 use App\Http\Controllers\PenilaianController;
+use App\Http\Controllers\InTrayMatrixController;
 use Illuminate\Support\Str;
 
 /*
@@ -99,6 +100,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/assessment-inputs', [App\Http\Controllers\Admin\AssessmentInputController::class, 'index'])->name('assessment-inputs.index');
     Route::get('/assessment-inputs/export', [App\Http\Controllers\Admin\AssessmentInputController::class, 'export'])->name('assessment-inputs.export');
     
+    // In-Tray Matrix
+    Route::get('/intray-matrix/{sesiId}/{pesertaId}', [InTrayMatrixController::class, 'show'])->name('intray-matrix.show');
+    Route::get('/intray-matrix/{sesiId}/{pesertaId}/data', [InTrayMatrixController::class, 'getMatrixData'])->name('intray-matrix.data');
+    
     
     // Manajemen Urutan Assessment
 
@@ -155,6 +160,9 @@ Route::prefix('peserta')->name('peserta.')->middleware(['auth'])->group(function
     
     // Test route untuk debugging
     Route::get('/test-studi-kasus/{id}', [PesertaController::class, 'showStudiKasus'])->name('test.studi-kasus');
+    
+    // In-Tray Matrix (for participants)
+    Route::get('/intray-matrix', [InTrayMatrixController::class, 'show'])->name('intray-matrix.show');
 });
 
 // Test route tanpa middleware untuk debugging studi kasus

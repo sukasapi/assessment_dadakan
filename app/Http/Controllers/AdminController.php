@@ -1019,6 +1019,13 @@ class AdminController extends Controller
             });
         }
         
+        // Filter peserta harus diprioritaskan sebelum universal search
+        if ($request->has('peserta_id') && $request->peserta_id) {
+            $query->whereHas('participants', function($q) use ($request) {
+                $q->where('peserta_id', $request->peserta_id);
+            });
+        }
+        
         if ($request->has('universal_search') && $request->universal_search) {
             $searchTerm = $request->universal_search;
             $query->where(function($q) use ($searchTerm) {
@@ -1028,12 +1035,6 @@ class AdminController extends Controller
                            ->orWhere('email', 'like', '%' . $searchTerm . '%')
                            ->orWhere('instansi', 'like', '%' . $searchTerm . '%');
                   });
-            });
-        }
-        
-        if ($request->has('peserta_id') && $request->peserta_id) {
-            $query->whereHas('participants', function($q) use ($request) {
-                $q->where('peserta_id', $request->peserta_id);
             });
         }
         
@@ -1107,6 +1108,13 @@ class AdminController extends Controller
                 });
             }
             
+            // Filter peserta harus diprioritaskan sebelum universal search
+            if ($request->has('peserta_id') && $request->peserta_id) {
+                $query->whereHas('participants', function($q) use ($request) {
+                    $q->where('peserta_id', $request->peserta_id);
+                });
+            }
+            
             if ($request->has('universal_search') && $request->universal_search) {
                 $searchTerm = $request->universal_search;
                 $query->where(function($q) use ($searchTerm) {
@@ -1116,12 +1124,6 @@ class AdminController extends Controller
                                ->orWhere('email', 'like', '%' . $searchTerm . '%')
                                ->orWhere('instansi', 'like', '%' . $searchTerm . '%');
                       });
-                });
-            }
-            
-            if ($request->has('peserta_id') && $request->peserta_id) {
-                $query->whereHas('participants', function($q) use ($request) {
-                    $q->where('peserta_id', $request->peserta_id);
                 });
             }
             
