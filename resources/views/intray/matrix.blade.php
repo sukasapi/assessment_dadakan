@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('peserta.layouts.app')
 
 @section('title', 'Matriks Prioritas In-Tray')
 
@@ -24,11 +24,11 @@
                             Kembali ke Progress
                         </a>
                     @else
-                        <a href="{{ route('peserta.dashboard') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <a href="{{ route('peserta.assessment.kerja', $inTrayAssessment->penilaian_id) }}?sesi={{ $sesi->id }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                             </svg>
-                            Kembali ke Dashboard
+                            Kembali ke Assessment
                         </a>
                     @endif
                 </div>
@@ -224,21 +224,6 @@
             </div>
         </div>
 
-        <!-- Unanswered Memos -->
-        @if($unansweredMemos->count() > 0)
-        <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 class="text-lg font-semibold text-yellow-800 mb-3">Memo yang Belum Dijawab ({{ $unansweredMemos->count() }})</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                @foreach($unansweredMemos as $memo)
-                    <div class="bg-white border border-yellow-200 rounded p-3">
-                        <h4 class="font-medium text-gray-900 text-sm">{{ $memo->judul_memo }}</h4>
-                        <p class="text-xs text-gray-600 mt-1">{{ Str::limit($memo->konten_memo, 80) }}</p>
-                        <p class="text-xs text-yellow-600 mt-2 font-medium">Belum diprioritaskan</p>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
     </div>
 </div>
 

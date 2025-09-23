@@ -343,32 +343,82 @@ class PesertaController extends Controller
         }
 
         $peserta = Peserta::findOrFail($pesertaId);
-        // id bisa datang sebagai penilaian_id (yang diharapkan),
-        // atau keliru dikirim sebagai sesi_assessment.id. Tangani keduanya.
-        $assessment = Penilaian::with(['sesiPenilaian'])->find($id);
-        if (!$assessment) {
-            $sa = \App\Models\SesiAssessment::find($id);
-            if ($sa) {
-                $assessment = Penilaian::with(['sesiPenilaian'])->findOrFail($sa->penilaian_id);
-            } else {
-                abort(404);
-            }
-        }
-        // Instruksi khusus per sesi-assessment
-        // Pertimbangkan param sesi. Jika tidak ada/invalid, gunakan sesi terdaftar untuk peserta pada penilaian ini
+        
+        // Pertimbangkan param sesi terlebih dahulu untuk menentukan assessment yang tepat
         $requestedSesiId = (int) request()->query('sesi');
         $participantSesiIds = \App\Models\AssessmentParticipant::where('peserta_id', (int) $pesertaId)
             ->pluck('sesi_penilaian_id')
             ->toArray();
-        $effectiveSesiId = $requestedSesiId ?: $assessment->sesi_penilaian_id;
-        if (!in_array($effectiveSesiId, $participantSesiIds, true)) {
-            $effectiveSesiId = \App\Models\SesiAssessment::where('penilaian_id', $assessment->id)
-                ->whereIn('sesi_penilaian_id', $participantSesiIds)
-                ->value('sesi_penilaian_id') ?: $effectiveSesiId;
+        
+        // Jika ada parameter sesi, cari assessment yang sesuai dengan sesi tersebut
+        if ($requestedSesiId && in_array($requestedSesiId, $participantSesiIds, true)) {
+            // Pertama, coba cari assessment dengan ID yang diminta untuk sesi tersebut
+            $sesiAssessment = \App\Models\SesiAssessment::where('sesi_penilaian_id', $requestedSesiId)
+                ->whereHas('penilaian', function($query) use ($id) {
+                    $query->where('id', $id);
+                })
+                ->with(['penilaian.sesiPenilaian'])
+                ->first();
+            
+            if ($sesiAssessment) {
+                $assessment = $sesiAssessment->penilaian;
+                $effectiveSesiId = $requestedSesiId;
+            } else {
+                // Jika assessment dengan ID yang diminta tidak tersedia untuk sesi tersebut,
+                // cari assessment in-tray yang tersedia untuk sesi tersebut
+                $sesiAssessment = \App\Models\SesiAssessment::where('sesi_penilaian_id', $requestedSesiId)
+                    ->whereHas('penilaian', function($query) {
+                        $query->where('jenis', 'in_tray');
+                    })
+                    ->with(['penilaian.sesiPenilaian'])
+                    ->first();
+                
+                if ($sesiAssessment) {
+                    $assessment = $sesiAssessment->penilaian;
+                    $effectiveSesiId = $requestedSesiId;
+                } else {
+                    // Fallback ke logika lama
+                    $assessment = Penilaian::with(['sesiPenilaian'])->find($id);
+                    if (!$assessment) {
+                        $sa = \App\Models\SesiAssessment::find($id);
+                        if ($sa) {
+                            $assessment = Penilaian::with(['sesiPenilaian'])->findOrFail($sa->penilaian_id);
+                        } else {
+                            abort(404);
+                        }
+                    }
+                    $effectiveSesiId = $requestedSesiId ?: $assessment->sesi_penilaian_id;
+                    if (!in_array($effectiveSesiId, $participantSesiIds, true)) {
+                        $effectiveSesiId = \App\Models\SesiAssessment::where('penilaian_id', $assessment->id)
+                            ->whereIn('sesi_penilaian_id', $participantSesiIds)
+                            ->value('sesi_penilaian_id') ?: $effectiveSesiId;
+                    }
+                    $sesiAssessment = \App\Models\SesiAssessment::where('penilaian_id', $assessment->id)
+                        ->where('sesi_penilaian_id', $effectiveSesiId)
+                        ->first();
+                }
+            }
+        } else {
+            // Logika lama untuk backward compatibility
+            $assessment = Penilaian::with(['sesiPenilaian'])->find($id);
+            if (!$assessment) {
+                $sa = \App\Models\SesiAssessment::find($id);
+                if ($sa) {
+                    $assessment = Penilaian::with(['sesiPenilaian'])->findOrFail($sa->penilaian_id);
+                } else {
+                    abort(404);
+                }
+            }
+            $effectiveSesiId = $requestedSesiId ?: $assessment->sesi_penilaian_id;
+            if (!in_array($effectiveSesiId, $participantSesiIds, true)) {
+                $effectiveSesiId = \App\Models\SesiAssessment::where('penilaian_id', $assessment->id)
+                    ->whereIn('sesi_penilaian_id', $participantSesiIds)
+                    ->value('sesi_penilaian_id') ?: $effectiveSesiId;
+            }
+            $sesiAssessment = \App\Models\SesiAssessment::where('penilaian_id', $assessment->id)
+                ->where('sesi_penilaian_id', $effectiveSesiId)
+                ->first();
         }
-        $sesiAssessment = \App\Models\SesiAssessment::where('penilaian_id', $assessment->id)
-            ->where('sesi_penilaian_id', $effectiveSesiId)
-            ->first();
         
         // Debug: Log data assessment
         Log::info('Assessment data:', [

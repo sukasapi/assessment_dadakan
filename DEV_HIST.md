@@ -518,6 +518,180 @@ $matrix = [
 - **Position**: Sejajar dengan tombol "Simpan Sementara" dan "Simpan Final"
 - **Styling**: Purple button dengan icon matriks untuk konsistensi visual
 
+### **Layout Fix**
+- **Issue**: Error "View [layouts.app] not found" pada peserta/intray-matrix
+- **Root Cause**: File `intray/matrix.blade.php` menggunakan `@extends('layouts.app')` yang tidak ada
+- **Solution**: Diubah menjadi `@extends('peserta.layouts.app')` untuk konsistensi dengan layout peserta
+- **File**: `resources/views/intray/matrix.blade.php`
+
+### **Unanswered Memos Removal**
+- **Request**: Hilangkan bagian memo yang belum dijawab dari halaman matriks
+- **Changes**: 
+  - Removed "Unanswered Memos" section dari view
+  - Removed `$unansweredMemos` logic dari controller
+  - Simplified matrix display to show only prioritized memos
+- **Files**: 
+  - `resources/views/intray/matrix.blade.php`
+  - `app/Http/Controllers/InTrayMatrixController.php`
+
+### **Back Button Route Fix**
+- **Request**: Tombol kembali pada halaman matriks harus mengarah ke peserta/assessment bukan ke dashboard
+- **Changes**:
+  - Changed back button route from `peserta.dashboard` to `peserta.assessment.kerja`
+  - Added proper assessment ID parameter: `$inTrayAssessment->penilaian_id`
+  - Added session parameter: `?sesi={{ $sesi->id }}`
+  - Updated button text from "Kembali ke Dashboard" to "Kembali ke Assessment"
+- **File**: `resources/views/intray/matrix.blade.php`
+
+### **In-Tray Question & Answer Enhancement**
+- **Request**: Tambahkan bagian pertanyaan dan jawaban pada form in-tray dengan WYSIWYG editor
+- **Changes**:
+  - Added question display section in memo cards showing admin's questions
+  - Added separate answer display section for participant's answers
+  - Replaced textarea with CKEditor for answer input in modal
+  - Added fallback text "Belum ada pertanyaan" when no question is set
+  - Always show question section in modal for in-tray prioritas model
+  - Updated JavaScript to handle CKEditor initialization and data sync
+  - Removed old textarea event listeners
+- **Files**: 
+  - `resources/views/peserta/assessment-kerja.blade.php`
+- **Features**:
+  - WYSIWYG editor with basic formatting (bold, italic, underline, lists)
+  - Real-time sync between editor and hidden input fields
+  - Display of question text from admin in modal
+  - Fallback handling for missing questions
+
+### **In-Tray Instructions Update**
+- **Request**: Sesuaikan konten info/petunjuk pada halaman peserta/assessment untuk in-tray berdasarkan mode (urutan/prioritas)
+- **Changes**:
+  - Added conditional instructions based on `$intrayModel` variable
+  - Updated instructions for "urutan" mode: drag & drop untuk mengatur urutan prioritas
+  - Updated instructions for "prioritas" mode: pilih kategori prioritas, isi disposisi, jawab pertanyaan
+  - Different workflow guidance for each mode
+  - Clear step-by-step instructions for each assessment type
+- **Files**: 
+  - `resources/views/peserta/assessment-kerja.blade.php`
+- **Features**:
+  - Mode-specific instructions for better user guidance
+  - Clear workflow differences between urutan and prioritas modes
+  - Updated terminology to match actual functionality
+
+### **Question & Answer Section Relocation**
+- **Request**: Pindahkan bagian pertanyaan dan jawaban dari modal ke bawah daftar memo, hanya untuk mode prioritas
+- **Changes**:
+  - Removed question section from modal completely
+  - Added new question & answer section below memo list
+  - Only displays for in-tray with prioritas mode
+  - Each memo with question gets its own section with WYSIWYG editor
+  - Removed all JavaScript related to modal question handling
+  - Added new JavaScript to initialize CKEditor for each question section
+  - Conditional display: only shows if memos exist and mode is prioritas
+- **Files**: 
+  - `resources/views/peserta/assessment-kerja.blade.php`
+- **Features**:
+  - Dedicated section for questions and answers
+  - Individual WYSIWYG editor for each memo's question
+  - Clean separation from modal functionality
+  - Better user experience with dedicated space for Q&A
+
+### **In-Tray Mode Functionality Fix**
+- **Issue**: Mode urutan dan prioritas memiliki cara pengisian yang sama, padahal seharusnya berbeda
+- **Root Cause**: 
+  - `makeSortable()` dipanggil untuk semua mode di DOMContentLoaded
+  - Badge prioritas ditampilkan untuk semua mode
+  - Card memo memiliki cursor-move dan draggable untuk semua mode
+- **Changes**:
+  - Removed automatic `makeSortable()` call from DOMContentLoaded
+  - Added conditional display for priority badge (only for urutan mode)
+  - Added conditional cursor-move class and draggable attribute based on mode
+  - Added conditional sortable class for board based on mode
+  - Fixed modal priority section to only show for prioritas mode
+- **Files**: 
+  - `resources/views/peserta/assessment-kerja.blade.php`
+- **Features**:
+  - Mode urutan: drag & drop functionality, priority badge, no priority selection in modal
+  - Mode prioritas: no drag & drop, priority selection in modal, question & answer section
+  - Proper separation of functionality between modes
+
+### **Drag & Drop Functionality Fix**
+- **Issue**: Drag & drop tidak berfungsi untuk assessment in-tray mode urutan
+- **Root Cause**: 
+  - Konflik antara attribute `draggable` di HTML dan JavaScript
+  - Event listeners mungkin tidak terpasang dengan benar
+  - Timing issue dalam inisialisasi
+- **Changes**:
+  - Removed `draggable` attribute from HTML template
+  - Let JavaScript handle all draggable attributes
+  - Added debug logging to track function calls and event listeners
+  - Enhanced error handling and debugging in makeSortable function
+  - Added console logs to track initialization process
+- **Files**: 
+  - `resources/views/peserta/assessment-kerja.blade.php`
+- **Features**:
+  - Proper drag & drop functionality for urutan mode
+  - Debug logging for troubleshooting
+  - Clean separation between HTML and JavaScript draggable handling
+  - Enhanced error tracking and debugging
+
+### **In-Tray Model Detection Fix**
+- **Issue**: Assessment in-tray mode urutan terbaca sebagai mode prioritas
+- **Root Cause**: 
+  - Semua assessment in-tray di database memiliki `model_in_tray = 'prioritas'`
+  - Tidak ada assessment in-tray dengan mode urutan untuk testing
+  - Console log menunjukkan "prioritas" karena data di database memang prioritas
+- **Changes**:
+  - Created new in-tray assessment with `model_in_tray = 'urutan'` for testing
+  - Copied existing memos to new assessment
+  - Removed debug console logs from JavaScript functions
+  - Cleaned up temporary files
+- **Files**: 
+  - `resources/views/peserta/assessment-kerja.blade.php`
+  - Database: New assessment with ID 5 and 6 (urutan model)
+- **Features**:
+  - Proper mode detection based on database values
+  - Test data available for both urutan and prioritas modes
+  - Clean JavaScript without debug logs
+  - Proper separation of functionality between modes
+
+### **Card 3 Drag & Drop Fix**
+- **Issue**: Card 3 pada mode in-tray urutan tidak bisa di drag & drop
+- **Root Cause**: 
+  - Event listeners mungkin tidak terpasang dengan benar pada card tertentu
+  - Konflik event listeners yang terpasang berulang kali
+  - Masalah dengan DOM manipulation dan event binding
+- **Changes**:
+  - Added comprehensive debug logging to track card setup and event binding
+  - Implemented card cloning to remove existing event listeners before adding new ones
+  - Enhanced error tracking for each card during initialization
+  - Added detailed console logs for drag events (dragstart, dragend, drop)
+- **Files**: 
+  - `resources/views/peserta/assessment-kerja.blade.php`
+- **Features**:
+  - Clean event listener setup for all cards
+  - Debug logging to identify specific card issues
+  - Proper DOM manipulation to prevent event listener conflicts
+  - Enhanced drag & drop reliability for all cards
+
+### **Assessment Model Detection Fix**
+- **Issue**: URL `/peserta/assessment/2/kerja?sesi=5` menampilkan mode prioritas padahal seharusnya urutan
+- **Root Cause**: 
+  - Assessment ID 2 memiliki `model_in_tray = 'prioritas'` di database
+  - Sistem mengambil assessment berdasarkan ID tanpa mempertimbangkan sesi yang diminta
+  - Tidak ada mekanisme untuk override model berdasarkan sesi
+- **Changes**:
+  - Created comprehensive debugging script to analyze assessment data
+  - Updated assessment ID 2 `model_in_tray` from 'prioritas' to 'urutan'
+  - Added detailed logging for assessment model determination
+  - Implemented database verification and fix scripts
+- **Files**: 
+  - Database: `penilaian` table (assessment ID 2)
+  - `app/Http/Controllers/PesertaController.php` (enhanced logging)
+- **Features**:
+  - Correct assessment model detection based on database values
+  - Enhanced debugging capabilities for assessment model issues
+  - Proper URL handling for assessment with session parameters
+  - Database consistency for assessment models
+
 ---
 
 *Dokumen ini berisi seluruh riwayat pengembangan aplikasi Assessment Center dari setup awal hingga fitur-fitur terbaru yang telah diimplementasikan. Mulai sekarang, semua dokumentasi baru akan ditambahkan ke file DEV_HIST.md ini.*
