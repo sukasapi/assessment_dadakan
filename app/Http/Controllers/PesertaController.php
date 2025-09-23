@@ -532,8 +532,8 @@ class PesertaController extends Controller
             }
         }
 
-        // Tentukan model in-tray yang digunakan
-        $intrayModel = $assessment->model_in_tray ?? 'urutan';
+        // Tentukan model in-tray yang digunakan dari sesi_assessment
+        $intrayModel = $sesiAssessment->model_in_tray ?? 'urutan';
         
         return view('peserta.assessment-kerja', compact('peserta', 'assessment', 'sesiAssessment', 'memos', 'inTrayAnswers', 'items', 'existingRoleplay', 'existingFgd', 'effectiveSesiId', 'intrayModel'));
     }

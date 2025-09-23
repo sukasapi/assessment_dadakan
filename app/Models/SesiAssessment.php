@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Aplikasi ini dikembangkan oleh Kusuma Dewangga
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */ 
 class SesiAssessment extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'sesi_assessment';
     
@@ -24,6 +25,7 @@ class SesiAssessment extends Model
         'aktif',
         'durasi_default',
         'instruksi_khusus',
+        'model_in_tray',
         'memos'
     ];
 

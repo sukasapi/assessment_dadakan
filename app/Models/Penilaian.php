@@ -80,7 +80,7 @@ class Penilaian extends Model
 
     public function latihanInTray(): HasMany
     {
-        return $this->hasMany(LatihanInTray::class);
+        return $this->hasMany(LatihanInTray::class)->whereNull('deleted_at');
     }
 
     public function catatanRoleplay(): HasMany

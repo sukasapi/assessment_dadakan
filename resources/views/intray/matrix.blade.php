@@ -63,7 +63,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
                                             <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit($memo['konten'], 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -105,7 +105,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
                                             <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit($memo['konten'], 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -150,7 +150,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
                                             <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit($memo['konten'], 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -192,7 +192,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
                                             <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit($memo['konten'], 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -278,7 +278,10 @@ document.addEventListener('click', function(e) {
 
 function showMemoDetail(id, judul, konten, disposisi, jawaban) {
     document.getElementById('modalTitle').textContent = judul;
-    document.getElementById('modalContent').textContent = konten;
+    // Remove HTML tags from content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = konten;
+    document.getElementById('modalContent').textContent = tempDiv.textContent || tempDiv.innerText || '';
     document.getElementById('modalDisposisi').textContent = disposisi || 'Tidak ada disposisi';
     
     const jawabanContainer = document.getElementById('modalJawabanContainer');

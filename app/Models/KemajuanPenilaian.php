@@ -45,6 +45,12 @@ class KemajuanPenilaian extends Model
         return $this->belongsTo(SesiPenilaian::class);
     }
 
+    public function sesiAssessment(): BelongsTo
+    {
+        return $this->belongsTo(SesiAssessment::class, 'penilaian_id', 'penilaian_id')
+            ->where('sesi_penilaian_id', $this->sesi_penilaian_id);
+    }
+
     // Accessors
     public function getStatusTextAttribute(): string
     {
