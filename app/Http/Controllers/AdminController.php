@@ -1833,6 +1833,13 @@ class AdminController extends Controller
                 ];
             });
 
+        // Debug: Log existing assessments data
+        Log::info('Existing assessments data for edit session', [
+            'sesi_id' => $id,
+            'existing_assessments_count' => $existingAssessments->count(),
+            'existing_assessments_data' => $existingAssessments->toArray()
+        ]);
+
         return view('admin.sesi.edit', compact('sesi', 'assessmentTypes', 'existingAssessments'));
     }
 
