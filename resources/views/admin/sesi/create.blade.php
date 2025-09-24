@@ -312,7 +312,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inisialisasi CKEditor untuk instruksi (bukan memo)
     if (window.ClassicEditor) {
         document.querySelectorAll('.instruksi-editor').forEach(function(el) {
-            ClassicEditor.create(el).catch(err => console.error(err));
+            ClassicEditor.create(el, {
+                toolbar: {
+                    items: [
+                        'bold', 'italic', 'underline', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'outdent', 'indent', '|',
+                        'link', '|',
+                        'undo', 'redo'
+                    ]
+                },
+                list: {
+                    properties: {
+                        styles: true,
+                        startIndex: true,
+                        reversed: true
+                    }
+                }
+            }).catch(err => console.error(err));
         });
     }
 
@@ -478,7 +495,24 @@ function addMemo(button) {
     container.appendChild(wrapper);
 
     if (window.ClassicEditor) {
-        ClassicEditor.create(wrapper.querySelector('textarea')).catch(err => console.error(err));
+        ClassicEditor.create(wrapper.querySelector('textarea'), {
+            toolbar: {
+                items: [
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'link', '|',
+                    'undo', 'redo'
+                ]
+            },
+            list: {
+                properties: {
+                    styles: true,
+                    startIndex: true,
+                    reversed: true
+                }
+            }
+        }).catch(err => console.error(err));
     }
 }
 

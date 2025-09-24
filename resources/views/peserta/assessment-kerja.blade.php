@@ -492,7 +492,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const jawabanEl = document.getElementById('jawaban');
     if (jawabanEl) {
         let jawabanInit = `{!! addslashes($existingJawaban ?? '') !!}`;
-        ClassicEditor.create(jawabanEl, { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
+        ClassicEditor.create(jawabanEl, { 
+            toolbar: {
+                items: [
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'link', '|',
+                    'undo', 'redo'
+                ]
+            },
+            list: {
+                properties: {
+                    styles: true,
+                    startIndex: true,
+                    reversed: true
+                }
+            }
+        })
             .then(ed => { window.jawabanEditor = ed; if (jawabanInit) { ed.setData(jawabanInit); } })
             .catch(err => console.error(err));
     }
@@ -501,14 +518,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const roleplayEl = document.getElementById('roleplayText');
     if (roleplayEl) {
         const initVal = `{!! addslashes($existingRoleplay ?? '') !!}`;
-        ClassicEditor.create(roleplayEl, { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
+        ClassicEditor.create(roleplayEl, { 
+            toolbar: {
+                items: [
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'link', '|',
+                    'undo', 'redo'
+                ]
+            },
+            list: {
+                properties: {
+                    styles: true,
+                    startIndex: true,
+                    reversed: true
+                }
+            }
+        })
             .then(ed => { window.roleplayEditor = ed; if (initVal) ed.setData(initVal); })
             .catch(err => console.error(err));
     }
     const fgdEl = document.getElementById('fgdText');
     if (fgdEl) {
         const initVal = `{!! addslashes($existingFgd ?? '') !!}`;
-        ClassicEditor.create(fgdEl, { toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo'] })
+        ClassicEditor.create(fgdEl, { 
+            toolbar: {
+                items: [
+                    'bold', 'italic', 'underline', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'link', '|',
+                    'undo', 'redo'
+                ]
+            },
+            list: {
+                properties: {
+                    styles: true,
+                    startIndex: true,
+                    reversed: true
+                }
+            }
+        })
             .then(ed => { window.fgdEditor = ed; if (initVal) ed.setData(initVal); })
             .catch(err => console.error(err));
     }
@@ -833,7 +884,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (intrayQuestionEditorEl) {
         ClassicEditor
             .create(intrayQuestionEditorEl, {
-                toolbar: ['bold', 'italic', 'underline', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo'],
+                toolbar: {
+                    items: [
+                        'bold', 'italic', 'underline', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'outdent', 'indent', '|',
+                        'link', '|',
+                        'undo', 'redo'
+                    ]
+                },
+                list: {
+                    properties: {
+                        styles: true,
+                        startIndex: true,
+                        reversed: true
+                    }
+                },
                 height: 200
             })
             .then(editor => {
