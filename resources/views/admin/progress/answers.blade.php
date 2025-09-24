@@ -628,18 +628,21 @@ document.addEventListener('DOMContentLoaded', function(){
                 .then(blob => {
                     const blobUrl = URL.createObjectURL(blob);
                     
-                    // Create PDF embed with blob URL
-                    const embed = document.createElement('embed');
-                    embed.type = 'application/pdf';
-                    embed.src = blobUrl + '#toolbar=0&navpanes=0&view=FitH&zoom=page-width';
-                    embed.className = 'w-full h-full';
+                    // Create iframe for PDF viewing
+                    const iframe = document.createElement('iframe');
+                    iframe.style.width = '100%';
+                    iframe.style.height = '500px';
+                    iframe.style.border = '1px solid #eeeeee';
+                    iframe.src = pdfUrl + '#zoom=80';
+                    iframe.frameBorder = '0';
+                    iframe.allowFullscreen = true;
                     
-                    embed.onload = function() {
+                    iframe.onload = function() {
                         content.innerHTML = '';
-                        content.appendChild(embed);
+                        content.appendChild(iframe);
                     };
                     
-                    embed.onerror = function() {
+                    iframe.onerror = function() {
                         content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal memuat PDF</div>';
                     };
                     
