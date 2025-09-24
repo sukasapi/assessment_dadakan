@@ -77,14 +77,17 @@ class InTrayMatrixController extends Controller
             return redirect()->route($redirectRoute)->with('error', 'Tidak ada assessment in-tray dengan mode prioritas untuk sesi ini');
         }
         
-        // Get all memos for this assessment
+        // Get memos for this assessment and session
         $memos = LatihanInTray::where('penilaian_id', $inTrayAssessment->penilaian_id)
-            ->orderBy('id')
+            ->where('sesi_penilaian_id', $sesi->id)
+            ->where('aktif', true)
+            ->orderBy('urutan')
             ->get();
             
-        // Get participant's answers with priorities
+        // Get participant's answers with priorities for this session
         $jawaban = JawabanInTray::where('peserta_id', $peserta->id)
             ->where('penilaian_id', $inTrayAssessment->penilaian_id)
+            ->where('sesi_penilaian_id', $sesi->id)
             ->whereHas('prioritasMemo')
             ->with('prioritasMemo', 'latihanInTray')
             ->get();
@@ -104,10 +107,9 @@ class InTrayMatrixController extends Controller
             if ($memo && $prioritas) {
                 $memoData = [
                     'id' => $memo->id,
-                    'judul' => $memo->judul_memo,
+                    'judul' => $this->extractTitleFromContent($memo->konten_memo),
                     'konten' => $memo->konten_memo,
                     'disposisi' => $jawab->disposisi,
-                    'jawaban_pertanyaan' => $jawab->jawaban_pertanyaan,
                     'prioritas_label' => $prioritas->priority_label,
                     'kategori_prioritas' => $prioritas->kategori_prioritas
                 ];
@@ -167,9 +169,10 @@ class InTrayMatrixController extends Controller
             return response()->json(['error' => 'No in-tray assessment found'], 404);
         }
         
-        // Get participant's answers
+        // Get participant's answers for this session
         $jawaban = JawabanInTray::where('peserta_id', $pesertaId)
             ->where('penilaian_id', $inTrayAssessment->penilaian_id)
+            ->where('sesi_penilaian_id', $sesiId)
             ->whereHas('prioritasMemo')
             ->with('prioritasMemo', 'latihanInTray')
             ->get();
@@ -188,10 +191,9 @@ class InTrayMatrixController extends Controller
             if ($memo && $prioritas) {
                 $memoData = [
                     'id' => $memo->id,
-                    'judul' => $memo->judul_memo,
+                    'judul' => $this->extractTitleFromContent($memo->konten_memo),
                     'konten' => $memo->konten_memo,
                     'disposisi' => $jawab->disposisi,
-                    'jawaban_pertanyaan' => $jawab->jawaban_pertanyaan,
                     'prioritas_label' => $prioritas->priority_label,
                     'kategori_prioritas' => $prioritas->kategori_prioritas
                 ];
@@ -205,5 +207,28 @@ class InTrayMatrixController extends Controller
             'peserta' => $peserta->nama_lengkap,
             'sesi' => $sesi->nama
         ]);
+    }
+    
+    /**
+     * Extract title from memo content
+     */
+    private function extractTitleFromContent($content)
+    {
+        if (empty($content)) {
+            return 'Memo Tanpa Judul';
+        }
+        
+        // Remove HTML tags
+        $cleanContent = strip_tags($content);
+        
+        // Get first line or first 50 characters
+        $lines = explode("\n", $cleanContent);
+        $firstLine = trim($lines[0]);
+        
+        if (strlen($firstLine) > 50) {
+            return substr($firstLine, 0, 50) . '...';
+        }
+        
+        return $firstLine ?: 'Memo Tanpa Judul';
     }
 }

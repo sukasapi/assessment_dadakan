@@ -163,7 +163,7 @@
                         required>
                     <option value="">Pilih Assessment</option>
                                             @foreach($assessmentTypes as $assessment)
-                            <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}">{{ $assessment->nama }}</option>
+                            <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}" data-file="{{ $assessment->file_pdf ?? '' }}" data-url="{{ $assessment->file_pdf ? Storage::url($assessment->file_pdf) : '' }}">{{ $assessment->nama }}</option>
                         @endforeach
                 </select>
             </div>
@@ -226,6 +226,23 @@
                 <div class="pdf-status text-sm text-gray-600"></div>
             </div>
             <p class="mt-1 text-xs text-gray-500">Upload file PDF untuk deskripsi soal studi kasus (max 10MB)</p>
+            
+            <!-- Current PDF Display -->
+            <div class="mt-2 current-pdf-display" style="display: none;">
+                <p class="text-sm text-gray-600">PDF saat ini: <span class="current-pdf-name font-medium"></span></p>
+                <div class="flex gap-2 mt-2">
+                    <button type="button" 
+                            onclick="previewCurrentPdf(INDEX)"
+                            class="inline-flex items-center px-2 py-1 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        👁️ Preview PDF
+                    </button>
+                    <button type="button" 
+                            onclick="deleteCurrentPdf(INDEX)"
+                            class="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        🗑️ Hapus PDF
+                    </button>
+                </div>
+            </div>
         </div>
         
         <!-- Model In-Tray Selection - HIDDEN FIELD -->
@@ -245,6 +262,27 @@
     </div>
 </template>
 @endsection
+
+<!-- PDF Preview Modal -->
+<div id="pdfPreviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-4 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Preview PDF</h3>
+                <button onclick="closePdfPreview()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="pdfPreviewContent" class="w-full h-[80vh] border rounded-lg overflow-hidden">
+                <div class="flex items-center justify-center h-full text-gray-500">
+                    Memuat PDF...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section('scripts')
 <script>
@@ -338,6 +376,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (flashErrorDiv && flashErrorDiv.dataset.message) {
         showNotification(flashErrorDiv.dataset.message, 'error');
     }
+
+    // Trigger togglePdfUpload for existing assessments
+    document.querySelectorAll('select[name*="[penilaian_id]"]').forEach(function(select) {
+        if (select.value) {
+            togglePdfUpload(select);
+        }
+    });
 });
 
 // Function to update available options
@@ -413,8 +458,39 @@ function togglePdfUpload(selectElement) {
     const intrayModelSection = assessmentItem.querySelector('.intray-model-section');
     const selectedOption = selectElement.options[selectElement.selectedIndex];
     
-    if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus') {
+    
+    // PDF upload tersedia untuk studi_kasus, roleplay, dan fgd
+    if (selectedOption && (selectedOption.dataset.jenis === 'studi_kasus' || 
+                          selectedOption.dataset.jenis === 'roleplay' || 
+                          selectedOption.dataset.jenis === 'fgd')) {
         pdfSection.style.display = 'block';
+        // Check if there's existing PDF
+        checkExistingPdf(assessmentItem, selectedOption.value, selectedOption.dataset.file);
+        
+        // Update label berdasarkan jenis assessment
+        const pdfLabel = pdfSection.querySelector('label');
+        if (pdfLabel) {
+            if (selectedOption.dataset.jenis === 'studi_kasus') {
+                pdfLabel.textContent = 'Upload PDF Studi Kasus';
+            } else if (selectedOption.dataset.jenis === 'roleplay') {
+                pdfLabel.textContent = 'Upload PDF Role-Play';
+            } else if (selectedOption.dataset.jenis === 'fgd') {
+                pdfLabel.textContent = 'Upload PDF LGD/FGD';
+            }
+        }
+        
+        // Update description
+        const pdfDescription = pdfSection.querySelector('p.text-xs');
+        if (pdfDescription) {
+            if (selectedOption.dataset.jenis === 'studi_kasus') {
+                pdfDescription.textContent = 'Upload file PDF untuk deskripsi soal studi kasus (max 10MB)';
+            } else if (selectedOption.dataset.jenis === 'roleplay') {
+                pdfDescription.textContent = 'Upload file PDF untuk skenario dan instruksi role-play (max 10MB)';
+            } else if (selectedOption.dataset.jenis === 'fgd') {
+                pdfDescription.textContent = 'Upload file PDF untuk topik dan panduan LGD/FGD (max 10MB)';
+            }
+        }
+        
         if (memoSection) memoSection.style.display = 'none';
         if (intrayModelSection) intrayModelSection.style.display = 'none';
     } else {
@@ -445,6 +521,18 @@ function togglePdfUpload(selectElement) {
     }
 }
 
+// Function to check existing PDF for assessment
+function checkExistingPdf(assessmentItem, penilaianId, existingFile) {
+    const currentPdfDisplay = assessmentItem.querySelector('.current-pdf-display');
+    const currentPdfName = assessmentItem.querySelector('.current-pdf-name');
+    if (existingFile && currentPdfDisplay && currentPdfName) {
+        currentPdfDisplay.style.display = 'block';
+        currentPdfName.textContent = existingFile.split('/').pop();
+    } else if (currentPdfDisplay) {
+        currentPdfDisplay.style.display = 'none';
+    }
+}
+
 // Function to handle PDF upload
 function handlePdfUpload(inputElement, index) {
     const file = inputElement.files[0];
@@ -471,6 +559,178 @@ function handlePdfUpload(inputElement, index) {
         statusDiv.className = 'pdf-status text-sm text-green-600';
     } else {
         statusDiv.textContent = '';
+    }
+}
+
+// PDF Preview functionality
+function previewCurrentPdf(index) {
+    const assessmentItem = document.querySelectorAll('.assessment-item')[index] || 
+                          document.querySelector(`[data-assessment-index="${index}"]`);
+    
+    if (!assessmentItem) {
+        console.error('Assessment item not found for index:', index);
+        return;
+    }
+    
+    const selectElement = assessmentItem.querySelector('select[name*="[penilaian_id]"]');
+    if (!selectElement) {
+        console.error('Select element not found');
+        return;
+    }
+    
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    if (!selectedOption || !selectedOption.dataset.file) {
+        alert('Tidak ada PDF yang tersedia untuk di-preview');
+        return;
+    }
+    
+    const pdfFile = selectedOption.dataset.file;
+    const penilaianId = selectedOption.value;
+    
+    // Show modal
+    const modal = document.getElementById('pdfPreviewModal');
+    const content = document.getElementById('pdfPreviewContent');
+    
+    if (!modal || !content) {
+        console.error('PDF preview modal elements not found');
+        return;
+    }
+    
+    modal.classList.remove('hidden');
+    content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Memuat PDF...</div>';
+    
+    // Build PDF URL
+    const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
+    
+    // Disable right-click context menu
+    content.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    
+    // Disable keyboard shortcuts for save/print
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // Fetch PDF as blob to prevent direct access
+    fetch(pdfUrl)
+        .then(response => response.blob())
+        .then(blob => {
+            const blobUrl = URL.createObjectURL(blob);
+            
+            // Create PDF embed with blob URL
+            const embed = document.createElement('embed');
+            embed.type = 'application/pdf';
+            embed.src = blobUrl + '#toolbar=0&navpanes=0&view=FitH&zoom=page-width';
+            embed.className = 'w-full h-full';
+            
+            embed.onload = function() {
+                content.innerHTML = '';
+                content.appendChild(embed);
+            };
+            
+            embed.onerror = function() {
+                content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal memuat PDF</div>';
+            };
+            
+            // Cleanup blob URL when modal closes
+            const modal = document.getElementById('pdfPreviewModal');
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        if (modal.classList.contains('hidden')) {
+                            URL.revokeObjectURL(blobUrl);
+                            observer.disconnect();
+                        }
+                    }
+                });
+            });
+            observer.observe(modal, { attributes: true });
+        })
+        .catch(function(error) {
+            console.error('Error fetching PDF:', error);
+            content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal mengambil PDF</div>';
+        });
+}
+
+function closePdfPreview() {
+    const modal = document.getElementById('pdfPreviewModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('pdfPreviewModal');
+    if (modal && e.target === modal) {
+        closePdfPreview();
+    }
+});
+
+// Toast Notification util
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl transform transition-all duration-300 ease-in-out translate-x-full opacity-0 ${
+        type === 'success'
+            ? 'bg-green-500 text-white border-l-4 border-green-600'
+            : 'bg-red-500 text-white border-l-4 border-red-600'
+    }`;
+    const icon = type === 'success'
+        ? '<svg class="w-5 h-5 mr-3 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>'
+        : '<svg class="w-5 h-5 mr-3 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+    notification.innerHTML = icon + message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.classList.add('translate-x-0', 'opacity-100');
+    }, 100);
+    setTimeout(() => {
+        notification.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
+}
+
+// Function to delete current PDF
+function deleteCurrentPdf(index) {
+    if (confirm('Apakah Anda yakin ingin menghapus PDF ini?')) {
+        const assessmentItem = document.querySelectorAll('.assessment-item')[index] || 
+                              document.querySelector(`[data-assessment-index="${index}"]`);
+        
+        if (!assessmentItem) {
+            console.error('Assessment item not found for index:', index);
+            return;
+        }
+        
+        const currentPdfDisplay = assessmentItem.querySelector('.current-pdf-display');
+        const currentPdfName = assessmentItem.querySelector('.current-pdf-name');
+        
+        if (currentPdfDisplay) {
+            currentPdfDisplay.style.display = 'none';
+        }
+        
+        if (currentPdfName) {
+            currentPdfName.textContent = '';
+        }
+        
+        // Clear any file input
+        const pdfInput = assessmentItem.querySelector('input[type="file"]');
+        if (pdfInput) {
+            pdfInput.value = '';
+        }
+        
+        // Clear PDF status
+        const statusDiv = assessmentItem.querySelector('.pdf-status');
+        if (statusDiv) {
+            statusDiv.textContent = '';
+            statusDiv.className = 'pdf-status text-sm text-gray-600';
+        }
+        
+        // Show success message
+        showNotification('PDF berhasil dihapus', 'success');
     }
 }
 

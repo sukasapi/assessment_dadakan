@@ -42,51 +42,143 @@
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h2 class="text-xl font-semibold text-gray-900 mb-4">Deskripsi Soal</h2>
                     @if($assessment->file_pdf)
+                        <!-- PDF untuk Studi Kasus -->
                         @php
                             $pdfUrl = route('assessment.pdf.view', ['penilaianId' => $assessment->id, 'filename' => $assessment->file_pdf]);
                         @endphp
                         <div class="w-full border rounded-md overflow-hidden">
-                            <div id="pdfInlineContainer" class="w-full h-[70vh] flex items-center justify-center text-gray-500">
-                                Memuat PDF...
+                            <div id="studiKasusPdfViewer" class="w-full h-[70vh] bg-gray-100 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                    <p class="text-gray-600">Memuat PDF...</p>
+                                </div>
                             </div>
                         </div>
-                        @push('scripts')
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
                         <script>
-                        (function(){
-                            const url = "{{ $pdfUrl }}";
-                            const container = document.getElementById('pdfInlineContainer');
-                            fetch(url, {
-                                method: 'GET',
-                                headers: { 'Accept': 'application/pdf' },
-                                credentials: 'same-origin'
-                            }).then(async (res) => {
-                                if (!res.ok) throw new Error('Gagal memuat PDF');
-                                const blob = await res.blob();
-                                const blobUrl = URL.createObjectURL(blob);
-                                container.innerHTML = '';
-                                const embed = document.createElement('embed');
-                                embed.type = 'application/pdf';
-                                // Sembunyikan toolbar default browser
-                                embed.src = blobUrl + '#toolbar=0&navpanes=0&view=FitH&zoom=page-width';
-                                embed.className = 'w-full h-full';
-                                // Nonaktifkan klik kanan di area viewer
-                                embed.addEventListener('contextmenu', (e) => e.preventDefault());
-                                container.appendChild(embed);
-                                
-                                // Cegah shortcut simpan/cetak (Ctrl+S / Ctrl+P)
-                                document.addEventListener('keydown', function(e){
-                                    const isCtrl = e.ctrlKey || e.metaKey;
-                                    if (isCtrl && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'p')) {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                    }
-                                });
-                            }).catch(() => {
-                                container.textContent = 'Tidak dapat menampilkan PDF. Silakan buka di tab baru.';
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const container = document.getElementById('studiKasusPdfViewer');
+                            const originalUrl = "{{ $pdfUrl }}";
+                            
+                            // Set PDF.js worker
+                            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                            
+                            // Disable right-click context menu
+                            container.addEventListener('contextmenu', function(e) {
+                                e.preventDefault();
+                                return false;
                             });
-                        })();
+                            
+                            // Disable keyboard shortcuts for save/print
+                            document.addEventListener('keydown', function(e) {
+                                if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
+                                    e.preventDefault();
+                                    return false;
+                                }
+                            });
+                            
+                            // Fetch PDF as blob to prevent direct access
+                            fetch(originalUrl)
+                                .then(response => response.blob())
+                                .then(blob => {
+                                    const blobUrl = URL.createObjectURL(blob);
+                                    
+                                    // Load PDF using PDF.js with blob URL
+                                    return pdfjsLib.getDocument(blobUrl).promise;
+                                })
+                                .then(function(pdf) {
+                                    // Create canvas for first page
+                                    const canvas = document.createElement('canvas');
+                                    const context = canvas.getContext('2d');
+                                    
+                                    pdf.getPage(1).then(function(page) {
+                                        const viewport = page.getViewport({ scale: 1.5 });
+                                        canvas.height = viewport.height;
+                                        canvas.width = viewport.width;
+                                        
+                                        const renderContext = {
+                                            canvasContext: context,
+                                            viewport: viewport
+                                        };
+                                        
+                                        page.render(renderContext).promise.then(function() {
+                                            container.innerHTML = '';
+                                            container.appendChild(canvas);
+                                            
+                                            // Add navigation if multiple pages
+                                            if (pdf.numPages > 1) {
+                                                const navDiv = document.createElement('div');
+                                                navDiv.className = 'flex justify-center items-center gap-4 mt-4';
+                                                
+                                                const prevBtn = document.createElement('button');
+                                                prevBtn.textContent = '← Previous';
+                                                prevBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+                                                
+                                                const nextBtn = document.createElement('button');
+                                                nextBtn.textContent = 'Next →';
+                                                nextBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+                                                
+                                                const pageInfo = document.createElement('span');
+                                                pageInfo.textContent = `Page 1 of ${pdf.numPages}`;
+                                                
+                                                let currentPage = 1;
+                                                
+                                                prevBtn.onclick = function() {
+                                                    if (currentPage > 1) {
+                                                        currentPage--;
+                                                        renderPage(currentPage);
+                                                        pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages}`;
+                                                    }
+                                                };
+                                                
+                                                nextBtn.onclick = function() {
+                                                    if (currentPage < pdf.numPages) {
+                                                        currentPage++;
+                                                        renderPage(currentPage);
+                                                        pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages}`;
+                                                    }
+                                                };
+                                                
+                                                function renderPage(pageNum) {
+                                                    pdf.getPage(pageNum).then(function(page) {
+                                                        const viewport = page.getViewport({ scale: 1.5 });
+                                                        canvas.height = viewport.height;
+                                                        canvas.width = viewport.width;
+                                                        
+                                                        const renderContext = {
+                                                            canvasContext: context,
+                                                            viewport: viewport
+                                                        };
+                                                        
+                                                        page.render(renderContext);
+                                                    });
+                                                }
+                                                
+                                                navDiv.appendChild(prevBtn);
+                                                navDiv.appendChild(pageInfo);
+                                                navDiv.appendChild(nextBtn);
+                                                
+                                                container.appendChild(navDiv);
+                                            }
+                                        });
+                                    });
+                                }).catch(function(error) {
+                                    console.error('Error loading PDF:', error);
+                                    container.innerHTML = '<div class="text-center text-red-600 p-8"><p>Gagal memuat PDF. Silakan refresh halaman.</p></div>';
+                                });
+                            }).catch(function(error) {
+                                console.error('Error fetching PDF:', error);
+                                container.innerHTML = '<div class="text-center text-red-600 p-8"><p>Gagal mengambil PDF. Silakan refresh halaman.</p></div>';
+                            });
+                            
+                            // Cleanup blob URL when page unloads
+                            window.addEventListener('beforeunload', function() {
+                                if (typeof blobUrl !== 'undefined') {
+                                    URL.revokeObjectURL(blobUrl);
+                                }
+                            });
+                        });
                         </script>
-                        @endpush
                     @else
                         <div class="flex flex-col items-center justify-center h-32 text-gray-500">
                             <p class="text-lg font-medium">Deskripsi soal belum tersedia</p>
