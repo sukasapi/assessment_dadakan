@@ -280,6 +280,12 @@
                                                     Lihat Detail
                                                 </button>
                                             @endif
+                                            @if(($penilaian->jenis === 'studi_kasus' || $penilaian->jenis === 'roleplay' || $penilaian->jenis === 'fgd') && $penilaian->file_pdf)
+                                                <button data-action="view-pdf" data-penilaian-id="{{ $penilaian->id }}" data-pdf-file="{{ $penilaian->file_pdf }}" 
+                                                        class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded hover:bg-purple-200 transition-colors">
+                                                    📄 Lihat PDF
+                                                </button>
+                                            @endif
                                             <button data-action="download-answer" data-peserta-id="{{ $peserta->id }}" data-penilaian-id="{{ $penilaian->id }}" data-sesi-id="{{ $session->id }}" 
                                                     class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200 transition-colors">
                                                 Download
@@ -364,6 +370,27 @@
             </div>
             <div id="modalContent" class="text-sm text-gray-700">
                 <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal untuk melihat PDF -->
+<div id="pdfViewerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-4 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">PDF Assessment</h3>
+                <button onclick="closePdfViewer()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="pdfViewerContent" class="w-full h-[80vh] border rounded-lg overflow-hidden">
+                <div class="flex items-center justify-center h-full text-gray-500">
+                    Memuat PDF...
+                </div>
             </div>
         </div>
     </div>
@@ -560,16 +587,102 @@ document.addEventListener('DOMContentLoaded', function(){
             
             window.location.href = '{{ route("admin.progress.export-answers") }}?peserta_id=' + pesertaId + '&penilaian_id=' + penilaianId + '&sesi_id=' + sesiId;
         }
+        
+        if (e.target.getAttribute('data-action') === 'view-pdf') {
+            e.preventDefault();
+            const penilaianId = e.target.getAttribute('data-penilaian-id');
+            const pdfFile = e.target.getAttribute('data-pdf-file');
+            
+            // Show PDF viewer modal
+            const modal = document.getElementById('pdfViewerModal');
+            const content = document.getElementById('pdfViewerContent');
+            
+            if (!modal || !content) {
+                console.error('PDF viewer modal elements not found');
+                return;
+            }
+            
+            modal.classList.remove('hidden');
+            content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Memuat PDF...</div>';
+            
+            // Build PDF URL
+            const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
+            
+            // Disable right-click context menu
+            content.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Disable keyboard shortcuts for save/print
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            
+            // Fetch PDF as blob to prevent direct access
+            fetch(pdfUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    // Create PDF embed with blob URL
+                    const embed = document.createElement('embed');
+                    embed.type = 'application/pdf';
+                    embed.src = blobUrl + '#toolbar=0&navpanes=0&view=FitH&zoom=page-width';
+                    embed.className = 'w-full h-full';
+                    
+                    embed.onload = function() {
+                        content.innerHTML = '';
+                        content.appendChild(embed);
+                    };
+                    
+                    embed.onerror = function() {
+                        content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal memuat PDF</div>';
+                    };
+                    
+                    // Cleanup blob URL when modal closes
+                    const modal = document.getElementById('pdfViewerModal');
+                    const observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                                if (modal.classList.contains('hidden')) {
+                                    URL.revokeObjectURL(blobUrl);
+                                    observer.disconnect();
+                                }
+                            }
+                        });
+                    });
+                    observer.observe(modal, { attributes: true });
+                })
+                .catch(function(error) {
+                    console.error('Error fetching PDF:', error);
+                    content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal mengambil PDF</div>';
+                });
+        }
     });
     
     window.closeModal = function() {
         document.getElementById('answerModal').classList.add('hidden');
     };
     
+    window.closePdfViewer = function() {
+        document.getElementById('pdfViewerModal').classList.add('hidden');
+    };
+    
     // Close modal when clicking outside
     document.getElementById('answerModal').addEventListener('click', function(e) {
         if (e.target === this) {
             closeModal();
+        }
+    });
+    
+    // Close PDF viewer modal when clicking outside
+    document.getElementById('pdfViewerModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePdfViewer();
         }
     });
     

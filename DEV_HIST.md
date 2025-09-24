@@ -692,6 +692,60 @@ $matrix = [
   - Proper URL handling for assessment with session parameters
   - Database consistency for assessment models
 
+### **In-Tray Matrix Memo Filtering Fix**
+- **Issue**: Memo yang muncul di halaman peserta/in-tray-matrix masih tercampur dengan memo dari sesi lain
+- **Root Cause**: 
+  - Field `judul_memo` tidak ada di database, yang ada hanya `konten_memo`
+  - Query tidak memfilter berdasarkan `sesi_penilaian_id` untuk memastikan memo hanya dari sesi yang tepat
+  - Relasi antara `JawabanInTray` dan `LatihanInTray` tidak mempertimbangkan sesi
+- **Changes**:
+  - Fixed field reference from `$memo->judul_memo` to `$memo->konten_memo` with title extraction
+  - Added `sesi_penilaian_id` filter to both memo and answer queries
+  - Added `aktif = true` filter to ensure only active memos are shown
+  - Added `orderBy('urutan')` for proper memo ordering
+  - Created `extractTitleFromContent()` method to generate titles from memo content
+  - Updated both `show()` and `getMatrixData()` methods with consistent filtering
+- **Files**: 
+  - `app/Http/Controllers/InTrayMatrixController.php`
+- **Features**:
+  - Proper session-based memo filtering
+  - Title extraction from memo content (first line, max 50 characters)
+  - Consistent filtering across all matrix methods
+  - Only active memos are displayed
+  - Proper memo ordering based on `urutan` field
+
+### **PDF Viewer Security Enhancement - Anti-Download Protection**
+- **Issue**: PDF viewer masih memungkinkan download dan akses langsung ke file PDF
+- **Root Cause**: 
+  - Implementasi iframe/embed masih menggunakan URL langsung yang bisa diakses
+  - Tidak ada proteksi terhadap right-click dan keyboard shortcuts
+  - Hosting server mungkin memaksa PDF menjadi attachment
+- **Changes**:
+  1. **Laravel Response Headers**: Sudah menggunakan `Content-Disposition: inline`
+  2. **.htaccess Rules**: Ditambahkan rules untuk memaksa inline display dan mencegah direct access
+  3. **PDF.js Implementation**: Implementasi PDF.js dengan blob URL untuk mencegah akses langsung
+  4. **Security Features**:
+     - Disable right-click context menu
+     - Disable keyboard shortcuts (Ctrl+S, Ctrl+P, Ctrl+A)
+     - Fetch PDF as blob dan gunakan blob URL
+     - Cleanup blob URL saat modal ditutup
+     - Disable toolbar dan navigation di embed
+- **Files Modified**:
+  - `public/.htaccess` - Added PDF security headers
+  - `resources/views/peserta/assessment-kerja.blade.php` - Enhanced PDF.js implementation
+  - `resources/views/peserta/assessment-studi-kasus.blade.php` - Replaced iframe with PDF.js
+  - `resources/views/admin/sesi/create.blade.php` - Enhanced PDF preview
+  - `resources/views/admin/sesi/edit.blade.php` - Enhanced PDF preview
+  - `resources/views/admin/progress/answers.blade.php` - Enhanced PDF viewer
+- **Security Features Implemented**:
+  - Blob URL untuk mencegah direct access
+  - Context menu disabled
+  - Keyboard shortcuts disabled
+  - PDF toolbar disabled
+  - Automatic blob cleanup
+  - Server-side headers untuk inline display
+- **Testing**: PDF sekarang hanya bisa dilihat inline dan tidak bisa didownload atau diakses langsung
+
 ---
 
 *Dokumen ini berisi seluruh riwayat pengembangan aplikasi Assessment Center dari setup awal hingga fitur-fitur terbaru yang telah diimplementasikan. Mulai sekarang, semua dokumentasi baru akan ditambahkan ke file DEV_HIST.md ini.*

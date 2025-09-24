@@ -23,3 +23,21 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# PDF Security Headers - Force inline display and prevent download
+<FilesMatch "\.(pdf)$">
+    Header set Content-Disposition "inline"
+    Header set Content-Type "application/pdf"
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header unset Content-Length
+</FilesMatch>
+
+# Prevent direct access to PDF files in storage
+<FilesMatch "storage/app/public/assessments/pdf/.*\.pdf$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>

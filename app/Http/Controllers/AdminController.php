@@ -1716,6 +1716,33 @@ class AdminController extends Controller
                 } catch (\Exception $e) {
                     Log::error('Gagal menyimpan memos in-tray (create): ' . $e->getMessage());
                 }
+
+                // Jika jenis studi_kasus, roleplay, atau fgd dan ada file upload, simpan ke Penilaian
+                try {
+                    $penilaian = Penilaian::find($assessment['penilaian_id']);
+                    if ($penilaian && in_array($penilaian->jenis, ['studi_kasus', 'roleplay', 'fgd'])) {
+                        if ($request->hasFile("assessments.$index.file_pdf")) {
+                            // Hapus file lama jika ada
+                            if (!empty($penilaian->file_pdf)) {
+                                Storage::disk('public')->delete($penilaian->file_pdf);
+                            }
+                            // Upload baru
+                            $filePath = $request->file("assessments.$index.file_pdf")->store('assessments/pdf', 'public');
+                            $penilaian->update(['file_pdf' => $filePath]);
+                            
+                            Log::info('PDF uploaded successfully for create', [
+                                'penilaian_id' => $penilaian->id,
+                                'jenis' => $penilaian->jenis,
+                                'file_path' => $filePath
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Gagal menyimpan PDF assessment pada create sesi: ' . $e->getMessage(), [
+                        'penilaian_id' => $assessment['penilaian_id'],
+                        'index' => $index
+                    ]);
+                }
             }
 
             DB::commit();
@@ -2078,10 +2105,10 @@ class AdminController extends Controller
                     Log::error('Gagal menyimpan memos in-tray (update): ' . $e->getMessage());
                 }
 
-                // Jika jenis studi_kasus dan ada file upload, simpan ke Penilaian
+                // Jika jenis studi_kasus, roleplay, atau fgd dan ada file upload, simpan ke Penilaian
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
-                    if ($penilaian && $penilaian->jenis === 'studi_kasus') {
+                    if ($penilaian && in_array($penilaian->jenis, ['studi_kasus', 'roleplay', 'fgd'])) {
                         if ($request->hasFile("assessments.$index.file_pdf")) {
                             // Hapus file lama jika ada
                             if (!empty($penilaian->file_pdf)) {
@@ -2090,10 +2117,19 @@ class AdminController extends Controller
                             // Upload baru
                             $filePath = $request->file("assessments.$index.file_pdf")->store('assessments/pdf', 'public');
                             $penilaian->update(['file_pdf' => $filePath]);
+                            
+                            Log::info('PDF uploaded successfully for update', [
+                                'penilaian_id' => $penilaian->id,
+                                'jenis' => $penilaian->jenis,
+                                'file_path' => $filePath
+                            ]);
                         }
                     }
                 } catch (\Exception $e) {
-                    Log::error('Gagal menyimpan PDF studi kasus pada update sesi: ' . $e->getMessage());
+                    Log::error('Gagal menyimpan PDF assessment pada update sesi: ' . $e->getMessage(), [
+                        'penilaian_id' => $assessment['penilaian_id'],
+                        'index' => $index
+                    ]);
                 }
             }
 

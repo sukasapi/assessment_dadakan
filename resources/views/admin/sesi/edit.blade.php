@@ -234,11 +234,18 @@
             <!-- Current PDF Display -->
             <div class="mt-2 current-pdf-display" style="display: none;">
                 <p class="text-sm text-gray-600">PDF saat ini: <span class="current-pdf-name font-medium"></span></p>
-                <button type="button" 
-                        onclick="deleteCurrentPdf(INDEX)"
-                        class="mt-1 inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                    Hapus PDF
-                </button>
+                <div class="flex gap-2 mt-2">
+                    <button type="button" 
+                            onclick="previewCurrentPdf(INDEX)"
+                            class="inline-flex items-center px-2 py-1 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        👁️ Preview PDF
+                    </button>
+                    <button type="button" 
+                            onclick="deleteCurrentPdf(INDEX)"
+                            class="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        🗑️ Hapus PDF
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -258,6 +265,27 @@
     </div>
 </template>
 @endsection
+
+<!-- PDF Preview Modal -->
+<div id="pdfPreviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-4 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Preview PDF</h3>
+                <button onclick="closePdfPreview()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="pdfPreviewContent" class="w-full h-[80vh] border rounded-lg overflow-hidden">
+                <div class="flex items-center justify-center h-full text-gray-500">
+                    Memuat PDF...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section('scripts')
 <script>
@@ -298,9 +326,11 @@ function addAssessment(data = null) {
         if (durasiInput) durasiInput.value = data.durasi_default || '';
         if (instruksiTextarea) instruksiTextarea.value = data.instruksi_khusus || '';
 
-        // Tampilkan section upload PDF jika jenis adalah studi_kasus
+        // Tampilkan section upload PDF jika jenis adalah studi_kasus, roleplay, atau fgd
         const selectedOption = penilaianSelect ? penilaianSelect.options[penilaianSelect.selectedIndex] : null;
-        if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus') {
+        if (selectedOption && (selectedOption.dataset.jenis === 'studi_kasus' || 
+                              selectedOption.dataset.jenis === 'roleplay' || 
+                              selectedOption.dataset.jenis === 'fgd')) {
             const pdfSection = clone.querySelector('.pdf-upload-section');
             if (pdfSection) {
                 pdfSection.style.display = 'block';
@@ -446,6 +476,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Trigger togglePdfUpload for existing assessments
+    document.querySelectorAll('select[name*="[penilaian_id]"]').forEach(function(select) {
+        if (select.value) {
+            togglePdfUpload(select);
+        }
+    });
+
     // Tampilkan notifikasi error dari flash (jika ada)
     const flashErrorDiv = document.getElementById('flashError');
     if (flashErrorDiv && flashErrorDiv.dataset.message) {
@@ -551,10 +588,39 @@ function togglePdfUpload(selectElement) {
     const intrayModelSection = assessmentItem.querySelector('.intray-model-section');
     const selectedOption = selectElement.options[selectElement.selectedIndex];
     
-    if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus') {
+    
+    // PDF upload tersedia untuk studi_kasus, roleplay, dan fgd
+    if (selectedOption && (selectedOption.dataset.jenis === 'studi_kasus' || 
+                          selectedOption.dataset.jenis === 'roleplay' || 
+                          selectedOption.dataset.jenis === 'fgd')) {
         pdfSection.style.display = 'block';
         // Check if there's existing PDF
         checkExistingPdf(assessmentItem, selectedOption.value, selectedOption.dataset.file);
+        
+        // Update label berdasarkan jenis assessment
+        const pdfLabel = pdfSection.querySelector('label');
+        if (pdfLabel) {
+            if (selectedOption.dataset.jenis === 'studi_kasus') {
+                pdfLabel.textContent = 'Upload PDF Studi Kasus';
+            } else if (selectedOption.dataset.jenis === 'roleplay') {
+                pdfLabel.textContent = 'Upload PDF Role-Play';
+            } else if (selectedOption.dataset.jenis === 'fgd') {
+                pdfLabel.textContent = 'Upload PDF LGD/FGD';
+            }
+        }
+        
+        // Update description
+        const pdfDescription = pdfSection.querySelector('p.text-xs');
+        if (pdfDescription) {
+            if (selectedOption.dataset.jenis === 'studi_kasus') {
+                pdfDescription.textContent = 'Upload file PDF untuk deskripsi soal studi kasus (max 10MB)';
+            } else if (selectedOption.dataset.jenis === 'roleplay') {
+                pdfDescription.textContent = 'Upload file PDF untuk skenario dan instruksi role-play (max 10MB)';
+            } else if (selectedOption.dataset.jenis === 'fgd') {
+                pdfDescription.textContent = 'Upload file PDF untuk topik dan panduan LGD/FGD (max 10MB)';
+            }
+        }
+        
         if (memoSection) memoSection.style.display = 'none';
         if (intrayModelSection) intrayModelSection.style.display = 'none';
     } else {
@@ -618,6 +684,116 @@ function handlePdfUpload(inputElement, index) {
     }
 }
 
+// PDF Preview functionality
+function previewCurrentPdf(index) {
+    const assessmentItem = document.querySelector(`[data-assessment-index="${index}"]`) || 
+                          document.querySelectorAll('.assessment-item')[index];
+    
+    if (!assessmentItem) {
+        console.error('Assessment item not found for index:', index);
+        return;
+    }
+    
+    const selectElement = assessmentItem.querySelector('select[name*="[penilaian_id]"]');
+    if (!selectElement) {
+        console.error('Select element not found');
+        return;
+    }
+    
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    if (!selectedOption || !selectedOption.dataset.file) {
+        alert('Tidak ada PDF yang tersedia untuk di-preview');
+        return;
+    }
+    
+    const pdfFile = selectedOption.dataset.file;
+    const penilaianId = selectedOption.value;
+    
+    // Show modal
+    const modal = document.getElementById('pdfPreviewModal');
+    const content = document.getElementById('pdfPreviewContent');
+    
+    if (!modal || !content) {
+        console.error('PDF preview modal elements not found');
+        return;
+    }
+    
+    modal.classList.remove('hidden');
+    content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Memuat PDF...</div>';
+    
+    // Build PDF URL
+    const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
+    
+    // Disable right-click context menu
+    content.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    
+    // Disable keyboard shortcuts for save/print
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // Fetch PDF as blob to prevent direct access
+    fetch(pdfUrl)
+        .then(response => response.blob())
+        .then(blob => {
+            const blobUrl = URL.createObjectURL(blob);
+            
+            // Create PDF embed with blob URL
+            const embed = document.createElement('embed');
+            embed.type = 'application/pdf';
+            embed.src = blobUrl + '#toolbar=0&navpanes=0&view=FitH&zoom=page-width';
+            embed.className = 'w-full h-full';
+            
+            embed.onload = function() {
+                content.innerHTML = '';
+                content.appendChild(embed);
+            };
+            
+            embed.onerror = function() {
+                content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal memuat PDF</div>';
+            };
+            
+            // Cleanup blob URL when modal closes
+            const modal = document.getElementById('pdfPreviewModal');
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        if (modal.classList.contains('hidden')) {
+                            URL.revokeObjectURL(blobUrl);
+                            observer.disconnect();
+                        }
+                    }
+                });
+            });
+            observer.observe(modal, { attributes: true });
+        })
+        .catch(function(error) {
+            console.error('Error fetching PDF:', error);
+            content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal mengambil PDF</div>';
+        });
+}
+
+function closePdfPreview() {
+    const modal = document.getElementById('pdfPreviewModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('pdfPreviewModal');
+    if (modal && e.target === modal) {
+        closePdfPreview();
+    }
+});
+
 // Toast Notification util (selaras dengan index)
 function showNotification(message, type) {
     const notification = document.createElement('div');
@@ -643,11 +819,23 @@ function showNotification(message, type) {
 // Function to delete current PDF
 function deleteCurrentPdf(index) {
     if (confirm('Apakah Anda yakin ingin menghapus PDF ini?')) {
-        // This would typically make an AJAX call to delete the PDF
-        const assessmentItem = document.querySelector(`[name*="[${index}][penilaian_id]"]`).closest('.assessment-item');
+        const assessmentItem = document.querySelectorAll('.assessment-item')[index] || 
+                              document.querySelector(`[data-assessment-index="${index}"]`);
+        
+        if (!assessmentItem) {
+            console.error('Assessment item not found for index:', index);
+            return;
+        }
+        
         const currentPdfDisplay = assessmentItem.querySelector('.current-pdf-display');
+        const currentPdfName = assessmentItem.querySelector('.current-pdf-name');
+        
         if (currentPdfDisplay) {
             currentPdfDisplay.style.display = 'none';
+        }
+        
+        if (currentPdfName) {
+            currentPdfName.textContent = '';
         }
         
         // Clear any file input
@@ -655,6 +843,16 @@ function deleteCurrentPdf(index) {
         if (pdfInput) {
             pdfInput.value = '';
         }
+        
+        // Clear PDF status
+        const statusDiv = assessmentItem.querySelector('.pdf-status');
+        if (statusDiv) {
+            statusDiv.textContent = '';
+            statusDiv.className = 'pdf-status text-sm text-gray-600';
+        }
+        
+        // Show success message
+        showNotification('PDF berhasil dihapus', 'success');
     }
 }
 

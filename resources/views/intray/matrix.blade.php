@@ -73,7 +73,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
-                                                data-jawaban="{{ $memo['jawaban_pertanyaan'] }}">
+>
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -115,7 +115,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
-                                                data-jawaban="{{ $memo['jawaban_pertanyaan'] }}">
+>
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -160,7 +160,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
-                                                data-jawaban="{{ $memo['jawaban_pertanyaan'] }}">
+>
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -202,7 +202,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
-                                                data-jawaban="{{ $memo['jawaban_pertanyaan'] }}">
+>
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -248,10 +248,6 @@
                     <label class="block text-sm font-medium text-gray-700">Disposisi</label>
                     <div class="mt-1 p-3 bg-blue-50 rounded-md text-sm text-gray-900" id="modalDisposisi"></div>
                 </div>
-                <div id="modalJawabanContainer" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700">Jawaban Pertanyaan</label>
-                    <div class="mt-1 p-3 bg-green-50 rounded-md text-sm text-gray-900" id="modalJawaban"></div>
-                </div>
             </div>
             <div class="flex justify-end mt-6">
                 <button onclick="closeMemoModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
@@ -270,29 +266,17 @@ document.addEventListener('click', function(e) {
         const judul = e.target.getAttribute('data-judul');
         const konten = e.target.getAttribute('data-konten');
         const disposisi = e.target.getAttribute('data-disposisi');
-        const jawaban = e.target.getAttribute('data-jawaban');
-        
-        showMemoDetail(id, judul, konten, disposisi, jawaban);
+        showMemoDetail(id, judul, konten, disposisi);
     }
 });
 
-function showMemoDetail(id, judul, konten, disposisi, jawaban) {
+function showMemoDetail(id, judul, konten, disposisi) {
     document.getElementById('modalTitle').textContent = judul;
     // Remove HTML tags from content
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = konten;
     document.getElementById('modalContent').textContent = tempDiv.textContent || tempDiv.innerText || '';
     document.getElementById('modalDisposisi').textContent = disposisi || 'Tidak ada disposisi';
-    
-    const jawabanContainer = document.getElementById('modalJawabanContainer');
-    const jawabanElement = document.getElementById('modalJawaban');
-    
-    if (jawaban && jawaban.trim() !== '') {
-        jawabanElement.textContent = jawaban;
-        jawabanContainer.classList.remove('hidden');
-    } else {
-        jawabanContainer.classList.add('hidden');
-    }
     
     document.getElementById('memoModal').classList.remove('hidden');
 }

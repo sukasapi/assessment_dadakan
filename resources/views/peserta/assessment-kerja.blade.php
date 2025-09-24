@@ -22,9 +22,7 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengisian:</h2>
                 <div class="prose max-w-none">
-                    @if(isset($sesiAssessment) && !empty($sesiAssessment->instruksi_khusus))
-                        {!! $sesiAssessment->instruksi_khusus !!}
-                    @elseif(!empty($assessment->petunjuk))
+                    @if(!empty($assessment->petunjuk))
                         {!! $assessment->petunjuk !!}
                     @else
                         <p class="text-gray-500 italic">Petunjuk pengisian belum tersedia.</p>
@@ -125,12 +123,6 @@
                                         </div>
                                         @endif
                                         
-                                        @if($__jawaban)
-                                        <div class="memo-answer-text text-xxs text-gray-600 mt-1">
-                                            <span class="font-medium">Jawaban:</span>
-                                            <span class="memo-answer-text-value">{{ Str::limit($__jawaban, 50) }}</span>
-                                        </div>
-                                        @endif
                                     </div>
                                 @endforeach
                             @else
@@ -202,6 +194,148 @@
                         @endif
                         @break
                     @case('roleplay')
+                        <!-- Skenario dan Instruksi Role-Play -->
+                        <div class="mb-6">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Skenario dan Instruksi Role-Play</h2>
+                            @if($assessment->file_pdf)
+                                <!-- PDF untuk Role-Play -->
+                                @php
+                                    $pdfUrl = route('assessment.pdf.view', ['penilaianId' => $assessment->id, 'filename' => $assessment->file_pdf]);
+                                @endphp
+                                <div class="w-full border rounded-md overflow-hidden">
+                                    <div id="roleplayPdfViewer" class="w-full h-[70vh] bg-gray-100 flex items-center justify-center">
+                                        <div class="text-center">
+                                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                            <p class="text-gray-600">Memuat PDF...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+                                <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const container = document.getElementById('roleplayPdfViewer');
+                                    const originalUrl = "{{ $pdfUrl }}";
+                                    
+                                    // Set PDF.js worker
+                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                                    
+                                    // Disable right-click context menu
+                                    container.addEventListener('contextmenu', function(e) {
+                                        e.preventDefault();
+                                        return false;
+                                    });
+                                    
+                                    // Disable keyboard shortcuts for save/print
+                                    document.addEventListener('keydown', function(e) {
+                                        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
+                                            e.preventDefault();
+                                            return false;
+                                        }
+                                    });
+                                    
+                                    // Fetch PDF as blob to prevent direct access
+                                    fetch(originalUrl)
+                                        .then(response => response.blob())
+                                        .then(blob => {
+                                            const blobUrl = URL.createObjectURL(blob);
+                                            
+                                            // Load PDF using PDF.js with blob URL
+                                            return pdfjsLib.getDocument(blobUrl).promise;
+                                        })
+                                        .then(function(pdf) {
+                                        // Create canvas for first page
+                                        const canvas = document.createElement('canvas');
+                                        const context = canvas.getContext('2d');
+                                        
+                                        pdf.getPage(1).then(function(page) {
+                                            const viewport = page.getViewport({ scale: 1.5 });
+                                            canvas.height = viewport.height;
+                                            canvas.width = viewport.width;
+                                            
+                                            const renderContext = {
+                                                canvasContext: context,
+                                                viewport: viewport
+                                            };
+                                            
+                                            page.render(renderContext).promise.then(function() {
+                                                container.innerHTML = '';
+                                                container.appendChild(canvas);
+                                                
+                                                // Add navigation if multiple pages
+                                                if (pdf.numPages > 1) {
+                                                    const navDiv = document.createElement('div');
+                                                    navDiv.className = 'flex justify-center items-center gap-4 mt-4';
+                                                    
+                                                    const prevBtn = document.createElement('button');
+                                                    prevBtn.textContent = '← Previous';
+                                                    prevBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+                                                    
+                                                    const nextBtn = document.createElement('button');
+                                                    nextBtn.textContent = 'Next →';
+                                                    nextBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+                                                    
+                                                    const pageInfo = document.createElement('span');
+                                                    pageInfo.textContent = `Page 1 of ${pdf.numPages}`;
+                                                    
+                                                    let currentPage = 1;
+                                                    
+                                                    prevBtn.onclick = function() {
+                                                        if (currentPage > 1) {
+                                                            currentPage--;
+                                                            renderPage(currentPage);
+                                                            pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages}`;
+                                                        }
+                                                    };
+                                                    
+                                                    nextBtn.onclick = function() {
+                                                        if (currentPage < pdf.numPages) {
+                                                            currentPage++;
+                                                            renderPage(currentPage);
+                                                            pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages}`;
+                                                        }
+                                                    };
+                                                    
+                                                    function renderPage(pageNum) {
+                                                        pdf.getPage(pageNum).then(function(page) {
+                                                            const viewport = page.getViewport({ scale: 1.5 });
+                                                            canvas.height = viewport.height;
+                                                            canvas.width = viewport.width;
+                                                            
+                                                            const renderContext = {
+                                                                canvasContext: context,
+                                                                viewport: viewport
+                                                            };
+                                                            
+                                                            page.render(renderContext);
+                                                        });
+                                                    }
+                                                    
+                                                    navDiv.appendChild(prevBtn);
+                                                    navDiv.appendChild(pageInfo);
+                                                    navDiv.appendChild(nextBtn);
+                                                    
+                                                    container.appendChild(navDiv);
+                                                }
+                                            });
+                                        });
+                                    }).catch(function(error) {
+                                        container.innerHTML = '<div class="text-center text-red-600 p-8"><p>Gagal memuat PDF. Silakan refresh halaman.</p></div>';
+                                    });
+                                });
+                                </script>
+                            @elseif(isset($sesiAssessment) && !empty($sesiAssessment->instruksi_khusus))
+                                <!-- Fallback: Instruksi Khusus jika tidak ada PDF -->
+                                <div class="prose max-w-none bg-gray-50 p-4 rounded-lg border">
+                                    {!! $sesiAssessment->instruksi_khusus !!}
+                                </div>
+                            @else
+                                <div class="flex flex-col items-center justify-center h-32 text-gray-500">
+                                    <p class="text-lg font-medium">Skenario Role-Play belum tersedia</p>
+                                    <p class="text-sm">Silakan hubungi administrator untuk informasi lebih lanjut.</p>
+                                </div>
+                            @endif
+                        </div>
+                        
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Catatan Saya</h2>
                         <!--   @if(isset($items) && $items->count())
                              <div class="space-y-4 mb-6">
@@ -221,6 +355,144 @@
                         @break
 
                     @case('fgd')
+                        <!-- Topik dan Panduan LGD/FGD -->
+                        <div class="mb-6">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Topik dan Panduan LGD/FGD</h2>
+                            @if($assessment->file_pdf)
+                                <!-- PDF untuk LGD/FGD -->
+                                @php
+                                    $pdfUrl = route('assessment.pdf.view', ['penilaianId' => $assessment->id, 'filename' => $assessment->file_pdf]);
+                                @endphp
+                                <div class="w-full border rounded-md overflow-hidden">
+                                    <div id="fgdPdfViewer" class="w-full h-[70vh] bg-gray-100 flex items-center justify-center">
+                                        <div class="text-center">
+                                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                            <p class="text-gray-600">Memuat PDF...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const container = document.getElementById('fgdPdfViewer');
+                                    const originalUrl = "{{ $pdfUrl }}";
+                                    
+                                    // Disable right-click context menu
+                                    container.addEventListener('contextmenu', function(e) {
+                                        e.preventDefault();
+                                        return false;
+                                    });
+                                    
+                                    // Disable keyboard shortcuts for save/print
+                                    document.addEventListener('keydown', function(e) {
+                                        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
+                                            e.preventDefault();
+                                            return false;
+                                        }
+                                    });
+                                    
+                                    // Fetch PDF as blob to prevent direct access
+                                    fetch(originalUrl)
+                                        .then(response => response.blob())
+                                        .then(blob => {
+                                            const blobUrl = URL.createObjectURL(blob);
+                                            
+                                            // Load PDF using PDF.js with blob URL
+                                            return pdfjsLib.getDocument(blobUrl).promise;
+                                        })
+                                        .then(function(pdf) {
+                                        // Create canvas for first page
+                                        const canvas = document.createElement('canvas');
+                                        const context = canvas.getContext('2d');
+                                        
+                                        pdf.getPage(1).then(function(page) {
+                                            const viewport = page.getViewport({ scale: 1.5 });
+                                            canvas.height = viewport.height;
+                                            canvas.width = viewport.width;
+                                            
+                                            const renderContext = {
+                                                canvasContext: context,
+                                                viewport: viewport
+                                            };
+                                            
+                                            page.render(renderContext).promise.then(function() {
+                                                container.innerHTML = '';
+                                                container.appendChild(canvas);
+                                                
+                                                // Add navigation if multiple pages
+                                                if (pdf.numPages > 1) {
+                                                    const navDiv = document.createElement('div');
+                                                    navDiv.className = 'flex justify-center items-center gap-4 mt-4';
+                                                    
+                                                    const prevBtn = document.createElement('button');
+                                                    prevBtn.textContent = '← Previous';
+                                                    prevBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+                                                    
+                                                    const nextBtn = document.createElement('button');
+                                                    nextBtn.textContent = 'Next →';
+                                                    nextBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+                                                    
+                                                    const pageInfo = document.createElement('span');
+                                                    pageInfo.textContent = `Page 1 of ${pdf.numPages}`;
+                                                    
+                                                    let currentPage = 1;
+                                                    
+                                                    prevBtn.onclick = function() {
+                                                        if (currentPage > 1) {
+                                                            currentPage--;
+                                                            renderPage(currentPage);
+                                                            pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages}`;
+                                                        }
+                                                    };
+                                                    
+                                                    nextBtn.onclick = function() {
+                                                        if (currentPage < pdf.numPages) {
+                                                            currentPage++;
+                                                            renderPage(currentPage);
+                                                            pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages}`;
+                                                        }
+                                                    };
+                                                    
+                                                    function renderPage(pageNum) {
+                                                        pdf.getPage(pageNum).then(function(page) {
+                                                            const viewport = page.getViewport({ scale: 1.5 });
+                                                            canvas.height = viewport.height;
+                                                            canvas.width = viewport.width;
+                                                            
+                                                            const renderContext = {
+                                                                canvasContext: context,
+                                                                viewport: viewport
+                                                            };
+                                                            
+                                                            page.render(renderContext);
+                                                        });
+                                                    }
+                                                    
+                                                    navDiv.appendChild(prevBtn);
+                                                    navDiv.appendChild(pageInfo);
+                                                    navDiv.appendChild(nextBtn);
+                                                    
+                                                    container.appendChild(navDiv);
+                                                }
+                                            });
+                                        });
+                                    }).catch(function(error) {
+                                        container.innerHTML = '<div class="text-center text-red-600 p-8"><p>Gagal memuat PDF. Silakan refresh halaman.</p></div>';
+                                    });
+                                });
+                                </script>
+                            @elseif(isset($sesiAssessment) && !empty($sesiAssessment->instruksi_khusus))
+                                <!-- Fallback: Instruksi Khusus jika tidak ada PDF -->
+                                <div class="prose max-w-none bg-gray-50 p-4 rounded-lg border">
+                                    {!! $sesiAssessment->instruksi_khusus !!}
+                                </div>
+                            @else
+                                <div class="flex flex-col items-center justify-center h-32 text-gray-500">
+                                    <p class="text-lg font-medium">Topik LGD/FGD belum tersedia</p>
+                                    <p class="text-sm">Silakan hubungi administrator untuk informasi lebih lanjut.</p>
+                                </div>
+                            @endif
+                        </div>
+                        
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Catatan Saya</h2>
                         <!-- @if(isset($items) && $items->count())
                              <div class="space-y-4 mb-6">

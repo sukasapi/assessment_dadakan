@@ -138,6 +138,26 @@ Route::get('/admin/assessment/{penilaianId}/pdf/{filename}', function($penilaian
     ]);
 })->where('filename', '.*')->name('assessment.pdf.view');
 
+// Route khusus untuk inline PDF display (mencegah download)
+Route::get('/pdf/inline/{penilaianId}/{filename}', function($penilaianId, $filename) {
+    $relativePath = Str::startsWith($filename, 'assessments/pdf') ? $filename : ('assessments/pdf/' . $filename);
+    $path = storage_path('app/public/' . $relativePath);
+
+    if (!file_exists($path)) {
+        abort(404);
+    }
+
+    return response()->file($path, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="' . basename($relativePath) . '"',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Pragma' => 'no-cache',
+        'Expires' => '0',
+        'X-Content-Type-Options' => 'nosniff',
+        'X-Frame-Options' => 'SAMEORIGIN'
+    ]);
+})->where('filename', '.*')->name('pdf.inline');
+
 // Routes untuk Peserta (dengan auth middleware)
 Route::prefix('peserta')->name('peserta.')->middleware(['auth'])->group(function () {
     Route::get('/dashboard', [PesertaController::class, 'dashboard'])->name('dashboard');
