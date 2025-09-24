@@ -628,11 +628,27 @@ document.addEventListener('DOMContentLoaded', function(){
                 .then(blob => {
                     const blobUrl = URL.createObjectURL(blob);
                     
-                    // Create PDF embed with blob URL
+                    // Create PDF embed with blob URL and responsive controls
                     const embed = document.createElement('embed');
                     embed.type = 'application/pdf';
                     embed.src = blobUrl + '#toolbar=0&navpanes=0&view=FitH&zoom=page-width';
                     embed.className = 'w-full h-full';
+                    
+                    // Add responsive CSS
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        #pdfViewerContent embed {
+                            max-width: 100%;
+                            height: auto;
+                            min-height: 500px;
+                        }
+                        @media (max-width: 768px) {
+                            #pdfViewerContent embed {
+                                min-height: 400px;
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
                     
                     embed.onload = function() {
                         content.innerHTML = '';

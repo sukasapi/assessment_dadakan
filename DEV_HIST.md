@@ -746,6 +746,46 @@ $matrix = [
   - Server-side headers untuk inline display
 - **Testing**: PDF sekarang hanya bisa dilihat inline dan tidak bisa didownload atau diakses langsung
 
+### **PDF Viewer Responsive Controls Enhancement**
+- **Issue**: PDF viewer tidak memiliki kontrol dan terpotong terutama pada desktop mobile
+- **Root Cause**: 
+  - Scale tetap 1.5 yang tidak responsive terhadap ukuran layar
+  - Tidak ada kontrol zoom atau fit-to-width
+  - Canvas tidak responsive dan bisa terpotong
+  - Tidak ada overflow handling untuk layar kecil
+- **Changes**:
+  1. **Responsive Scale Calculation**: 
+     - Menghitung scale berdasarkan lebar container
+     - Scale minimum 0.5, maksimum 2.0
+     - Otomatis menyesuaikan dengan ukuran layar
+  2. **Zoom Controls**:
+     - Tombol Zoom In/Out dengan increment 0.2
+     - Tombol Fit Width untuk menyesuaikan dengan lebar container
+     - Display persentase zoom saat ini
+  3. **Responsive CSS**:
+     - Canvas max-width 100% dan height auto
+     - Overflow auto untuk scroll horizontal/vertical
+     - Media query untuk mobile (height 60vh)
+     - Min-height untuk embed di admin
+  4. **Enhanced Navigation**:
+     - Kontrol zoom terintegrasi dengan navigasi halaman
+     - Scale konsisten saat berpindah halaman
+- **Files Modified**:
+  - `resources/views/peserta/assessment-kerja.blade.php` - Enhanced roleplay & FGD PDF viewers
+  - `resources/views/peserta/assessment-studi-kasus.blade.php` - Enhanced studi kasus PDF viewer
+  - `resources/views/admin/sesi/create.blade.php` - Enhanced PDF preview
+  - `resources/views/admin/sesi/edit.blade.php` - Enhanced PDF preview
+  - `resources/views/admin/progress/answers.blade.php` - Enhanced PDF viewer
+- **Features Implemented**:
+  - Responsive scale calculation based on container width
+  - Zoom In/Out controls with 20% increments
+  - Fit Width button for optimal viewing
+  - Zoom percentage display
+  - Responsive CSS with mobile breakpoints
+  - Overflow handling for small screens
+  - Consistent scale across page navigation
+- **Testing**: PDF viewer sekarang responsive dan tidak terpotong pada berbagai ukuran layar
+
 ---
 
 *Dokumen ini berisi seluruh riwayat pengembangan aplikasi Assessment Center dari setup awal hingga fitur-fitur terbaru yang telah diimplementasikan. Mulai sekarang, semua dokumentasi baru akan ditambahkan ke file DEV_HIST.md ini.*

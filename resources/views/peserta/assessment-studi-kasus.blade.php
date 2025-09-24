@@ -47,13 +47,26 @@
                             $pdfUrl = route('assessment.pdf.view', ['penilaianId' => $assessment->id, 'filename' => $assessment->file_pdf]);
                         @endphp
                         <div class="w-full border rounded-md overflow-hidden">
-                            <div id="studiKasusPdfViewer" class="w-full h-[70vh] bg-gray-100 flex items-center justify-center">
+                            <div id="studiKasusPdfViewer" class="w-full h-[70vh] bg-gray-100 flex items-center justify-center overflow-auto">
                                 <div class="text-center">
                                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                                     <p class="text-gray-600">Memuat PDF...</p>
                                 </div>
                             </div>
                         </div>
+                        <style>
+                        #studiKasusPdfViewer canvas {
+                            max-width: 100%;
+                            height: auto;
+                            display: block;
+                            margin: 0 auto;
+                        }
+                        @media (max-width: 768px) {
+                            #studiKasusPdfViewer {
+                                height: 60vh !important;
+                            }
+                        }
+                        </style>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
                         <script>
                         document.addEventListener('DOMContentLoaded', function() {
@@ -91,8 +104,17 @@
                                     const canvas = document.createElement('canvas');
                                     const context = canvas.getContext('2d');
                                     
+                                    // Calculate responsive scale based on container width
+                                    function calculateScale(page) {
+                                        const containerWidth = container.clientWidth - 40; // Account for padding
+                                        const pageViewport = page.getViewport({ scale: 1.0 });
+                                        const scale = Math.min(containerWidth / pageViewport.width, 2.0); // Max scale 2.0
+                                        return Math.max(scale, 0.5); // Min scale 0.5
+                                    }
+                                    
                                     pdf.getPage(1).then(function(page) {
-                                        const viewport = page.getViewport({ scale: 1.5 });
+                                        const scale = calculateScale(page);
+                                        const viewport = page.getViewport({ scale: scale });
                                         canvas.height = viewport.height;
                                         canvas.width = viewport.width;
                                         
@@ -103,6 +125,59 @@
                                         
                                         page.render(renderContext).promise.then(function() {
                                             container.innerHTML = '';
+                                            
+                                            // Create controls container
+                                            const controlsDiv = document.createElement('div');
+                                            controlsDiv.className = 'flex justify-center items-center gap-2 mb-4 flex-wrap';
+                                            
+                                            // Zoom controls
+                                            const zoomOutBtn = document.createElement('button');
+                                            zoomOutBtn.textContent = 'Zoom Out';
+                                            zoomOutBtn.className = 'px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600';
+                                            
+                                            const zoomInBtn = document.createElement('button');
+                                            zoomInBtn.textContent = 'Zoom In';
+                                            zoomInBtn.className = 'px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600';
+                                            
+                                            const fitWidthBtn = document.createElement('button');
+                                            fitWidthBtn.textContent = 'Fit Width';
+                                            fitWidthBtn.className = 'px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600';
+                                            
+                                            const zoomInfo = document.createElement('span');
+                                            zoomInfo.textContent = `${Math.round(scale * 100)}%`;
+                                            zoomInfo.className = 'text-sm text-gray-600 px-2';
+                                            
+                                            let currentScale = scale;
+                                            
+                                            // Zoom functions
+                                            function updateZoom(newScale) {
+                                                currentScale = Math.max(0.3, Math.min(3.0, newScale));
+                                                const newViewport = page.getViewport({ scale: currentScale });
+                                                canvas.height = newViewport.height;
+                                                canvas.width = newViewport.width;
+                                                
+                                                const renderContext = {
+                                                    canvasContext: context,
+                                                    viewport: newViewport
+                                                };
+                                                
+                                                page.render(renderContext);
+                                                zoomInfo.textContent = `${Math.round(currentScale * 100)}%`;
+                                            }
+                                            
+                                            zoomOutBtn.onclick = () => updateZoom(currentScale - 0.2);
+                                            zoomInBtn.onclick = () => updateZoom(currentScale + 0.2);
+                                            fitWidthBtn.onclick = () => {
+                                                const fitScale = calculateScale(page);
+                                                updateZoom(fitScale);
+                                            };
+                                            
+                                            controlsDiv.appendChild(zoomOutBtn);
+                                            controlsDiv.appendChild(zoomInfo);
+                                            controlsDiv.appendChild(zoomInBtn);
+                                            controlsDiv.appendChild(fitWidthBtn);
+                                            
+                                            container.appendChild(controlsDiv);
                                             container.appendChild(canvas);
                                             
                                             // Add navigation if multiple pages
@@ -141,7 +216,7 @@
                                                 
                                                 function renderPage(pageNum) {
                                                     pdf.getPage(pageNum).then(function(page) {
-                                                        const viewport = page.getViewport({ scale: 1.5 });
+                                                        const viewport = page.getViewport({ scale: currentScale });
                                                         canvas.height = viewport.height;
                                                         canvas.width = viewport.width;
                                                         
