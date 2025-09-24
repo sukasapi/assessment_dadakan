@@ -34,7 +34,10 @@ class SesiPenilaian extends Model
     public function assessments(): HasMany
     {
         return $this->hasMany(SesiAssessment::class, 'sesi_penilaian_id')
-            ->whereNull('deleted_at')
+            ->where(function($query) {
+                $query->whereNull('deleted_at')
+                      ->orWhere('deleted_at', '0000-00-00 00:00:00');
+            })
             ->orderBy('urutan');
     }
 

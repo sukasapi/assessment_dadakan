@@ -776,11 +776,20 @@ class AdminController extends Controller
                     
                     // Get in-tray model info
                     $inTrayModel = '';
+                    $inTrayModelType = '';
+                    $showMatrix = false;
+                    
                     if ($mapJenis['in_tray']) {
-                        $inTrayPenilaian = \App\Models\Penilaian::find($mapJenis['in_tray']);
-                        if ($inTrayPenilaian) {
-                            $model = $inTrayPenilaian->model_in_tray ?? 'urutan';
+                        // Get the model from sesi_assessment table, not from penilaian table
+                        $sesiAssessment = \App\Models\SesiAssessment::where('sesi_penilaian_id', $session->id)
+                            ->where('penilaian_id', $mapJenis['in_tray'])
+                            ->first();
+                        
+                        if ($sesiAssessment) {
+                            $model = $sesiAssessment->model_in_tray ?? 'urutan';
                             $inTrayModel = $model === 'prioritas' ? ' (Prioritas)' : ' (Urutan)';
+                            $inTrayModelType = $model;
+                            $showMatrix = $model === 'prioritas';
                         }
                     }
 
@@ -795,7 +804,9 @@ class AdminController extends Controller
                         'studi_kasus_status' => $statusBadge($mapJenis['studi_kasus']),
                         'in_tray_status' => $statusBadge($mapJenis['in_tray']) . $inTrayModel,
                         'roleplay_status' => $statusBadge($mapJenis['roleplay'] ?? $mapJenis['role_play']),
-                        'fgd_status' => $statusBadge($mapJenis['fgd'])
+                        'fgd_status' => $statusBadge($mapJenis['fgd']),
+                        'in_tray_model_type' => $inTrayModelType,
+                        'show_matrix' => $showMatrix
                     ];
                 }
             }

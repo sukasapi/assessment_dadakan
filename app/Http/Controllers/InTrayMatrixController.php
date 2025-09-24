@@ -25,7 +25,7 @@ class InTrayMatrixController extends Controller
         if ($isAdmin) {
             // Admin can view any participant's matrix
             if (!$sesiId || !$pesertaId) {
-                return redirect()->route('admin.progress')->with('error', 'Parameter sesi dan peserta diperlukan');
+                return redirect()->route('admin.progress.index')->with('error', 'Parameter sesi dan peserta diperlukan');
             }
             
             $sesi = SesiPenilaian::findOrFail($sesiId);
@@ -33,7 +33,7 @@ class InTrayMatrixController extends Controller
             
             // Verify participant is in the session
             if (!$sesi->participants()->where('peserta_id', $pesertaId)->exists()) {
-                return redirect()->route('admin.progress')->with('error', 'Peserta tidak ditemukan dalam sesi ini');
+                return redirect()->route('admin.progress.index')->with('error', 'Peserta tidak ditemukan dalam sesi ini');
             }
             
         } else {
@@ -66,14 +66,14 @@ class InTrayMatrixController extends Controller
         // Get in-tray assessment for this session
         $inTrayAssessment = $sesi->assessments()
             ->whereHas('penilaian', function($query) {
-                $query->where('jenis', 'in_tray')
-                      ->where('model_in_tray', 'prioritas');
+                $query->where('jenis', 'in_tray');
             })
+            ->where('model_in_tray', 'prioritas')
             ->with('penilaian')
             ->first();
             
         if (!$inTrayAssessment) {
-            $redirectRoute = $isAdmin ? 'admin.progress' : 'peserta.dashboard';
+            $redirectRoute = $isAdmin ? 'admin.progress.index' : 'peserta.dashboard';
             return redirect()->route($redirectRoute)->with('error', 'Tidak ada assessment in-tray dengan mode prioritas untuk sesi ini');
         }
         
@@ -157,9 +157,9 @@ class InTrayMatrixController extends Controller
         // Get in-tray assessment
         $inTrayAssessment = $sesi->assessments()
             ->whereHas('penilaian', function($query) {
-                $query->where('jenis', 'in_tray')
-                      ->where('model_in_tray', 'prioritas');
+                $query->where('jenis', 'in_tray');
             })
+            ->where('model_in_tray', 'prioritas')
             ->with('penilaian')
             ->first();
             
