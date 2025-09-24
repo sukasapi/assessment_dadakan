@@ -67,4 +67,20 @@ class LatihanInTray extends Model
             $q->whereNull('pertanyaan')->orWhere('pertanyaan', '');
         });
     }
+
+    /**
+     * Override the default soft delete behavior to handle '0000-00-00 00:00:00' values
+     */
+    protected static function bootSoftDeletes()
+    {
+        static::addGlobalScope(new class extends \Illuminate\Database\Eloquent\SoftDeletingScope {
+            public function apply(\Illuminate\Database\Eloquent\Builder $builder, \Illuminate\Database\Eloquent\Model $model)
+            {
+                $builder->where(function ($query) use ($model) {
+                    $query->whereNull($model->getQualifiedDeletedAtColumn())
+                          ->orWhere($model->getQualifiedDeletedAtColumn(), '0000-00-00 00:00:00');
+                });
+            }
+        });
+    }
 }

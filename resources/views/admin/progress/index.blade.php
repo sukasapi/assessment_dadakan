@@ -374,10 +374,12 @@ document.addEventListener('DOMContentLoaded', function(){
                                     class="text-xs bg-blue-100 text-blue-800 px-1 sm:px-1.5 py-0.5 rounded hover:bg-blue-200 transition-colors">
                                 Lihat Jawaban
                             </button>
+                            ${item.show_matrix ? `
                             <button data-action="view-matrix" data-peserta-id="${item.peserta_id}" data-sesi-id="${item.sesi_id}" 
                                     class="text-xs bg-purple-100 text-purple-800 px-1 sm:px-1.5 py-0.5 rounded hover:bg-purple-200 transition-colors">
                                 Matriks In-Tray
                             </button>
+                            ` : ''}
                             <button data-action="download-data" data-peserta-id="${item.peserta_id}" data-sesi-id="${item.sesi_id}" 
                                     class="text-xs bg-green-100 text-green-800 px-1 sm:px-1.5 py-0.5 rounded hover:bg-green-200 transition-colors">
                                 Download

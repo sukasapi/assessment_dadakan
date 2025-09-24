@@ -125,13 +125,6 @@
                                         </div>
                                         @endif
                                         
-                                        @if($memo->pertanyaan)
-                                        <div class="memo-question-text text-xxs text-gray-600 mt-1">
-                                            <span class="font-medium">Pertanyaan:</span>
-                                            <span class="memo-question-text-value">{{ Str::limit($memo->pertanyaan, 50) }}</span>
-                                        </div>
-                                        @endif
-                                        
                                         @if($__jawaban)
                                         <div class="memo-answer-text text-xxs text-gray-600 mt-1">
                                             <span class="font-medium">Jawaban:</span>
@@ -148,34 +141,43 @@
                             @endif
                         </div>
                         
-                        @if($memos->count() > 0 && ($intrayModel ?? 'urutan') === 'prioritas')
-                        <!-- Question & Answer Section -->
+                        @if($memos->count() > 0)
+                        <!-- Question & Answer Section - Single question for entire in-tray assessment -->
                         <div class="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
                             <div class="p-4 md:p-5">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Pertanyaan dan Jawaban</h3>
                                 
-                                @if($memos->where('pertanyaan', '!=', null)->count() > 0)
-                                    @foreach($memos->where('pertanyaan', '!=', null) as $memo)
-                                        <div class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                            <div class="mb-3">
-                                                <label class="block text-sm font-medium text-gray-800 mb-2">Pertanyaan untuk {{ $memo->judul_memo ?? 'Memo M-' . $memo->id }}</label>
-                                                <div class="text-sm text-gray-600 bg-white p-3 rounded-md border">
-                                                    {!! $memo->pertanyaan !!}
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="block text-sm font-medium text-gray-800 mb-2">Jawaban Anda</label>
-                                                <div id="questionAnswerEditor{{ $memo->id }}" class="border border-gray-300 rounded-md"></div>
-                                                <textarea id="questionAnswer{{ $memo->id }}" name="question_answers[{{ $memo->id }}]" style="display: none;">{{ optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '' }}</textarea>
-                                            </div>
+                                @php
+                                    // Get the first memo with a question, or use a default question
+                                    $firstMemoWithQuestion = $memos->where('pertanyaan', '!=', null)->first();
+                                    $defaultQuestion = 'Berdasarkan memo-memo yang telah Anda baca dan prioritaskan, jelaskan strategi dan pendekatan yang akan Anda gunakan untuk menangani situasi yang dihadapi. Sertakan alasan mengapa Anda memilih prioritas tersebut dan bagaimana Anda akan mengimplementasikan solusi yang diusulkan.';
+                                    $assessmentQuestion = $firstMemoWithQuestion ? $firstMemoWithQuestion->pertanyaan : $defaultQuestion;
+                                    
+                                    // Get existing answer from any memo (they should all be the same)
+                                    $existingAnswer = '';
+                                    foreach ($memos as $memo) {
+                                        $answer = optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '';
+                                        if (!empty($answer)) {
+                                            $existingAnswer = $answer;
+                                            break;
+                                        }
+                                    }
+                                @endphp
+                                
+                                <div class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                    <div class="mb-3">
+                                        <label class="block text-sm font-medium text-gray-800 mb-2">Pertanyaan untuk Assessment In-Tray</label>
+                                        <div class="text-sm text-gray-600 bg-white p-3 rounded-md border">
+                                            {!! $assessmentQuestion !!}
                                         </div>
-                                    @endforeach
-                                @else
-                                    <div class="text-center py-8 text-gray-500">
-                                        <p class="text-sm">Belum ada pertanyaan yang disediakan untuk memo-memo ini.</p>
                                     </div>
-                                @endif
+                                    
+                                    <div class="mb-3">
+                                        <label class="block text-sm font-medium text-gray-800 mb-2">Jawaban Anda</label>
+                                        <div id="intrayQuestionAnswerEditor" class="border border-gray-300 rounded-md"></div>
+                                        <textarea id="intrayQuestionAnswer" name="intray_question_answer" style="display: none;">{{ $existingAnswer }}</textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         @endif
@@ -417,23 +419,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('inTrayBoard');
         if (!container) return [];
         const cards = Array.from(container.querySelectorAll('.memo-card'));
+        
+        // Get the single question answer from the editor
+        const intrayQuestionAnswer = window.intrayQuestionEditor ? window.intrayQuestionEditor.getData() : '';
+        
         return cards.map((card, idx) => {
             const answer = {
                 latihan_in_tray_id: parseInt(card.getAttribute('data-id'), 10),
                 urutan_prioritas: idx + 1,
-                disposisi: (card.querySelector('.memo-disposisi')?.value || '').trim()
+                disposisi: (card.querySelector('.memo-disposisi')?.value || '').trim(),
+                jawaban_pertanyaan: intrayQuestionAnswer.trim() // Use the single answer for all memos
             };
 
             // Add priority selection if using priority model
             const prioritySelect = card.querySelector('.memo-priority-select');
             if (prioritySelect) {
                 answer.kategori_prioritas = prioritySelect.value;
-            }
-
-            // Add question answer if available
-            const questionAnswer = card.querySelector('.memo-question-answer');
-            if (questionAnswer) {
-                answer.jawaban_pertanyaan = questionAnswer.value.trim();
             }
 
             return answer;
@@ -826,19 +827,20 @@ function toggleInTrayModel() {
     }
 }
 
-// Initialize CKEditor for question answers
+// Initialize CKEditor for single in-tray question answer
 document.addEventListener('DOMContentLoaded', function() {
-    const questionEditors = document.querySelectorAll('[id^="questionAnswerEditor"]');
-    questionEditors.forEach(function(editorEl) {
-        const memoId = editorEl.id.replace('questionAnswerEditor', '');
+    const intrayQuestionEditorEl = document.getElementById('intrayQuestionAnswerEditor');
+    if (intrayQuestionEditorEl) {
         ClassicEditor
-            .create(editorEl, {
+            .create(intrayQuestionEditorEl, {
                 toolbar: ['bold', 'italic', 'underline', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo'],
-                height: 150
+                height: 200
             })
             .then(editor => {
+                window.intrayQuestionEditor = editor;
+                
                 // Set initial value
-                const textarea = document.getElementById('questionAnswer' + memoId);
+                const textarea = document.getElementById('intrayQuestionAnswer');
                 if (textarea) {
                     editor.setData(textarea.value || '');
                 }
@@ -851,9 +853,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             })
             .catch(error => {
-                console.error('Error initializing CKEditor for memo ' + memoId + ':', error);
+                console.error('Error initializing CKEditor for in-tray question:', error);
             });
-    });
+    }
 });
 </script>
 @endsection
