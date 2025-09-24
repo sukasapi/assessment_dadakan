@@ -740,8 +740,8 @@ function previewCurrentPdf(index) {
     modal.classList.remove('hidden');
     content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Memuat PDF...</div>';
     
-    // Build PDF URL - try alternative route first
-    const pdfUrl = `/pdf/inline/${penilaianId}/${encodeURIComponent(pdfFile)}`;
+    // Build PDF URL - use same route as participants (proven to work)
+    const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${encodeURIComponent(pdfFile)}`;
     
     console.log('PDF URL:', pdfUrl);
     console.log('PDF File:', pdfFile);
