@@ -157,8 +157,28 @@
 
 <style>
 .ck-editor__editable[role="textbox"] { min-height: 12rem; }
-.ck-content ul { list-style: disc !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
-.ck-content ol { list-style: decimal !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
+.ck-content ul { 
+    list-style: disc !important; 
+    list-style-position: outside !important; 
+    margin-left: 1.5rem !important; 
+    padding-left: 0 !important; 
+}
+.ck-content ol { 
+    list-style: decimal !important; 
+    list-style-position: outside !important; 
+    margin-left: 1.5rem !important; 
+    padding-left: 0 !important; 
+}
+.ck-content li {
+    display: list-item !important;
+    margin: 0.25rem 0 !important;
+}
+/* Fix untuk bullet dan numbering yang tidak muncul */
+.ck-editor__editable ul li::marker,
+.ck-editor__editable ol li::marker {
+    display: block !important;
+    visibility: visible !important;
+}
 </style>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
@@ -192,7 +212,22 @@ function setAction(action) {
 // Inisialisasi CKEditor 5 Classic basic untuk jawaban studi kasus
 let jawabanEditor = null;
 ClassicEditor.create(document.getElementById('jawaban'), {
-    toolbar: ['bold','italic','link','bulletedList','numberedList','undo','redo']
+    toolbar: {
+        items: [
+            'bold', 'italic', 'underline', '|',
+            'bulletedList', 'numberedList', '|',
+            'outdent', 'indent', '|',
+            'link', '|',
+            'undo', 'redo'
+        ]
+    },
+    list: {
+        properties: {
+            styles: true,
+            startIndex: true,
+            reversed: true
+        }
+    }
 }).then(ed => { jawabanEditor = ed; }).catch(err => console.error(err));
 
 // Auto-save draft setiap 30 detik (ambil dari ClassicEditor)

@@ -341,7 +341,24 @@ function addAssessment(data = null) {
                     memoContainer.appendChild(wrapper);
                     if (window.ClassicEditor) {
                         const ta = wrapper.querySelector('textarea');
-                        ClassicEditor.create(ta).then(editor => {
+                        ClassicEditor.create(ta, {
+                            toolbar: {
+                                items: [
+                                    'bold', 'italic', 'underline', '|',
+                                    'bulletedList', 'numberedList', '|',
+                                    'outdent', 'indent', '|',
+                                    'link', '|',
+                                    'undo', 'redo'
+                                ]
+                            },
+                            list: {
+                                properties: {
+                                    styles: true,
+                                    startIndex: true,
+                                    reversed: true
+                                }
+                            }
+                        }).then(editor => {
                             editor.model.document.on('change:data', () => {
                                 ta.value = editor.getData();
                             });

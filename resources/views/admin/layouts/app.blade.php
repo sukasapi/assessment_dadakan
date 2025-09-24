@@ -13,6 +13,28 @@
         .ck-editor__editable[role="textbox"] {
             min-height: 320px; /* ~8 baris+toolbar */
         }
+        /* Fix untuk bullet dan numbering yang tidak muncul */
+        .ck-content ul { 
+            list-style: disc !important; 
+            list-style-position: outside !important; 
+            margin-left: 1.5rem !important; 
+            padding-left: 0 !important; 
+        }
+        .ck-content ol { 
+            list-style: decimal !important; 
+            list-style-position: outside !important; 
+            margin-left: 1.5rem !important; 
+            padding-left: 0 !important; 
+        }
+        .ck-content li {
+            display: list-item !important;
+            margin: 0.25rem 0 !important;
+        }
+        .ck-editor__editable ul li::marker,
+        .ck-editor__editable ol li::marker {
+            display: block !important;
+            visibility: visible !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
