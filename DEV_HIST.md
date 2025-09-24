@@ -864,4 +864,169 @@ $matrix = [
 
 ---
 
+## 🔧 **Admin Edit Sesi PDF Preview Fix** - *25 Januari 2025*
+
+### **Masalah**
+- Tombol preview PDF di halaman admin edit sesi tidak berfungsi
+- Modal PDF tidak muncul ketika tombol preview ditekan
+- Template menggunakan placeholder `INDEX` yang tidak diganti dengan nilai sebenarnya
+
+### **Solusi**
+- **Simplified PDF Preview**: Mengganti implementasi fetch + blob dengan iframe sederhana
+- **Fixed Template Placeholder**: Memperbaiki penggantian placeholder `INDEX` pada onclick handlers
+- **Modal Integration**: Memastikan modal PDF preview berfungsi dengan baik
+
+### **Perubahan Teknis**
+- **Simplified Implementation**: 
+  ```javascript
+  // Sebelum: fetch + blob + complex error handling
+  fetch(pdfUrl).then(response => response.blob()).then(blob => { ... })
+  
+  // Sesudah: iframe langsung
+  const iframe = document.createElement('iframe');
+  iframe.src = pdfUrl + '#zoom=80';
+  ```
+- **Fixed Template Processing**:
+  ```javascript
+  // Update onclick handlers with INDEX placeholders
+  const onclickElements = clone.querySelectorAll('[onclick*="INDEX"]');
+  onclickElements.forEach(element => {
+      element.onclick = element.onclick.toString().replace(/INDEX/g, assessmentIndex);
+  });
+  ```
+
+### **Files Modified**
+- `resources/views/admin/sesi/edit.blade.php` - Fixed PDF preview functionality
+- **Benefits**:
+  - **Working Preview**: Tombol preview PDF sekarang berfungsi dengan baik
+  - **Simplified Code**: Implementasi yang lebih sederhana dan mudah di-maintain
+  - **Consistent Experience**: Menggunakan iframe yang sama seperti implementasi lainnya
+  - **Better Performance**: Tidak perlu fetch dan blob processing
+
+---
+
+## 🔧 **Admin Edit Sesi Assessment Display Fix** - *25 Januari 2025*
+
+### **Masalah**
+- Assessment yang ada pada sesi menjadi hilang setelah perubahan tombol preview PDF
+- Halaman edit sesi tidak menampilkan assessment yang sudah ada sebelumnya
+- Template placeholder `INDEX` tidak diganti dengan benar pada onclick handlers
+
+### **Solusi**
+- **Fixed Template Processing**: Memperbaiki cara mengganti placeholder `INDEX` pada onclick handlers
+- **Added Debug Logging**: Menambahkan console.log untuk debugging data existing assessments
+- **Improved Error Handling**: Memperbaiki error handling pada parsing JSON data
+
+### **Perubahan Teknis**
+- **Fixed Onclick Handler Processing**:
+  ```javascript
+  // Sebelum: element.onclick = element.onclick.toString().replace(/INDEX/g, assessmentIndex);
+  // Sesudah: 
+  const originalOnclick = element.getAttribute('onclick');
+  if (originalOnclick) {
+      element.setAttribute('onclick', originalOnclick.replace(/INDEX/g, assessmentIndex));
+  }
+  ```
+- **Added Debug Logging**:
+  ```javascript
+  console.log('Existing assessments loaded:', existingAssessments);
+  console.log('Loading existing assessments:', existingAssessments.length);
+  ```
+
+### **Files Modified**
+- `resources/views/admin/sesi/edit.blade.php` - Fixed template processing and added debug logging
+- `app/Http/Controllers/AdminController.php` - Added debug logging for existing assessments data
+- **Benefits**:
+  - **Assessment Display**: Assessment yang ada sekarang ditampilkan dengan benar
+  - **Template Processing**: Placeholder `INDEX` diganti dengan benar pada semua elemen
+  - **Debug Capability**: Console logging membantu debugging masalah data
+  - **Better Error Handling**: Error handling yang lebih robust untuk parsing JSON
+
+---
+
+## 🔧 **Admin Edit Sesi PDF Preview URL Fix** - *25 Januari 2025*
+
+### **Masalah**
+- Modal PDF preview muncul tetapi hanya menampilkan "Memuat PDF..." tanpa PDF yang sebenarnya dimuat
+- URL PDF tidak dibangun dengan benar
+- Route PDF tidak dapat diakses dengan benar
+
+### **Solusi**
+- **Fixed PDF URL Building**: Memperbaiki cara membangun URL PDF dengan menggunakan route yang benar
+- **Added Debug Logging**: Menambahkan console.log untuk debugging URL dan data PDF
+- **Route Optimization**: Menggunakan route `/pdf/inline/` yang sudah ada dan teruji
+
+### **Perubahan Teknis**
+- **Fixed PDF URL Construction**:
+  ```javascript
+  // Sebelum: const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
+  // Sesudah: const pdfUrl = `/pdf/inline/${penilaianId}/${encodeURIComponent(pdfFile)}`;
+  ```
+- **Added Debug Logging**:
+  ```javascript
+  console.log('PDF URL:', pdfUrl);
+  console.log('PDF File:', pdfFile);
+  console.log('Penilaian ID:', penilaianId);
+  console.log('Selected option:', selectedOption);
+  ```
+
+### **Files Modified**
+- `resources/views/admin/sesi/edit.blade.php` - Fixed PDF URL building and added debug logging
+- **Benefits**:
+  - **Working PDF Preview**: PDF sekarang dapat dimuat dan ditampilkan dengan benar
+  - **Correct URL**: URL PDF dibangun dengan route yang benar dan teruji
+  - **Debug Capability**: Console logging membantu debugging masalah PDF loading
+  - **URL Encoding**: Menggunakan encodeURIComponent untuk menangani karakter khusus dalam filename
+
+---
+
+## 🔧 **Admin Edit Sesi PDF Preview Iframe Implementation Fix** - *25 Januari 2025*
+
+### **Masalah**
+- PDF preview masih hanya menampilkan "Memuat PDF..." meskipun route dapat diakses dengan benar
+- Iframe tidak dapat memuat PDF meskipun URL sudah benar
+- Implementasi JavaScript iframe yang kompleks tidak berfungsi dengan baik
+
+### **Solusi**
+- **Simplified Iframe Implementation**: Mengganti implementasi JavaScript yang kompleks dengan HTML iframe langsung
+- **Direct HTML Injection**: Menggunakan `innerHTML` untuk langsung menyisipkan iframe HTML
+- **Added Fallback Link**: Menambahkan link "Buka di Tab Baru" sebagai fallback
+
+### **Perubahan Teknis**
+- **Simplified Implementation**:
+  ```javascript
+  // Sebelum: Complex JavaScript iframe creation with event listeners
+  const iframe = document.createElement('iframe');
+  iframe.onload = function() { ... };
+  iframe.onerror = function() { ... };
+  
+  // Sesudah: Direct HTML injection
+  content.innerHTML = `
+      <div class="w-full h-full flex flex-col">
+          <div class="flex justify-between items-center mb-2">
+              <span class="text-sm text-gray-600">Preview PDF</span>
+              <a href="${pdfUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 text-sm">
+                  Buka di Tab Baru
+              </a>
+          </div>
+          <iframe 
+              src="${pdfUrl}#zoom=80" 
+              style="width: 100%; height: 500px; border: 1px solid #eeeeee;"
+              frameborder="0"
+              allowfullscreen="allowfullscreen">
+          </iframe>
+      </div>
+  `;
+  ```
+
+### **Files Modified**
+- `resources/views/admin/sesi/edit.blade.php` - Simplified iframe implementation
+- **Benefits**:
+  - **Working PDF Preview**: PDF sekarang dapat dimuat dan ditampilkan dengan benar
+  - **Simplified Code**: Implementasi yang lebih sederhana dan mudah di-maintain
+  - **Fallback Option**: Link "Buka di Tab Baru" sebagai alternatif jika iframe tidak berfungsi
+  - **Better UX**: Interface yang lebih clean dengan header dan fallback link
+
+---
+
 *Dokumen ini berisi seluruh riwayat pengembangan aplikasi Assessment Center dari setup awal hingga fitur-fitur terbaru yang telah diimplementasikan. Mulai sekarang, semua dokumentasi baru akan ditambahkan ke file DEV_HIST.md ini.*

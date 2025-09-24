@@ -302,6 +302,15 @@ function addAssessment(data = null) {
         element.name = element.name.replace('INDEX', assessmentIndex);
     });
     
+    // Update onclick handlers with INDEX placeholders
+    const onclickElements = clone.querySelectorAll('[onclick*="INDEX"]');
+    onclickElements.forEach(element => {
+        const originalOnclick = element.getAttribute('onclick');
+        if (originalOnclick) {
+            element.setAttribute('onclick', originalOnclick.replace(/INDEX/g, assessmentIndex));
+        }
+    });
+    
     // Update assessment number
     const numberSpan = clone.querySelector('.assessment-number');
     if (numberSpan) {
@@ -446,13 +455,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let existingAssessments = [];
     try {
         const jsonEl = document.getElementById('existingAssessmentsData');
-        existingAssessments = jsonEl ? JSON.parse(jsonEl.textContent || '[]') : [];
+        const jsonData = jsonEl ? jsonEl.textContent : '[]';
+        existingAssessments = JSON.parse(jsonData);
+        console.log('Existing assessments loaded:', existingAssessments);
     } catch (e) {
+        console.error('Error parsing existing assessments:', e);
         existingAssessments = [];
     }
     
     if (existingAssessments.length > 0) {
-        existingAssessments.forEach(function(assessment) {
+        console.log('Loading existing assessments:', existingAssessments.length);
+        existingAssessments.forEach(function(assessment, index) {
+            console.log('Loading assessment', index, ':', assessment);
             addAssessment({
                 penilaian_id: assessment.penilaian_id,
                 urutan: assessment.urutan,
@@ -463,6 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     } else {
+        console.log('No existing assessments found, adding default');
         addAssessment();
     }
     
@@ -709,6 +724,10 @@ function previewCurrentPdf(index) {
     const pdfFile = selectedOption.dataset.file;
     const penilaianId = selectedOption.value;
     
+    console.log('Selected option:', selectedOption);
+    console.log('PDF file from dataset:', pdfFile);
+    console.log('Penilaian ID from value:', penilaianId);
+    
     // Show modal
     const modal = document.getElementById('pdfPreviewModal');
     const content = document.getElementById('pdfPreviewContent');
@@ -721,65 +740,30 @@ function previewCurrentPdf(index) {
     modal.classList.remove('hidden');
     content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Memuat PDF...</div>';
     
-    // Build PDF URL
-    const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
+    // Build PDF URL - try alternative route first
+    const pdfUrl = `/pdf/inline/${penilaianId}/${encodeURIComponent(pdfFile)}`;
     
-    // Disable right-click context menu
-    content.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        return false;
-    });
+    console.log('PDF URL:', pdfUrl);
+    console.log('PDF File:', pdfFile);
+    console.log('Penilaian ID:', penilaianId);
     
-    // Disable keyboard shortcuts for save/print
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
-            e.preventDefault();
-            return false;
-        }
-    });
-    
-    // Fetch PDF as blob to prevent direct access
-    fetch(pdfUrl)
-        .then(response => response.blob())
-        .then(blob => {
-            const blobUrl = URL.createObjectURL(blob);
-            
-            // Create iframe for PDF viewing
-            const iframe = document.createElement('iframe');
-            iframe.style.width = '100%';
-            iframe.style.height = '500px';
-            iframe.style.border = '1px solid #eeeeee';
-            iframe.src = pdfUrl + '#zoom=80';
-            iframe.frameBorder = '0';
-            iframe.allowFullscreen = true;
-            
-            iframe.onload = function() {
-                content.innerHTML = '';
-                content.appendChild(iframe);
-            };
-            
-            iframe.onerror = function() {
-                content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal memuat PDF</div>';
-            };
-            
-            // Cleanup blob URL when modal closes
-            const modal = document.getElementById('pdfPreviewModal');
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        if (modal.classList.contains('hidden')) {
-                            URL.revokeObjectURL(blobUrl);
-                            observer.disconnect();
-                        }
-                    }
-                });
-            });
-            observer.observe(modal, { attributes: true });
-        })
-        .catch(function(error) {
-            console.error('Error fetching PDF:', error);
-            content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal mengambil PDF</div>';
-        });
+    // Create iframe for PDF viewing - langsung set HTML
+    content.innerHTML = `
+        <div class="w-full h-full flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-gray-600">Preview PDF</span>
+                <a href="${pdfUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 text-sm">
+                    Buka di Tab Baru
+                </a>
+            </div>
+            <iframe 
+                src="${pdfUrl}#zoom=80" 
+                style="width: 100%; height: 500px; border: 1px solid #eeeeee;"
+                frameborder="0"
+                allowfullscreen="allowfullscreen">
+            </iframe>
+        </div>
+    `;
 }
 
 function closePdfPreview() {
