@@ -934,7 +934,7 @@ class AdminController extends Controller
                     
                     // Add model info for in-tray
                     if ($jenis === 'in_tray') {
-                        $model = $progress->penilaian->model_in_tray ?? 'urutan';
+                        $model = $progress->sesiAssessment->model_in_tray ?? 'urutan';
                         $jenis = $jenis . ' (' . ($model === 'prioritas' ? 'Prioritas' : 'Urutan') . ')';
                     }
                     
@@ -1220,9 +1220,11 @@ class AdminController extends Controller
                 ->get();
             
             if ($jawaban->count() > 0) {
-                // Cek model yang digunakan
-                $penilaian = \App\Models\Penilaian::find($penilaianId);
-                $model = $penilaian->model_in_tray ?? 'urutan';
+                // Cek model yang digunakan dari sesi_assessment
+                $sesiAssessment = \App\Models\SesiAssessment::where('penilaian_id', $penilaianId)
+                    ->where('sesi_penilaian_id', $sesiId)
+                    ->first();
+                $model = $sesiAssessment->model_in_tray ?? 'urutan';
                 
                 if ($model === 'prioritas') {
                     $result = [];
@@ -1318,9 +1320,11 @@ class AdminController extends Controller
             if ($jawaban->count() > 0) {
                 $content .= '<div class="bg-gray-50 p-4 rounded-md">';
                 
-                // Cek model yang digunakan
-                $penilaian = \App\Models\Penilaian::find($penilaianId);
-                $model = $penilaian->model_in_tray ?? 'urutan';
+                // Cek model yang digunakan dari sesi_assessment
+                $sesiAssessment = \App\Models\SesiAssessment::where('penilaian_id', $penilaianId)
+                    ->where('sesi_penilaian_id', $sesiId)
+                    ->first();
+                $model = $sesiAssessment->model_in_tray ?? 'urutan';
                 
                 if ($model === 'prioritas') {
                     $content .= '<div class="font-medium text-sm mb-2">Prioritas Memo:</div>';
@@ -1637,6 +1641,12 @@ class AdminController extends Controller
         try {
             DB::beginTransaction();
 
+            // Log request data untuk debugging
+            Log::info('Sesi Create Request', [
+                'all_request_data' => $request->all(),
+                'assessments_data' => $request->input('assessments', [])
+            ]);
+
             // Buat sesi baru
             $sesi = SesiPenilaian::create([
                 'nama' => $request->nama,
@@ -1661,13 +1671,20 @@ class AdminController extends Controller
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
-                        // Update model in-tray di tabel penilaian
+                        // Update model in-tray di tabel sesi_assessment (bukan penilaian)
                         if (isset($assessment['model_in_tray'])) {
-                            $penilaian->update(['model_in_tray' => $assessment['model_in_tray']]);
+                            $sesiAssessment = SesiAssessment::where('sesi_penilaian_id', $sesi->id)
+                                ->where('penilaian_id', $assessment['penilaian_id'])
+                                ->first();
+                            if ($sesiAssessment) {
+                                $sesiAssessment->update(['model_in_tray' => $assessment['model_in_tray']]);
+                            }
                         }
                         
                         $memos = $assessment['memos'] ?? [];
-                        if (is_array($memos) && count(array_filter($memos, fn($m) => trim((string)$m) !== '')) > 0) {
+                        $validMemos = array_filter($memos, fn($m) => trim((string)$m) !== '');
+                        
+                        if (count($validMemos) > 0) {
                             // Hapus memo lama untuk sesi penilaian ini
                             LatihanInTray::where('sesi_penilaian_id', $sesi->id)
                                 ->where('penilaian_id', $assessment['penilaian_id'])
@@ -1729,16 +1746,33 @@ class AdminController extends Controller
             ->orderBy('nama')
             ->get();
 
-        // Siapkan existing assessments lengkap dengan memos untuk jenis in_tray
-        $existingAssessments = $sesi->assessments
+        // Log query untuk mengambil data sesi dan assessments
+        Log::info('Database Query - SELECT sesi_penilaian with assessments', [
+            'query' => "SELECT * FROM sesi_penilaian WHERE id = {$id}",
+            'sesi_id' => $id
+        ]);
+        
+        // Siapkan existing assessments lengkap dengan memos untuk jenis in_tray (exclude soft deleted)
+        $existingAssessments = $sesi->assessments()
+            ->whereNull('deleted_at')
+            ->get()
             ->sortBy('urutan')
             ->values()
             ->map(function ($sesiAssessment) use ($sesi) {
                 $memos = [];
+                $modelInTray = null;
                 if ($sesiAssessment->penilaian && $sesiAssessment->penilaian->jenis === 'in_tray') {
+                    // Log query untuk mengambil memos (exclude soft deleted)
+                    Log::info('Database Query - SELECT latihan_in_tray', [
+                        'query' => "SELECT urutan, konten_memo FROM latihan_in_tray WHERE sesi_penilaian_id = {$sesi->id} AND penilaian_id = {$sesiAssessment->penilaian_id} AND deleted_at IS NULL ORDER BY urutan",
+                        'sesi_penilaian_id' => $sesi->id,
+                        'penilaian_id' => $sesiAssessment->penilaian_id
+                    ]);
+                    
                     $memos = \App\Models\LatihanInTray::select('urutan', 'konten_memo')
                         ->where('sesi_penilaian_id', $sesi->id)
                         ->where('penilaian_id', $sesiAssessment->penilaian_id)
+                        ->whereNull('deleted_at')
                         ->orderBy('urutan')
                         ->get()
                         ->unique('urutan')
@@ -1746,6 +1780,9 @@ class AdminController extends Controller
                         ->pluck('konten_memo')
                         ->values()
                         ->toArray();
+                    
+                    // Ambil model_in_tray dari tabel sesi_assessment
+                    $modelInTray = $sesiAssessment->model_in_tray ?? 'urutan';
                 }
 
                 return [
@@ -1753,6 +1790,7 @@ class AdminController extends Controller
                     'urutan' => $sesiAssessment->urutan,
                     'durasi_default' => $sesiAssessment->durasi_default,
                     'instruksi_khusus' => $sesiAssessment->instruksi_khusus,
+                    'model_in_tray' => $modelInTray,
                     'memos' => $memos,
                 ];
             });
@@ -1765,6 +1803,13 @@ class AdminController extends Controller
      */
     public function sesiUpdate(Request $request, $id)
     {
+        // Log semua data yang diterima
+        Log::info('Sesi Update Request', [
+            'sesi_id' => $id,
+            'all_request_data' => $request->all(),
+            'assessments_data' => $request->input('assessments', [])
+        ]);
+        
         $request->validate([
             'nama' => 'required|string|max:255',
             'durasi_menit' => 'nullable|integer|min:1',
@@ -1785,6 +1830,30 @@ class AdminController extends Controller
 
             $sesi = SesiPenilaian::findOrFail($id);
 
+            // Log query UPDATE untuk sesi
+            Log::info('Database Query - UPDATE sesi_penilaian', [
+                'query' => "UPDATE sesi_penilaian SET nama = '{$request->nama}', durasi_menit = {$request->durasi_menit}, catatan = '{$request->catatan}' WHERE id = {$id}",
+                'sesi_id' => $id
+            ]);
+            
+            // Log request data untuk debugging
+            Log::info('Sesi Update Request', [
+                'sesi_id' => $sesi->id,
+                'all_request_data' => $request->all(),
+                'assessments_data' => $request->input('assessments', [])
+            ]);
+            
+            // Log khusus untuk model_in_tray
+            foreach ($request->assessments as $index => $assessment) {
+                Log::info('Assessment Data Debug', [
+                    'index' => $index,
+                    'penilaian_id' => $assessment['penilaian_id'] ?? 'NOT SET',
+                    'model_in_tray' => $assessment['model_in_tray'] ?? 'NOT SET',
+                    'urutan' => $assessment['urutan'] ?? 'NOT SET',
+                    'full_assessment_data' => $assessment
+                ]);
+            }
+
             // Update sesi
             $sesi->update([
                 'nama' => $request->nama,
@@ -1792,47 +1861,207 @@ class AdminController extends Controller
                 'catatan' => $request->catatan
             ]);
 
-            // Hapus assessment lama
-            $sesi->assessments()->delete();
-
-            // Simpan assessment baru
-            foreach ($request->assessments as $index => $assessment) {
-                $sesiAssessment = SesiAssessment::create([
-                    'sesi_penilaian_id' => $sesi->id,
-                    'penilaian_id' => $assessment['penilaian_id'],
-                    'urutan' => $assessment['urutan'],
-                    'durasi_default' => $assessment['durasi_default'] ?? null,
-                    'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
-                    'aktif' => true
+            // Ambil semua penilaian_id yang ada dalam request
+            $requestPenilaianIds = collect($request->assessments)->pluck('penilaian_id')->toArray();
+            
+            // Soft delete assessment yang tidak ada dalam request
+            $existingAssessments = SesiAssessment::where('sesi_penilaian_id', $sesi->id)
+                ->whereNotIn('penilaian_id', $requestPenilaianIds)
+                ->get();
+                
+            foreach ($existingAssessments as $assessmentToDelete) {
+                Log::info('Database Query - SOFT DELETE sesi_assessment (not in request)', [
+                    'query' => "UPDATE sesi_assessment SET deleted_at = NOW() WHERE id = {$assessmentToDelete->id}",
+                    'sesi_assessment_id' => $assessmentToDelete->id,
+                    'penilaian_id' => $assessmentToDelete->penilaian_id
                 ]);
+                $assessmentToDelete->delete();
+            }
 
-                // Simpan memos untuk in_tray (ke tabel latihan_in_tray)
+            // Update atau create assessment baru
+            foreach ($request->assessments as $index => $assessment) {
+                // Cek apakah assessment sudah ada untuk sesi ini (termasuk yang soft deleted)
+                $existingAssessment = SesiAssessment::withTrashed()
+                    ->where('sesi_penilaian_id', $sesi->id)
+                    ->where('penilaian_id', $assessment['penilaian_id'])
+                    ->first();
+                
+                if ($existingAssessment) {
+                    if ($existingAssessment->trashed()) {
+                        // Restore dan update assessment yang soft deleted
+                        Log::info('Database Query - RESTORE sesi_assessment', [
+                            'query' => "UPDATE sesi_assessment SET deleted_at = NULL, urutan = {$assessment['urutan']}, durasi_default = " . ($assessment['durasi_default'] ?? 'NULL') . ", instruksi_khusus = '{$assessment['instruksi_khusus']}', updated_at = NOW() WHERE id = {$existingAssessment->id}",
+                            'sesi_assessment_id' => $existingAssessment->id,
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'urutan' => $assessment['urutan']
+                        ]);
+                        
+                        $existingAssessment->restore();
+                        $existingAssessment->update([
+                            'urutan' => $assessment['urutan'],
+                            'durasi_default' => $assessment['durasi_default'] ?? null,
+                            'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                        ]);
+                    } else {
+                        // Update assessment yang sudah ada
+                        Log::info('Database Query - UPDATE sesi_assessment', [
+                            'query' => "UPDATE sesi_assessment SET urutan = {$assessment['urutan']}, durasi_default = " . ($assessment['durasi_default'] ?? 'NULL') . ", instruksi_khusus = '{$assessment['instruksi_khusus']}', updated_at = NOW() WHERE id = {$existingAssessment->id}",
+                            'sesi_assessment_id' => $existingAssessment->id,
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'urutan' => $assessment['urutan']
+                        ]);
+                        
+                        $existingAssessment->update([
+                            'urutan' => $assessment['urutan'],
+                            'durasi_default' => $assessment['durasi_default'] ?? null,
+                            'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                        ]);
+                    }
+                    
+                    $sesiAssessment = $existingAssessment;
+                } else {
+                    // Create assessment baru
+                    Log::info('Database Query - INSERT sesi_assessment', [
+                        'query' => "INSERT INTO sesi_assessment (sesi_penilaian_id, penilaian_id, urutan, durasi_default, instruksi_khusus, aktif) VALUES ({$sesi->id}, {$assessment['penilaian_id']}, {$assessment['urutan']}, " . ($assessment['durasi_default'] ?? 'NULL') . ", '{$assessment['instruksi_khusus']}', 1)",
+                        'sesi_penilaian_id' => $sesi->id,
+                        'penilaian_id' => $assessment['penilaian_id'],
+                        'urutan' => $assessment['urutan']
+                    ]);
+                    
+                    $sesiAssessment = SesiAssessment::create([
+                        'sesi_penilaian_id' => $sesi->id,
+                        'penilaian_id' => $assessment['penilaian_id'],
+                        'urutan' => $assessment['urutan'],
+                        'durasi_default' => $assessment['durasi_default'] ?? null,
+                        'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                        'aktif' => true
+                    ]);
+                }
+
+                // Update model_in_tray di tabel sesi_assessment (bukan penilaian)
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
-                        // Update model in-tray di tabel penilaian
-                        if (isset($assessment['model_in_tray'])) {
-                            $penilaian->update(['model_in_tray' => $assessment['model_in_tray']]);
-                        }
+                        // Update model_in_tray di tabel sesi_assessment
+                        $modelInTrayValue = $assessment['model_in_tray'] ?? 'urutan';
                         
+                        Log::info('Updating model_in_tray in sesi_assessment', [
+                            'sesi_assessment_id' => $existingAssessment->id,
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'old_model' => $existingAssessment->model_in_tray,
+                            'new_model' => $modelInTrayValue,
+                            'assessment_data' => $assessment
+                        ]);
+                        
+                        // Log query yang akan dijalankan
+                        Log::info('Database Query - UPDATE sesi_assessment (model_in_tray)', [
+                            'query' => "UPDATE sesi_assessment SET model_in_tray = '{$modelInTrayValue}' WHERE id = {$existingAssessment->id}",
+                            'sesi_assessment_id' => $existingAssessment->id,
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'new_value' => $modelInTrayValue
+                        ]);
+                        
+                        // Update model_in_tray di sesi_assessment
+                        $existingAssessment->update(['model_in_tray' => $modelInTrayValue]);
+                        
+                        Log::info('Model_in_tray updated successfully in sesi_assessment', [
+                            'sesi_assessment_id' => $existingAssessment->id,
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'updated_model' => $modelInTrayValue
+                        ]);
+                    }
+                    
+                    // Proses memos hanya untuk jenis in_tray
+                    if ($penilaian && $penilaian->jenis === 'in_tray') {
                         $memos = $assessment['memos'] ?? [];
-                        if (is_array($memos) && count(array_filter($memos, fn($m) => trim((string)$m) !== '')) > 0) {
-                            // hapus data lama untuk sesi penilaian ini
-                            LatihanInTray::where('sesi_penilaian_id', $sesi->id)
-                                ->where('penilaian_id', $assessment['penilaian_id'])
-                                ->delete();
+                        
+                        // Ambil memos yang sudah ada
+                        $existingMemos = LatihanInTray::where('sesi_penilaian_id', $sesi->id)
+                            ->where('penilaian_id', $assessment['penilaian_id'])
+                            ->whereNull('deleted_at')
+                            ->orderBy('urutan')
+                            ->get();
+                        
+                        // Filter memo yang tidak kosong
+                        $validMemos = array_filter($memos, fn($m) => trim((string)$m) !== '');
+                        
+                        if (count($validMemos) > 0) {
                             $order = 1;
                             foreach ($memos as $memo) {
                                 if (trim((string)$memo) === '') continue;
-                                LatihanInTray::create([
-                                    'penilaian_id' => $assessment['penilaian_id'],
-                                    'sesi_penilaian_id' => $sesi->id,
-                                    'konten_memo' => $memo,
-                                    'urutan' => $order++,
-                                    'aktif' => true,
+                                
+                                // Cek apakah memo sudah ada untuk urutan ini
+                                $existingMemo = $existingMemos->where('urutan', $order)->first();
+                                
+                                if ($existingMemo) {
+                                    // Update memo yang sudah ada
+                                    Log::info('Database Query - UPDATE latihan_in_tray', [
+                                        'query' => "UPDATE latihan_in_tray SET konten_memo = '{$memo}', updated_at = NOW() WHERE id = {$existingMemo->id}",
+                                        'memo_id' => $existingMemo->id,
+                                        'urutan' => $order,
+                                        'memo_content' => substr($memo, 0, 50) . '...'
+                                    ]);
+                                    
+                                    $existingMemo->update([
+                                        'konten_memo' => $memo,
+                                    ]);
+                                } else {
+                                    // Create memo baru
+                                    Log::info('Database Query - INSERT latihan_in_tray', [
+                                        'query' => "INSERT INTO latihan_in_tray (penilaian_id, sesi_penilaian_id, konten_memo, urutan, aktif) VALUES ({$assessment['penilaian_id']}, {$sesi->id}, '{$memo}', {$order}, 1)",
+                                        'penilaian_id' => $assessment['penilaian_id'],
+                                        'sesi_penilaian_id' => $sesi->id,
+                                        'urutan' => $order,
+                                        'memo_content' => substr($memo, 0, 50) . '...'
+                                    ]);
+                                    
+                                    LatihanInTray::create([
+                                        'penilaian_id' => $assessment['penilaian_id'],
+                                        'sesi_penilaian_id' => $sesi->id,
+                                        'konten_memo' => $memo,
+                                        'urutan' => $order,
+                                        'aktif' => true,
+                                    ]);
+                                }
+                                $order++;
+                            }
+                            
+                            // Soft delete memos yang tidak digunakan lagi
+                            $usedOrders = range(1, $order - 1);
+                            $unusedMemos = $existingMemos->whereNotIn('urutan', $usedOrders);
+                            
+                            foreach ($unusedMemos as $unusedMemo) {
+                                Log::info('Database Query - SOFT DELETE unused latihan_in_tray', [
+                                    'query' => "UPDATE latihan_in_tray SET deleted_at = NOW() WHERE id = {$unusedMemo->id}",
+                                    'memo_id' => $unusedMemo->id,
+                                    'urutan' => $unusedMemo->urutan
                                 ]);
+                                
+                                $unusedMemo->delete();
+                            }
+                        } else {
+                            // Jika tidak ada memo yang valid, hapus semua memo yang ada
+                            Log::info('No valid memos provided, deleting all existing memos', [
+                                'penilaian_id' => $assessment['penilaian_id'],
+                                'sesi_penilaian_id' => $sesi->id,
+                                'existing_memos_count' => $existingMemos->count()
+                            ]);
+                            
+                            foreach ($existingMemos as $memoToDelete) {
+                                Log::info('Database Query - SOFT DELETE all latihan_in_tray', [
+                                    'query' => "UPDATE latihan_in_tray SET deleted_at = NOW() WHERE id = {$memoToDelete->id}",
+                                    'memo_id' => $memoToDelete->id,
+                                    'urutan' => $memoToDelete->urutan
+                                ]);
+                                
+                                $memoToDelete->delete();
                             }
                         }
+                    } else {
+                        Log::info('Assessment is not in_tray type, skipping memos processing', [
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'jenis' => $penilaian->jenis
+                        ]);
                     }
                 } catch (\Exception $e) {
                     Log::error('Gagal menyimpan memos in-tray (update): ' . $e->getMessage());
@@ -1852,7 +2081,7 @@ class AdminController extends Controller
                             $penilaian->update(['file_pdf' => $filePath]);
                         }
                     }
-        } catch (\Exception $e) {
+                } catch (\Exception $e) {
                     Log::error('Gagal menyimpan PDF studi kasus pada update sesi: ' . $e->getMessage());
                 }
             }

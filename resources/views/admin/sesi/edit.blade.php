@@ -158,7 +158,7 @@
             </button>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Assessment Type -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Jenis Assessment *</label>
@@ -169,6 +169,16 @@
                                             @foreach($assessmentTypes as $assessment)
                             <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}" data-file="{{ $assessment->file_pdf ?? '' }}" data-url="{{ $assessment->file_pdf ? Storage::url($assessment->file_pdf) : '' }}">{{ $assessment->nama }}</option>
                         @endforeach
+                </select>
+            </div>
+
+            <!-- Model In-Tray (hanya muncul jika jenis assessment adalah in_tray) -->
+            <div class="intray-model-section" style="display: none;">
+                <label class="block text-sm font-medium text-gray-700">Model In-Tray *</label>
+                <select name="assessments[INDEX][model_in_tray]" 
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="urutan">Urutan (Drag & Drop)</option>
+                    <option value="prioritas">Prioritas (4 Kategori)</option>
                 </select>
             </div>
 
@@ -232,20 +242,7 @@
             </div>
         </div>
         
-        <!-- Model In-Tray Selection -->
-        <div class="mt-3 intray-model-section" style="display: none;">
-            <label class="block text-sm font-medium text-gray-700">Model Assessment In-Tray *</label>
-            <select name="assessments[INDEX][model_in_tray]" 
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    required>
-                <option value="urutan">Model Urutan (Drag-Drop)</option>
-                <option value="prioritas">Model Prioritas (4 Kategori)</option>
-            </select>
-            <p class="mt-1 text-xs text-gray-500">
-                <strong>Model Urutan:</strong> Peserta mengurutkan memo dengan drag-drop<br>
-                <strong>Model Prioritas:</strong> Peserta memilih prioritas untuk setiap memo (Mendesak-Penting, Mendesak-Tidak Penting, Tidak Mendesak-Penting, Tidak Mendesak-Tidak Penting)
-            </p>
-        </div>
+        <!-- Model In-Tray Selection - HIDDEN FIELD REMOVED (duplikat dengan select element) -->
 
         <!-- Memos untuk In-Tray -->
         <div class="mt-4 memo-section" style="display:none;">
@@ -320,6 +317,8 @@ function addAssessment(data = null) {
         // Tampilkan dan prefille memo jika jenis adalah in_tray
         if (selectedOption && selectedOption.dataset.jenis === 'in_tray') {
             const memoSection = clone.querySelector('.memo-section');
+            const intrayModelSection = clone.querySelector('.intray-model-section');
+            
             if (memoSection) {
                 memoSection.style.display = 'block';
                 const memoContainer = memoSection.querySelector('.memo-container');
@@ -349,6 +348,20 @@ function addAssessment(data = null) {
                         }).catch(err => console.error(err));
                     }
                 });
+            }
+            
+            // Tampilkan dan isi section model in-tray
+            if (intrayModelSection) {
+                intrayModelSection.style.display = 'block';
+                const modelSelect = intrayModelSection.querySelector('select[name*="[model_in_tray]"]');
+                if (modelSelect) {
+                    // Set berdasarkan data yang ada dari database, tidak ada default fallback
+                    if (data.model_in_tray) {
+                        modelSelect.value = data.model_in_tray;
+                    }
+                    // Jika tidak ada data.model_in_tray, biarkan select tidak terpilih (user harus memilih)
+                    
+                }
             }
         }
     }
@@ -398,6 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 urutan: assessment.urutan,
                 durasi_default: assessment.durasi_default || '',
                 instruksi_khusus: assessment.instruksi_khusus || '',
+                model_in_tray: assessment.model_in_tray, // Gunakan nilai dari database tanpa default fallback
                 memos: assessment.memos || []
             });
         });
@@ -484,6 +498,19 @@ document.addEventListener('change', function(e) {
     if (e.target.name && e.target.name.includes('[penilaian_id]')) {
         updateAvailableOptions();
         togglePdfUpload(e.target);
+        
+        // Pastikan model_in_tray diupdate saat assessment berubah
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        if (selectedOption && selectedOption.dataset.jenis === 'in_tray') {
+            const assessmentItem = e.target.closest('.assessment-item');
+            const intrayModelSection = assessmentItem.querySelector('.intray-model-section');
+            if (intrayModelSection) {
+                const modelSelect = intrayModelSection.querySelector('select[name*="[model_in_tray]"]');
+                if (modelSelect) {
+                    // Jangan set default value, biarkan user memilih atau gunakan nilai yang sudah ada
+                }
+            }
+        }
     }
     
     // Update status tampilan file saat memilih file
@@ -524,7 +551,9 @@ function togglePdfUpload(selectElement) {
 
     if (selectedOption && selectedOption.dataset.jenis === 'in_tray') {
         if (memoSection) memoSection.style.display = 'block';
-        if (intrayModelSection) intrayModelSection.style.display = 'block';
+        if (intrayModelSection) {
+            intrayModelSection.style.display = 'block';
+        }
     } else {
         if (memoSection) memoSection.style.display = 'none';
         if (intrayModelSection) intrayModelSection.style.display = 'none';
@@ -641,5 +670,16 @@ function getAssessmentIndexFromElement(item) {
     const match = anyInput.name.match(/assessments\[(\d+)\]/);
     return match ? match[1] : 0;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        
+        
+        form.addEventListener('submit', function(e) {
+            console.log('Form submitted successfully');
+        });
+    }
+});
 </script>
 @endsection

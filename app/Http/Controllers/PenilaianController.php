@@ -129,7 +129,7 @@ class PenilaianController extends Controller
                 'disposisi' => $jawaban['disposisi'] ?? '',
                 'status' => $request->status,
                 'waktu_simpan' => now(),
-                'model_assessment' => $penilaian->model_in_tray ?? 'urutan',
+                'model_assessment' => $sesiAssessment->model_in_tray ?? 'urutan',
                 'jawaban_pertanyaan' => $jawaban['jawaban_pertanyaan'] ?? null
             ]);
 

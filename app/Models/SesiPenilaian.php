@@ -29,11 +29,13 @@ class SesiPenilaian extends Model
     ];
 
     /**
-     * Get the assessments for this session
+     * Get the assessments for this session (exclude soft deleted)
      */
     public function assessments(): HasMany
     {
-        return $this->hasMany(SesiAssessment::class, 'sesi_penilaian_id')->orderBy('urutan');
+        return $this->hasMany(SesiAssessment::class, 'sesi_penilaian_id')
+            ->whereNull('deleted_at')
+            ->orderBy('urutan');
     }
 
     /**

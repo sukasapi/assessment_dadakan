@@ -154,7 +154,7 @@
             </button>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Assessment Type -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Jenis Assessment *</label>
@@ -165,6 +165,16 @@
                                             @foreach($assessmentTypes as $assessment)
                             <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}">{{ $assessment->nama }}</option>
                         @endforeach
+                </select>
+            </div>
+
+            <!-- Model In-Tray (hanya muncul jika jenis assessment adalah in_tray) -->
+            <div class="intray-model-section" style="display: none;">
+                <label class="block text-sm font-medium text-gray-700">Model In-Tray *</label>
+                <select name="assessments[INDEX][model_in_tray]" 
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="urutan">Urutan (Drag & Drop)</option>
+                    <option value="prioritas">Prioritas (4 Kategori)</option>
                 </select>
             </div>
 
@@ -218,20 +228,8 @@
             <p class="mt-1 text-xs text-gray-500">Upload file PDF untuk deskripsi soal studi kasus (max 10MB)</p>
         </div>
         
-        <!-- Model In-Tray Selection -->
-        <div class="mt-3 intray-model-section" style="display: none;">
-            <label class="block text-sm font-medium text-gray-700">Model Assessment In-Tray *</label>
-            <select name="assessments[INDEX][model_in_tray]" 
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    required>
-                <option value="urutan">Model Urutan (Drag-Drop)</option>
-                <option value="prioritas">Model Prioritas (4 Kategori)</option>
-            </select>
-            <p class="mt-1 text-xs text-gray-500">
-                <strong>Model Urutan:</strong> Peserta mengurutkan memo dengan drag-drop<br>
-                <strong>Model Prioritas:</strong> Peserta memilih prioritas untuk setiap memo (Mendesak-Penting, Mendesak-Tidak Penting, Tidak Mendesak-Penting, Tidak Mendesak-Tidak Penting)
-            </p>
-        </div>
+        <!-- Model In-Tray Selection - HIDDEN FIELD -->
+        <input type="hidden" name="assessments[INDEX][model_in_tray]" value="urutan" class="model-in-tray-input">
 
         <!-- Memos untuk In-Tray -->
         <div class="mt-4 memo-section" style="display:none;">
@@ -413,7 +411,16 @@ function togglePdfUpload(selectElement) {
 
     if (selectedOption && selectedOption.dataset.jenis === 'in_tray') {
         if (memoSection) memoSection.style.display = 'block';
-        if (intrayModelSection) intrayModelSection.style.display = 'block';
+        if (intrayModelSection) {
+            intrayModelSection.style.display = 'block';
+            // Set default value untuk model_in_tray hanya jika belum ada nilai
+            const modelSelect = intrayModelSection.querySelector('select[name*="[model_in_tray]"]');
+            if (modelSelect && !modelSelect.value) {
+                // Set default value ke 'urutan'
+                modelSelect.value = 'urutan';
+                console.log('Setting model_in_tray default to urutan');
+            }
+        }
     } else {
         if (memoSection) memoSection.style.display = 'none';
         if (memoSection) memoSection.querySelector('.memo-container').innerHTML = '';
@@ -503,5 +510,64 @@ function showNotification(message, type) {
         setTimeout(() => notification.remove(), 300);
     }, 4000);
 }
+
+// Add form submission logging
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('=== FORM SUBMISSION DEBUG (CREATE) ===');
+            
+            // Log all form data
+            const formData = new FormData(form);
+            const formObject = {};
+            for (let [key, value] of formData.entries()) {
+                if (formObject[key]) {
+                    if (Array.isArray(formObject[key])) {
+                        formObject[key].push(value);
+                    } else {
+                        formObject[key] = [formObject[key], value];
+                    }
+                } else {
+                    formObject[key] = value;
+                }
+            }
+            
+            console.log('Form Data:', formObject);
+            
+            // Log assessment data specifically
+            const assessments = {};
+            for (let [key, value] of formData.entries()) {
+                if (key.startsWith('assessments[')) {
+                    const match = key.match(/assessments\[(\d+)\]\[([^\]]+)\]/);
+                    if (match) {
+                        const index = match[1];
+                        const field = match[2];
+                        if (!assessments[index]) {
+                            assessments[index] = {};
+                        }
+                        assessments[index][field] = value;
+                    }
+                }
+            }
+            
+            console.log('Assessment Data:', assessments);
+            
+            // Log model_in_tray specifically
+            for (let index in assessments) {
+                const assessment = assessments[index];
+                console.log(`Assessment ${index}:`, {
+                    penilaian_id: assessment.penilaian_id,
+                    model_in_tray: assessment.model_in_tray || 'NOT SET',
+                    urutan: assessment.urutan,
+                    durasi_default: assessment.durasi_default,
+                    instruksi_khusus: assessment.instruksi_khusus
+                });
+            }
+            
+            console.log('=== END FORM SUBMISSION DEBUG (CREATE) ===');
+        });
+    }
+});
 </script>
 @endsection

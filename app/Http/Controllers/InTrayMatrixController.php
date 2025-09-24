@@ -44,10 +44,19 @@ class InTrayMatrixController extends Controller
             
             $peserta = $user->peserta;
             
-            // Get the active session for this participant
-            $sesi = SesiPenilaian::whereHas('participants', function($query) use ($peserta) {
-                $query->where('peserta_id', $peserta->id);
-            })->where('status', 'active')->first();
+            // Check if there's a specific session parameter
+            $requestedSesiId = request()->query('sesi');
+            if ($requestedSesiId) {
+                // Get the specific session if participant is registered
+                $sesi = SesiPenilaian::whereHas('participants', function($query) use ($peserta) {
+                    $query->where('peserta_id', $peserta->id);
+                })->where('id', $requestedSesiId)->where('status', 'active')->first();
+            } else {
+                // Get the active session for this participant
+                $sesi = SesiPenilaian::whereHas('participants', function($query) use ($peserta) {
+                    $query->where('peserta_id', $peserta->id);
+                })->where('status', 'active')->first();
+            }
             
             if (!$sesi) {
                 return redirect()->route('peserta.dashboard')->with('error', 'Tidak ada sesi aktif untuk Anda');
@@ -121,15 +130,10 @@ class InTrayMatrixController extends Controller
             }
         }
         
-        // Get unanswered memos
-        $answeredMemoIds = $jawaban->pluck('latihan_in_tray_id')->toArray();
-        $unansweredMemos = $memos->whereNotIn('id', $answeredMemoIds);
-        
         return view('intray.matrix', compact(
             'sesi', 
             'peserta', 
             'matrix', 
-            'unansweredMemos',
             'isAdmin',
             'inTrayAssessment'
         ));

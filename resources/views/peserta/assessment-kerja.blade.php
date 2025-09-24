@@ -41,23 +41,37 @@
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Daftar Memo</h2>
                         <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
                             <p class="font-semibold mb-2">Petunjuk:</p>
-                            <ul class="list-disc pl-5 space-y-1">
-                                <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
-                                <li>Saat jumlah kartu banyak, gulir area daftar. Saat sedang menarik kartu dan mendekati tepi atas/bawah, daftar akan <span class="font-medium">auto-scroll</span>.</li>
-                                <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo dan <span class="font-medium">mengisi Disposisi</span>.</li>
-                                <li>Setelah Disposisi disimpan, ringkasannya muncul di bawah kartu pada baris <span class="italic">Disposisi</span>.</li>
-                            </ul>
+                            @if(($intrayModel ?? 'urutan') === 'urutan')
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">urutan prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
+                                    <li>Saat jumlah kartu banyak, gulir area daftar. Saat sedang menarik kartu dan mendekati tepi atas/bawah, daftar akan <span class="font-medium">auto-scroll</span>.</li>
+                                    <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo dan <span class="font-medium">mengisi Disposisi</span>.</li>
+                                    <li>Setelah Disposisi disimpan, ringkasannya muncul di bawah kartu pada baris <span class="italic">Disposisi</span>.</li>
+                                </ul>
+                            @else
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo.</li>
+                                    <li>Dalam detail memo, pilih <span class="font-medium">kategori prioritas</span> sesuai dengan tingkat urgensi dan kepentingan memo.</li>
+                                    <li>Isi <span class="font-medium">Disposisi</span> untuk menjelaskan tindakan yang akan diambil terhadap memo.</li>
+                                    <li>Jika ada pertanyaan, jawab pertanyaan tersebut dengan lengkap menggunakan editor yang tersedia.</li>
+                                    <li>Setelah semua informasi disimpan, ringkasannya akan muncul di bawah kartu memo.</li>
+                                </ul>
+                            @endif
                         </div>
-                        <div id="inTrayBoard" class="grid grid-cols-1 gap-3">
+                        <div id="inTrayBoard" class="grid grid-cols-1 gap-3 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'sortable' : '' }}">
                             @if($memos->count() > 0)
                                 @foreach($memos as $memo)
-                                    <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-move" data-id="{{ $memo->id }}" data-content='@json(['konten_memo' => $memo->konten_memo, 'pertanyaan' => $memo->pertanyaan])'>
+                                    <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'cursor-move' : '' }}" 
+                                         data-id="{{ $memo->id }}" 
+                                         data-content='@json(['konten_memo' => $memo->konten_memo, 'pertanyaan' => $memo->pertanyaan])'>
                                         <div class="flex items-start justify-between mb-2">
                                             <div class="flex items-center gap-3">
                                                 <div class="pt-1">
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-blue-100 text-blue-800 border border-blue-200">Memo M-{{$memo->id}}</span>
                                                     <input type="number" min="1" class="memo-prioritas hidden w-20 border-black-300 m-2 rounded-md shadow-sm focus:ring-blue-500 focus:border-black-500 bg-white-100" value="1" readonly>
+                                                    @if(($intrayModel ?? 'urutan') === 'urutan')
                                                     <span class="memo-prioritas-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 m-2">1</span>
+                                                    @endif
                                                 </div>
                                             </div>
                                             <button type="button" title="Lihat detail memo dan isi Disposisi" class="memo-detail inline-flex items-center px-2 py-1 text-xs border border-gray-300 rounded-md bg-white hover:bg-gray-50">Lihat Detail</button>
@@ -111,10 +125,17 @@
                                         </div>
                                         @endif
                                         
-                                        @if($memo->pertanyaan && $__jawaban)
+                                        @if($memo->pertanyaan)
                                         <div class="memo-question-text text-xxs text-gray-600 mt-1">
+                                            <span class="font-medium">Pertanyaan:</span>
+                                            <span class="memo-question-text-value">{{ Str::limit($memo->pertanyaan, 50) }}</span>
+                                        </div>
+                                        @endif
+                                        
+                                        @if($__jawaban)
+                                        <div class="memo-answer-text text-xxs text-gray-600 mt-1">
                                             <span class="font-medium">Jawaban:</span>
-                                            <span class="memo-question-text-value">{{ Str::limit($__jawaban, 50) }}</span>
+                                            <span class="memo-answer-text-value">{{ Str::limit($__jawaban, 50) }}</span>
                                         </div>
                                         @endif
                                     </div>
@@ -127,12 +148,53 @@
                             @endif
                         </div>
                         
+                        @if($memos->count() > 0 && ($intrayModel ?? 'urutan') === 'prioritas')
+                        <!-- Question & Answer Section -->
+                        <div class="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div class="p-4 md:p-5">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Pertanyaan dan Jawaban</h3>
+                                
+                                @if($memos->where('pertanyaan', '!=', null)->count() > 0)
+                                    @foreach($memos->where('pertanyaan', '!=', null) as $memo)
+                                        <div class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                            <div class="mb-3">
+                                                <label class="block text-sm font-medium text-gray-800 mb-2">Pertanyaan untuk {{ $memo->judul_memo ?? 'Memo M-' . $memo->id }}</label>
+                                                <div class="text-sm text-gray-600 bg-white p-3 rounded-md border">
+                                                    {!! $memo->pertanyaan !!}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="block text-sm font-medium text-gray-800 mb-2">Jawaban Anda</label>
+                                                <div id="questionAnswerEditor{{ $memo->id }}" class="border border-gray-300 rounded-md"></div>
+                                                <textarea id="questionAnswer{{ $memo->id }}" name="question_answers[{{ $memo->id }}]" style="display: none;">{{ optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '' }}</textarea>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="text-center py-8 text-gray-500">
+                                        <p class="text-sm">Belum ada pertanyaan yang disediakan untuk memo-memo ini.</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        @endif
+                        
                         @if($memos->count() > 0)
                         <form id="inTrayForm" class="mt-6">
                             @csrf
                             <div class="flex gap-3">
                                 <button type="button" id="saveInTrayDraft" class="px-4 py-2 bg-blue-600 text-white rounded-md">Simpan Sementara</button>
                                 <button type="button" id="saveInTrayFinal" class="px-4 py-2 bg-green-600 text-white rounded-md">Simpan Final</button>
+                                @if(($intrayModel ?? 'urutan') === 'prioritas')
+                                    <a href="{{ route('peserta.intray-matrix.show', ['sesi' => $effectiveSesiId]) }}" 
+                                       class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                        </svg>
+                                        Lihat Matriks
+                                    </a>
+                                @endif
                             </div>
                         </form>
                         @endif
@@ -238,31 +300,48 @@ function showPopup(message, type = 'success', redirectToDashboard = false) {
 // Drag & drop sederhana tanpa library
 function makeSortable(container) {
     let dragSrcEl = null;
-    container.querySelectorAll('.memo-card').forEach(card => {
-        card.setAttribute('draggable', 'true');
-        card.addEventListener('dragstart', (e) => {
-            dragSrcEl = card;
+    
+    const cards = container.querySelectorAll('.memo-card');
+    console.log('makeSortable: Found', cards.length, 'cards');
+    
+    cards.forEach((card, index) => {
+        console.log('Setting up card', index, 'with ID:', card.dataset.id);
+        
+        // Clone the card to remove all existing event listeners
+        const newCard = card.cloneNode(true);
+        card.parentNode.replaceChild(newCard, card);
+        
+        newCard.setAttribute('draggable', 'true');
+        
+        newCard.addEventListener('dragstart', (e) => {
+            console.log('dragstart on card', index, 'ID:', newCard.dataset.id);
+            dragSrcEl = newCard;
             e.dataTransfer.effectAllowed = 'move';
-            card.classList.add('opacity-50');
+            newCard.classList.add('opacity-50');
         });
-        card.addEventListener('dragend', () => {
-            card.classList.remove('opacity-50');
+        
+        newCard.addEventListener('dragend', (e) => {
+            console.log('dragend on card', index, 'ID:', newCard.dataset.id);
+            newCard.classList.remove('opacity-50');
             updateMemoOrders(container);
         });
-        card.addEventListener('dragover', (e) => {
+        
+        newCard.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
         });
-        card.addEventListener('drop', (e) => {
+        
+        newCard.addEventListener('drop', (e) => {
+            console.log('drop on card', index, 'ID:', newCard.dataset.id);
             e.stopPropagation();
-            if (dragSrcEl !== card) {
+            if (dragSrcEl !== newCard) {
                 const list = Array.from(container.children);
                 const srcIndex = list.indexOf(dragSrcEl);
-                const destIndex = list.indexOf(card);
+                const destIndex = list.indexOf(newCard);
                 if (srcIndex < destIndex) {
-                    container.insertBefore(dragSrcEl, card.nextSibling);
+                    container.insertBefore(dragSrcEl, newCard.nextSibling);
                 } else {
-                    container.insertBefore(dragSrcEl, card);
+                    container.insertBefore(dragSrcEl, newCard);
                 }
             }
         });
@@ -308,7 +387,6 @@ function updateMemoOrders(container) {
 document.addEventListener('DOMContentLoaded', () => {
     const board = document.getElementById('inTrayBoard');
     if (board) {
-        makeSortable(board);
         // tombol detail
         board.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('memo-detail')) {
@@ -321,7 +399,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize model based on assessment type
-    initializeInTrayModel('{{ $intrayModel ?? "urutan" }}');
+    const assessmentModel = '{{ $intrayModel ?? "urutan" }}';
+    console.log('=== ASSESSMENT MODE DEBUG ===');
+    console.log('Assessment Model:', assessmentModel);
+    console.log('Assessment Type:', '{{ $assessment->jenis }}');
+    console.log('Assessment ID:', '{{ $assessment->id }}');
+    console.log('Assessment Name:', '{{ $assessment->nama }}');
+    console.log('=============================');
+    initializeInTrayModel(assessmentModel);
 
     // URL simpan In-Tray
     const IN_TRAY_SAVE_URL = "{{ route('penilaian.in-tray.save', $assessment->id) }}";
@@ -555,15 +640,6 @@ function openMemoModal(html, card) {
                         </div>
                     </div>
 
-                    <!-- Question Section -->
-                    <div id="memoModalQuestionSection" class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm" style="display: none;">
-                        <div class="p-4 md:p-5">
-                            <label class="block text-sm font-medium text-gray-800 mb-2">Pertanyaan</label>
-                            <div id="memoModalQuestion" class="text-sm text-gray-600 bg-gray-50 p-3 rounded-md mb-3"></div>
-                            <label class="block text-sm font-medium text-gray-800 mb-2">Jawaban Anda</label>
-                            <textarea id="memoModalQuestionAnswer" rows="3" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Jawaban Anda..."></textarea>
-                        </div>
-                    </div>
 
                     <!-- Disposisi Section -->
                     <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -624,17 +700,6 @@ function openMemoModal(html, card) {
                 }
             }
             
-            if (evt.target && evt.target.id === 'memoModalQuestionAnswer') {
-                const questionAnswer = currentMemoCard.querySelector('.memo-question-answer');
-                if (questionAnswer) questionAnswer.value = evt.target.value;
-                
-                // Update question answer display text
-                const questionTextValue = currentMemoCard.querySelector('.memo-question-text-value');
-                if (questionTextValue) {
-                    const v = (evt.target.value || '').trim();
-                    questionTextValue.textContent = v.length ? v.substring(0, 50) + (v.length > 50 ? '...' : '') : '';
-                }
-            }
         });
     }
 
@@ -642,10 +707,7 @@ function openMemoModal(html, card) {
     const contentEl = document.getElementById('memoModalContent');
     const disposisiEl = document.getElementById('memoModalDisposisi');
     const priorityEl = document.getElementById('memoModalPriority');
-    const questionEl = document.getElementById('memoModalQuestion');
-    const questionAnswerEl = document.getElementById('memoModalQuestionAnswer');
     const prioritySection = document.getElementById('memoModalPrioritySection');
-    const questionSection = document.getElementById('memoModalQuestionSection');
     
     if (contentEl) contentEl.innerHTML = html;
     
@@ -659,11 +721,6 @@ function openMemoModal(html, card) {
         priorityEl.value = hiddenPriority.value || '';
     }
     
-    // Set question and answer from hidden input
-    const hiddenQuestionAnswer = card.querySelector('.memo-question-answer');
-    if (questionAnswerEl && hiddenQuestionAnswer) {
-        questionAnswerEl.value = hiddenQuestionAnswer.value || '';
-    }
     
     // Show/hide sections based on model
     const intrayModel = '{{ $intrayModel ?? "urutan" }}';
@@ -672,37 +729,19 @@ function openMemoModal(html, card) {
         prioritySection.style.display = intrayModel === 'prioritas' ? 'block' : 'none';
     }
     
-    if (questionSection) {
-        // Check if memo has question
-        const memoId = card.getAttribute('data-id');
-        const hasQuestion = card.querySelector('.memo-question-text');
-        questionSection.style.display = hasQuestion ? 'block' : 'none';
-        
-        if (questionEl && hasQuestion) {
-            // Get question from memo data
-            const memoData = card.getAttribute('data-content');
-            if (memoData) {
-                try {
-                    const memo = JSON.parse(memoData);
-                    if (memo.pertanyaan) {
-                        questionEl.innerHTML = memo.pertanyaan;
-                    }
-                } catch (e) {
-                    console.error('Error parsing memo data:', e);
-                }
-            }
-        }
-    }
 
     modal.classList.remove('hidden');
 }
 
 // Initialize in-tray model based on assessment configuration
 function initializeInTrayModel(model = 'urutan') {
+    console.log('initializeInTrayModel called with model:', model);
     if (model === 'prioritas') {
+        console.log('✅ Enabling PRIORITAS model (4 kategori prioritas)');
         // Enable priority model
         enablePriorityModel();
     } else {
+        console.log('✅ Enabling URUTAN model (drag & drop)');
         // Enable order model (default)
         enableOrderModel();
     }
@@ -710,11 +749,17 @@ function initializeInTrayModel(model = 'urutan') {
 
 // Enable priority model
 function enablePriorityModel() {
+    console.log('🔧 Setting up PRIORITAS model...');
     const board = document.getElementById('inTrayBoard');
-    if (!board) return;
+    if (!board) {
+        console.log('❌ Board not found');
+        return;
+    }
     
     const cards = board.querySelectorAll('.memo-card');
-    cards.forEach(card => {
+    console.log('📋 Found', cards.length, 'memo cards for prioritas model');
+    
+    cards.forEach((card, index) => {
         // Hide order badge
         const orderBadge = card.querySelector('.memo-prioritas-badge');
         if (orderBadge) {
@@ -728,29 +773,42 @@ function enablePriorityModel() {
     
     // Disable sortable functionality
     board.classList.remove('sortable');
+    console.log('✅ PRIORITAS model setup complete - No drag & drop, priority selection in modal');
 }
 
 // Enable order model
 function enableOrderModel() {
+    console.log('🔧 Setting up URUTAN model...');
     const board = document.getElementById('inTrayBoard');
-    if (!board) return;
+    if (!board) {
+        console.log('❌ Board not found');
+        return;
+    }
     
     const cards = board.querySelectorAll('.memo-card');
-    cards.forEach(card => {
+    console.log('📋 Found', cards.length, 'memo cards for urutan model');
+    
+    cards.forEach((card, index) => {
+        console.log('🎯 Setting up card', index, 'for order model, ID:', card.dataset.id);
+        
         // Show order badge
         const orderBadge = card.querySelector('.memo-prioritas-badge');
         if (orderBadge) {
             orderBadge.style.display = 'inline-flex';
+            console.log('🏷️ Order badge shown for card', index);
         }
         
         // Make card draggable
         card.setAttribute('draggable', 'true');
         card.classList.add('cursor-move');
+        console.log('🖱️ Card', index, 'made draggable');
     });
     
     // Enable sortable functionality
     board.classList.add('sortable');
+    console.log('🔄 Calling makeSortable...');
     makeSortable(board);
+    console.log('✅ URUTAN model setup complete - Drag & drop enabled, priority badges shown');
 }
 
 // Toggle between models (for testing purposes)
@@ -767,5 +825,35 @@ function toggleInTrayModel() {
         enablePriorityModel();
     }
 }
+
+// Initialize CKEditor for question answers
+document.addEventListener('DOMContentLoaded', function() {
+    const questionEditors = document.querySelectorAll('[id^="questionAnswerEditor"]');
+    questionEditors.forEach(function(editorEl) {
+        const memoId = editorEl.id.replace('questionAnswerEditor', '');
+        ClassicEditor
+            .create(editorEl, {
+                toolbar: ['bold', 'italic', 'underline', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo'],
+                height: 150
+            })
+            .then(editor => {
+                // Set initial value
+                const textarea = document.getElementById('questionAnswer' + memoId);
+                if (textarea) {
+                    editor.setData(textarea.value || '');
+                }
+                
+                // Listen for changes
+                editor.model.document.on('change:data', () => {
+                    if (textarea) {
+                        textarea.value = editor.getData();
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error initializing CKEditor for memo ' + memoId + ':', error);
+            });
+    });
+});
 </script>
 @endsection
