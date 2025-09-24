@@ -1029,4 +1029,43 @@ $matrix = [
 
 ---
 
+## 🔧 **Admin Edit Sesi PDF Preview Route Fix** - *25 Januari 2025*
+
+### **Masalah**
+- PDF preview di admin tidak berfungsi di server (Content unavailable. Resource was not cached)
+- Peserta sudah bisa mengakses PDF dengan baik, tetapi admin tidak bisa
+- Route `/pdf/inline/` memiliki header cache yang terlalu ketat untuk server production
+
+### **Analisa Masalah**
+- **Route Peserta (Bekerja)**: `/admin/assessment/{penilaianId}/pdf/{filename}` dengan header sederhana
+- **Route Admin (Bermasalah)**: `/pdf/inline/{penilaianId}/{filename}` dengan header cache ketat
+- **Header Cache Ketat**: `Cache-Control: no-cache, no-store, must-revalidate` menyebabkan masalah di server
+
+### **Solusi**
+- **Use Same Route as Participants**: Menggunakan route yang sama dengan peserta yang sudah terbukti bekerja
+- **Consistent Implementation**: Memastikan konsistensi antara implementasi peserta dan admin
+
+### **Perubahan Teknis**
+- **Route Change**:
+  ```javascript
+  // Sebelum (Bermasalah):
+  const pdfUrl = `/pdf/inline/${penilaianId}/${encodeURIComponent(pdfFile)}`;
+  
+  // Sesudah (Diperbaiki):
+  const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${encodeURIComponent(pdfFile)}`;
+  ```
+- **Header Comparison**:
+  - **Route Peserta**: `Cache-Control: public` (permissive)
+  - **Route Admin Lama**: `Cache-Control: no-cache, no-store, must-revalidate` (restrictive)
+
+### **Files Modified**
+- `resources/views/admin/sesi/edit.blade.php` - Changed PDF URL to use same route as participants
+- **Benefits**:
+  - **Working PDF Preview**: PDF sekarang dapat dimuat di server production
+  - **Consistent Implementation**: Menggunakan route yang sama dengan peserta
+  - **Server Compatibility**: Header cache yang lebih permisif untuk server production
+  - **Proven Solution**: Menggunakan implementasi yang sudah terbukti bekerja
+
+---
+
 *Dokumen ini berisi seluruh riwayat pengembangan aplikasi Assessment Center dari setup awal hingga fitur-fitur terbaru yang telah diimplementasikan. Mulai sekarang, semua dokumentasi baru akan ditambahkan ke file DEV_HIST.md ini.*
