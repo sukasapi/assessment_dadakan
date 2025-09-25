@@ -19,16 +19,21 @@
             </div>
             <div id="toast" class="hidden fixed top-6 right-6 z-50"></div>
             <!-- Petunjuk Pengisian -->
+             @if($assessment->jenis == 'roleplay' || $assessment->jenis == 'fgd')
+             @else
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengisian:</h2>
                 <div class="prose max-w-none">
-                    @if(!empty($assessment->petunjuk))
+                    @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
                         {!! $assessment->petunjuk !!}
+                    @elseif($assessment->jenis =='in_tray')
+                        {{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada petunjuk pengisian Khusus' }}
                     @else
                         <p class="text-gray-500 italic">Petunjuk pengisian belum tersedia.</p>
                     @endif
                 </div>
             </div>
+            @endif
 
             <!-- Konten Assessment -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -37,6 +42,19 @@
                 @switch($assessment->jenis)
                     @case('in_tray')
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Daftar Memo</h2>
+                        
+                       <!-- {{-- Debug information untuk troubleshooting --}}
+                        @if(config('app.debug'))
+                            <div class="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-xs">
+                                <strong>Debug Info (In-Tray):</strong><br>
+                                SesiAssessment ID: {{ $sesiAssessment->id ?? 'null' }}<br>
+                                SesiAssessment Sesi ID: {{ $sesiAssessment->sesi_penilaian_id ?? 'null' }}<br>
+                                Instruksi Khusus: {{ $sesiAssessment->instruksi_khusus ?? 'null' }}<br>
+                                Assessment Petunjuk: {{ $assessment->petunjuk ?? 'null' }}<br>
+                                Requested Sesi: {{ request('sesi') ?? 'null' }}
+                            </div>
+                        @endif -->
+                        
                         <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
                             <p class="font-semibold mb-2">Petunjuk:</p>
                             @if(($intrayModel ?? 'urutan') === 'urutan')
@@ -51,7 +69,7 @@
                                     <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo.</li>
                                     <li>Dalam detail memo, pilih <span class="font-medium">kategori prioritas</span> sesuai dengan tingkat urgensi dan kepentingan memo.</li>
                                     <li>Isi <span class="font-medium">Disposisi</span> untuk menjelaskan tindakan yang akan diambil terhadap memo.</li>
-                                    <li>Jika ada pertanyaan, jawab pertanyaan tersebut dengan lengkap menggunakan editor yang tersedia.</li>
+                                    <li>Kemudian Susun langkah-langkah strategis yang harus dilakukan dalam beberapa hari ke depan untuk merespon dan mengantisipasi isu-isu penting seperti yang ada dalam memo-memo penting.</li>
                                     <li>Setelah semua informasi disimpan, ringkasannya akan muncul di bawah kartu memo.</li>
                                 </ul>
                             @endif
@@ -142,7 +160,7 @@
                                 @php
                                     // Get the first memo with a question, or use a default question
                                     $firstMemoWithQuestion = $memos->where('pertanyaan', '!=', null)->first();
-                                    $defaultQuestion = 'Berdasarkan memo-memo yang telah Anda baca dan prioritaskan, jelaskan strategi dan pendekatan yang akan Anda gunakan untuk menangani situasi yang dihadapi. Sertakan alasan mengapa Anda memilih prioritas tersebut dan bagaimana Anda akan mengimplementasikan solusi yang diusulkan.';
+                                    $defaultQuestion = 'Susun langkah-langkah strategis yang harus dilakukan dalam beberapa hari ke depan untuk merespon dan mengantisipasi isu-isu penting seperti yang ada dalam memo-memo penting.';
                                     $assessmentQuestion = $firstMemoWithQuestion ? $firstMemoWithQuestion->pertanyaan : $defaultQuestion;
                                     
                                     // Get existing answer from any memo (they should all be the same)
@@ -384,7 +402,7 @@
                                     });
                                 });
                                 </script>
-                            @elseif(isset($sesiAssessment) && !empty($sesiAssessment->instruksi_khusus))
+                            @elseif(isset($sesiAssessment) && !empty(trim($sesiAssessment->instruksi_khusus)))
                                 <!-- Fallback: Instruksi Khusus jika tidak ada PDF -->
                                 <div class="prose max-w-none bg-gray-50 p-4 rounded-lg border">
                                     {!! $sesiAssessment->instruksi_khusus !!}
@@ -603,7 +621,7 @@
                                     });
                                 });
                                 </script>
-                            @elseif(isset($sesiAssessment) && !empty($sesiAssessment->instruksi_khusus))
+                            @elseif(isset($sesiAssessment) && !empty(trim($sesiAssessment->instruksi_khusus)))
                                 <!-- Fallback: Instruksi Khusus jika tidak ada PDF -->
                                 <div class="prose max-w-none bg-gray-50 p-4 rounded-lg border">
                                     {!! $sesiAssessment->instruksi_khusus !!}
