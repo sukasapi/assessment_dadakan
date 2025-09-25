@@ -228,31 +228,25 @@
 </div>
 
 <!-- Memo Detail Modal -->
-<div id="memoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
-        <div class="mt-3">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900" id="modalTitle">Detail Memo</h3>
-                <button onclick="closeMemoModal()" class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 rounded-full p-1">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
+<div id="memoModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+    <div class="relative w-full h-full bg-white flex flex-col">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+            <h3 class="text-base md:text-lg font-semibold" id="modalTitle">Detail Memo</h3>
+            <div class="flex items-center gap-2">
+                <button id="memoModalClose" class="px-3 py-1.5 text-sm border rounded hover:bg-gray-50">Tutup</button>
             </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">📄 Konten Memo</label>
-                    <div class="mt-1 p-4 bg-gray-50 rounded-md text-sm text-gray-900 border border-gray-200 max-h-60 overflow-y-auto" id="modalContent"></div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 md:p-6">
+            <div id="memoModalContent" class="prose max-w-none mb-6"></div>
+            <hr class="my-8 border-gray-200">
+            
+            <!-- Disposisi Section -->
+            <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div class="p-4 md:p-5">
+                    <label class="block text-sm font-medium text-gray-800 mb-2">Disposisi</label>
+                    <div id="memoModalDisposisi" class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap p-3 bg-gray-50 rounded-md border"></div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">📝 Disposisi</label>
-                    <div class="mt-1 p-4 bg-blue-50 rounded-md text-sm text-gray-900 border border-blue-200" id="modalDisposisi"></div>
-                </div>
-            </div>
-            <div class="flex justify-end mt-6 space-x-3">
-                <button onclick="closeMemoModal()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200">
-                    Tutup
-                </button>
             </div>
         </div>
     </div>
@@ -275,36 +269,35 @@ document.addEventListener('click', function(e) {
 function showMemoDetail(id, judul, konten, disposisi) {
     document.getElementById('modalTitle').textContent = judul;
     
-    // Handle content - preserve some HTML formatting but sanitize
-    const contentDiv = document.getElementById('modalContent');
-    if (konten) {
+    // Handle content - preserve HTML formatting like in assessment
+    const contentDiv = document.getElementById('memoModalContent');
+    if (konten && konten.trim() !== '') {
+        contentDiv.innerHTML = konten;
+    } else {
+        contentDiv.innerHTML = '<p class="text-gray-500 italic">Tidak ada konten memo</p>';
+    }
+    
+    // Handle disposisi - show full content
+    const disposisiDiv = document.getElementById('memoModalDisposisi');
+    if (disposisi && disposisi.trim() !== '') {
         // Create a temporary div to process the content
         const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = konten;
+        tempDiv.innerHTML = disposisi;
         
         // Convert to plain text but preserve line breaks
         const textContent = tempDiv.textContent || tempDiv.innerText || '';
-        contentDiv.innerHTML = textContent.replace(/\n/g, '<br>');
-    } else {
-        contentDiv.textContent = 'Tidak ada konten memo';
-    }
-    
-    // Handle disposisi
-    const disposisiDiv = document.getElementById('modalDisposisi');
-    if (disposisi && disposisi.trim() !== '') {
-        disposisiDiv.textContent = disposisi;
+        disposisiDiv.textContent = textContent;
         disposisiDiv.classList.remove('text-gray-500', 'italic');
+        disposisiDiv.classList.add('bg-green-50', 'border-green-200');
     } else {
         disposisiDiv.textContent = 'Belum ada disposisi';
         disposisiDiv.classList.add('text-gray-500', 'italic');
+        disposisiDiv.classList.remove('bg-green-50', 'border-green-200');
     }
     
-    // Show modal with animation
+    // Show modal
     const modal = document.getElementById('memoModal');
     modal.classList.remove('hidden');
-    
-    // Focus on modal for accessibility
-    modal.focus();
 }
 
 function closeMemoModal() {
@@ -313,15 +306,17 @@ function closeMemoModal() {
     
     // Clear content to prevent showing old data
     document.getElementById('modalTitle').textContent = 'Detail Memo';
-    document.getElementById('modalContent').textContent = '';
-    document.getElementById('modalDisposisi').textContent = '';
+    document.getElementById('memoModalContent').innerHTML = '';
+    document.getElementById('memoModalDisposisi').textContent = '';
+    
+    // Reset styling classes
+    const disposisiDiv = document.getElementById('memoModalDisposisi');
+    disposisiDiv.classList.remove('text-gray-500', 'italic', 'bg-green-50', 'border-green-200');
 }
 
-// Close modal when clicking outside
-document.getElementById('memoModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeMemoModal();
-    }
+// Close modal when clicking close button
+document.getElementById('memoModalClose').addEventListener('click', function() {
+    closeMemoModal();
 });
 
 // Close modal with Escape key
@@ -332,11 +327,6 @@ document.addEventListener('keydown', function(e) {
             closeMemoModal();
         }
     }
-});
-
-// Prevent modal from closing when clicking inside the modal content
-document.querySelector('#memoModal .relative').addEventListener('click', function(e) {
-    e.stopPropagation();
 });
 </script>
 @endsection
