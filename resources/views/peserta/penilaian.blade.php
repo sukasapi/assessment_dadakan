@@ -16,7 +16,7 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengisian:</h2>
                 <div class="prose max-w-none">
-                    @if(isset($sesiAssessment) && !empty($sesiAssessment->instruksi_khusus))
+                    @if(isset($sesiAssessment) && !empty(trim($sesiAssessment->instruksi_khusus)))
                         {!! $sesiAssessment->instruksi_khusus !!}
                     @elseif(!empty($penilaian->petunjuk))
                         {!! $penilaian->petunjuk !!}

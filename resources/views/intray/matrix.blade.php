@@ -73,7 +73,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
->
+                                                title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -115,7 +115,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
->
+                                                title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -160,7 +160,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
->
+                                                title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -202,7 +202,7 @@
                                                 data-judul="{{ $memo['judul'] }}"
                                                 data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
->
+                                                title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -229,11 +229,11 @@
 
 <!-- Memo Detail Modal -->
 <div id="memoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
         <div class="mt-3">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium text-gray-900" id="modalTitle">Detail Memo</h3>
-                <button onclick="closeMemoModal()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="closeMemoModal()" class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 rounded-full p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -241,16 +241,16 @@
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Konten Memo</label>
-                    <div class="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900" id="modalContent"></div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">📄 Konten Memo</label>
+                    <div class="mt-1 p-4 bg-gray-50 rounded-md text-sm text-gray-900 border border-gray-200 max-h-60 overflow-y-auto" id="modalContent"></div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Disposisi</label>
-                    <div class="mt-1 p-3 bg-blue-50 rounded-md text-sm text-gray-900" id="modalDisposisi"></div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">📝 Disposisi</label>
+                    <div class="mt-1 p-4 bg-blue-50 rounded-md text-sm text-gray-900 border border-blue-200" id="modalDisposisi"></div>
                 </div>
             </div>
-            <div class="flex justify-end mt-6">
-                <button onclick="closeMemoModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+            <div class="flex justify-end mt-6 space-x-3">
+                <button onclick="closeMemoModal()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200">
                     Tutup
                 </button>
             </div>
@@ -261,28 +261,60 @@
 <script>
 // Event listener for memo detail buttons
 document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('view-memo-btn')) {
-        const id = e.target.getAttribute('data-id');
-        const judul = e.target.getAttribute('data-judul');
-        const konten = e.target.getAttribute('data-konten');
-        const disposisi = e.target.getAttribute('data-disposisi');
+    // Check if clicked element is the button or its child (SVG)
+    const button = e.target.closest('.view-memo-btn');
+    if (button) {
+        const id = button.getAttribute('data-id');
+        const judul = button.getAttribute('data-judul');
+        const konten = button.getAttribute('data-konten');
+        const disposisi = button.getAttribute('data-disposisi');
         showMemoDetail(id, judul, konten, disposisi);
     }
 });
 
 function showMemoDetail(id, judul, konten, disposisi) {
     document.getElementById('modalTitle').textContent = judul;
-    // Remove HTML tags from content
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = konten;
-    document.getElementById('modalContent').textContent = tempDiv.textContent || tempDiv.innerText || '';
-    document.getElementById('modalDisposisi').textContent = disposisi || 'Tidak ada disposisi';
     
-    document.getElementById('memoModal').classList.remove('hidden');
+    // Handle content - preserve some HTML formatting but sanitize
+    const contentDiv = document.getElementById('modalContent');
+    if (konten) {
+        // Create a temporary div to process the content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = konten;
+        
+        // Convert to plain text but preserve line breaks
+        const textContent = tempDiv.textContent || tempDiv.innerText || '';
+        contentDiv.innerHTML = textContent.replace(/\n/g, '<br>');
+    } else {
+        contentDiv.textContent = 'Tidak ada konten memo';
+    }
+    
+    // Handle disposisi
+    const disposisiDiv = document.getElementById('modalDisposisi');
+    if (disposisi && disposisi.trim() !== '') {
+        disposisiDiv.textContent = disposisi;
+        disposisiDiv.classList.remove('text-gray-500', 'italic');
+    } else {
+        disposisiDiv.textContent = 'Belum ada disposisi';
+        disposisiDiv.classList.add('text-gray-500', 'italic');
+    }
+    
+    // Show modal with animation
+    const modal = document.getElementById('memoModal');
+    modal.classList.remove('hidden');
+    
+    // Focus on modal for accessibility
+    modal.focus();
 }
 
 function closeMemoModal() {
-    document.getElementById('memoModal').classList.add('hidden');
+    const modal = document.getElementById('memoModal');
+    modal.classList.add('hidden');
+    
+    // Clear content to prevent showing old data
+    document.getElementById('modalTitle').textContent = 'Detail Memo';
+    document.getElementById('modalContent').textContent = '';
+    document.getElementById('modalDisposisi').textContent = '';
 }
 
 // Close modal when clicking outside
@@ -290,6 +322,21 @@ document.getElementById('memoModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeMemoModal();
     }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('memoModal');
+        if (!modal.classList.contains('hidden')) {
+            closeMemoModal();
+        }
+    }
+});
+
+// Prevent modal from closing when clicking inside the modal content
+document.querySelector('#memoModal .relative').addEventListener('click', function(e) {
+    e.stopPropagation();
 });
 </script>
 @endsection
