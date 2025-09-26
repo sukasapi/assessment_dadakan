@@ -37,11 +37,9 @@
 
             <!-- Konten Assessment -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              
-
                 @switch($assessment->jenis)
                     @case('in_tray')
-                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Daftar Memo</h2>
+                      
                         
                        <!-- {{-- Debug information untuk troubleshooting --}}
                         @if(config('app.debug'))
@@ -59,6 +57,12 @@
                             <p class="font-semibold mb-2">Petunjuk:</p>
                             @if(($intrayModel ?? 'urutan') === 'urutan')
                                 <ul class="list-disc pl-5 space-y-1">
+                                @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
+                                    <li>{!! $assessment->petunjuk !!}</li>
+                                @elseif($assessment->jenis =='in_tray')
+                                    <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada petunjuk pengisian Khusus' }}</li>
+                                @else
+                                @endif
                                     <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">urutan prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
                                     <li>Saat jumlah kartu banyak, gulir area daftar. Saat sedang menarik kartu dan mendekati tepi atas/bawah, daftar akan <span class="font-medium">auto-scroll</span>.</li>
                                     <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo dan <span class="font-medium">mengisi Disposisi</span>.</li>
@@ -66,6 +70,12 @@
                                 </ul>
                             @else
                                 <ul class="list-disc pl-5 space-y-1">
+                                    @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
+                                        <li>{!! $assessment->petunjuk !!}</li>
+                                    @elseif($assessment->jenis =='in_tray')
+                                        <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada petunjuk pengisian Khusus' }}</li>
+                                    @else
+                                    @endif
                                     <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo.</li>
                                     <li>Dalam detail memo, pilih <span class="font-medium">kategori prioritas</span> sesuai dengan tingkat urgensi dan kepentingan memo.</li>
                                     <li>Isi <span class="font-medium">Disposisi</span> untuk menjelaskan tindakan yang akan diambil terhadap memo.</li>
@@ -74,6 +84,7 @@
                                 </ul>
                             @endif
                         </div>
+                        <h2 class="text-xl font-semibold text-gray-900 mt-4">Daftar Memo</h2>
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'sortable' : '' }}">
                             @if($memos->count() > 0)
                                 @foreach($memos as $memo)
