@@ -19,7 +19,7 @@
             </div>
             <div id="toast" class="hidden fixed top-6 right-6 z-50"></div>
             <!-- Petunjuk Pengisian -->
-             @if($assessment->jenis == 'roleplay' || $assessment->jenis == 'fgd')
+          <!--   @if($assessment->jenis == 'roleplay' || $assessment->jenis == 'fgd')
              @else
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengisian:</h2>
@@ -34,6 +34,7 @@
                 </div>
             </div>
             @endif
+-->
 
             <!-- Konten Assessment -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
