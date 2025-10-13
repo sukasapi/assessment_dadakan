@@ -172,19 +172,19 @@
                                     <td class="px-6 py-4">
                                         <div class="text-sm text-gray-900 max-w-xs">
                                             @if(strlen($input->jawaban_catatan) > 100)
-                                                <span class="cursor-pointer" 
-                                                      onclick="toggleAnswer('{{ $input->id }}')"
-                                                      id="answer-{{ $input->id }}-short">
-                                                    {{ substr($input->jawaban_catatan, 0, 100) }}...
+                                                <div class="cursor-pointer" 
+                                                     onclick="toggleAnswer('{{ $input->id }}')"
+                                                     id="answer-{{ $input->id }}-short">
+                                                    {!! html_entity_decode(substr($input->jawaban_catatan, 0, 100)) !!}...
                                                     <span class="text-blue-600 text-xs">(lihat selengkapnya)</span>
-                                                </span>
-                                                <span class="hidden" id="answer-{{ $input->id }}-full">
-                                                    {{ $input->jawaban_catatan }}
+                                                </div>
+                                                <div class="hidden" id="answer-{{ $input->id }}-full">
+                                                    {!! html_entity_decode($input->jawaban_catatan) !!}
                                                     <span class="text-blue-600 text-xs cursor-pointer" 
                                                           onclick="toggleAnswer('{{ $input->id }}')">(sembunyikan)</span>
-                                                </span>
+                                                </div>
                                             @else
-                                                {{ $input->jawaban_catatan }}
+                                                {!! html_entity_decode($input->jawaban_catatan) !!}
                                             @endif
                                         </div>
                                     </td>
@@ -259,12 +259,14 @@ function toggleAnswer(id) {
     const shortElement = document.getElementById(`answer-${id}-short`);
     const fullElement = document.getElementById(`answer-${id}-full`);
     
-    if (shortElement.classList.contains('hidden')) {
-        shortElement.classList.remove('hidden');
-        fullElement.classList.add('hidden');
-    } else {
-        shortElement.classList.add('hidden');
-        fullElement.classList.remove('hidden');
+    if (shortElement && fullElement) {
+        if (shortElement.classList.contains('hidden')) {
+            shortElement.classList.remove('hidden');
+            fullElement.classList.add('hidden');
+        } else {
+            shortElement.classList.add('hidden');
+            fullElement.classList.remove('hidden');
+        }
     }
 }
 
