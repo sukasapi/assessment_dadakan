@@ -36,14 +36,14 @@
         </div>
 
         <!-- Instructions -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+       <!-- <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h3 class="text-sm font-medium text-blue-800 mb-2">Petunjuk Penggunaan Matriks Prioritas:</h3>
             <ol class="text-sm text-blue-700 space-y-1">
                 <li><strong>1.</strong> Pahami peran dan tanggung jawab dari jabatan yang Anda perankan dan ekspektasinya</li>
                 <li><strong>2.</strong> Perhatikan detail tanggal-tanggal/waktu-waktu penting</li>
                 <li><strong>3.</strong> Buat skala prioritas berdasarkan matriks di bawah ini</li>
             </ol>
-        </div>
+        </div>-->
 
         <!-- Priority Matrix -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

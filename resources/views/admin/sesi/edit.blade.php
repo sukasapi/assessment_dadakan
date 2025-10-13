@@ -213,6 +213,7 @@
         <div class="mt-3">
             <label class="block text-sm font-medium text-gray-700">Instruksi Khusus (opsional)</label>
             <textarea name="assessments[INDEX][instruksi_khusus]" 
+                      id="instruksi-editor-INDEX"
                       rows="8"
                       class="instruksi-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Instruksi khusus untuk assessment ini"></textarea>
@@ -302,6 +303,12 @@ function addAssessment(data = null) {
         element.name = element.name.replace('INDEX', assessmentIndex);
     });
     
+    // Update ID placeholders
+    const idElements = clone.querySelectorAll('[id*="INDEX"]');
+    idElements.forEach(element => {
+        element.id = element.id.replace('INDEX', assessmentIndex);
+    });
+    
     // Update onclick handlers with INDEX placeholders
     const onclickElements = clone.querySelectorAll('[onclick*="INDEX"]');
     onclickElements.forEach(element => {
@@ -371,38 +378,27 @@ function addAssessment(data = null) {
                             <span class="text-sm text-gray-600">Memo ${idx + 1}</span>
                             <button type="button" class="text-red-600 hover:text-red-800 text-xs" onclick="this.closest('div.border').remove()">Hapus</button>
                         </div>
-                        <textarea name="assessments[INDEX][memos][]" class="memo-editor w-full" rows="10"></textarea>
+                        <textarea name="assessments[INDEX][memos][]" id="memo-editor-INDEX-${idx}" class="memo-editor w-full" rows="10"></textarea>
                     `;
                     wrapper.querySelectorAll('textarea[name*="assessments[INDEX]"]').forEach(el => {
                         el.name = el.name.replace('INDEX', assessmentIndex); // assessmentIndex saat ini mengacu pada item yang ditambahkan terakhir
                         el.value = content || '';
                     });
+                    wrapper.querySelectorAll('textarea[id*="INDEX"]').forEach(el => {
+                        el.id = el.id.replace('INDEX', assessmentIndex);
+                    });
                     memoContainer.appendChild(wrapper);
-                    if (window.ClassicEditor) {
-                        const ta = wrapper.querySelector('textarea');
-                        ClassicEditor.create(ta, {
-                            toolbar: {
-                                items: [
-                                    'bold', 'italic', 'underline', '|',
-                                    'bulletedList', 'numberedList', '|',
-                                    'outdent', 'indent', '|',
-                                    'link', '|',
-                                    'undo', 'redo'
-                                ]
-                            },
-                            list: {
-                                properties: {
-                                    styles: true,
-                                    startIndex: true,
-                                    reversed: true
-                                }
+                    setTimeout(function() {
+                        if (window.initCKEditor) {
+                            const ta = wrapper.querySelector('textarea');
+                            // Skip jika sudah diinisialisasi
+                            if (window.ckeditorInstances && window.ckeditorInstances[ta.id]) {
+                                return;
                             }
-                        }).then(editor => {
-                            editor.model.document.on('change:data', () => {
-                                ta.value = editor.getData();
-                            });
-                        }).catch(err => console.error(err));
-                    }
+                            
+                            window.initCKEditor(ta.id);
+                        }
+                    }, 500);
                 });
             }
             
@@ -427,10 +423,31 @@ function addAssessment(data = null) {
     
     // Update available options after adding new assessment
     updateAvailableOptions();
+    
+    // Initialize CKEditor for new assessment's instruction editor
+    setTimeout(function() {
+        if (window.initCKEditor) {
+            const newInstructionEditor = clone.querySelector('.instruksi-editor');
+            if (newInstructionEditor && (!window.ckeditorInstances || !window.ckeditorInstances[newInstructionEditor.id])) {
+                window.initCKEditor(newInstructionEditor.id);
+            }
+        }
+    }, 500);
 }
 
 function removeAssessment(button) {
     const assessmentItem = button.closest('.assessment-item');
+    
+    // Clean up CKEditor instances before removing
+    if (window.destroyCKEditor) {
+        const editors = assessmentItem.querySelectorAll('.instruksi-editor, .memo-editor');
+        editors.forEach(function(editor) {
+            if (window.ckeditorInstances && window.ckeditorInstances[editor.id]) {
+                window.destroyCKEditor(editor.id);
+            }
+        });
+    }
+    
     assessmentItem.remove();
     updateOrderNumbers();
 }
@@ -485,11 +502,18 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAvailableOptions();
 
     // Inisialisasi CKEditor untuk instruksi (bukan memo)
-    if (window.ClassicEditor) {
-        document.querySelectorAll('.instruksi-editor').forEach(function(el) {
-            ClassicEditor.create(el).catch(err => console.error(err));
-        });
-    }
+    setTimeout(function() {
+        if (window.initCKEditor) {
+            document.querySelectorAll('.instruksi-editor').forEach(function(el) {
+                // Skip jika sudah diinisialisasi
+                if (window.ckeditorInstances && window.ckeditorInstances[el.id]) {
+                    return;
+                }
+                
+                window.initCKEditor(el.id);
+            });
+        }
+    }, 500);
 
     // Trigger togglePdfUpload for existing assessments
     document.querySelectorAll('select[name*="[penilaian_id]"]').forEach(function(select) {
@@ -855,15 +879,26 @@ function addMemo(button) {
             <span class=\"text-sm text-gray-600\">Memo ${memoIndex + 1}</span>
             <button type=\"button\" class=\"text-red-600 hover:text-red-800 text-xs\" onclick=\"this.closest('div.border').remove()\">Hapus</button>
         </div>
-        <textarea name=\"assessments[INDEX][memos][]\" class=\"memo-editor w-full\" rows=\"10\" placeholder=\"Tulis isi memo di sini...\"></textarea>
+        <textarea name=\"assessments[INDEX][memos][]\" id=\"memo-editor-INDEX-${memoIndex}\" class=\"memo-editor w-full\" rows=\"10\" placeholder=\"Tulis isi memo di sini...\"></textarea>
     `;
     wrapper.querySelectorAll('textarea[name*="assessments[INDEX]"]').forEach(el => {
         el.name = el.name.replace('INDEX', getAssessmentIndexFromElement(section.closest('.assessment-item')));
     });
+    wrapper.querySelectorAll('textarea[id*="INDEX"]').forEach(el => {
+        el.id = el.id.replace('INDEX', getAssessmentIndexFromElement(section.closest('.assessment-item')));
+    });
     container.appendChild(wrapper);
-    if (window.ClassicEditor) {
-        ClassicEditor.create(wrapper.querySelector('textarea')).catch(err => console.error(err));
-    }
+    setTimeout(function() {
+        if (window.initCKEditor) {
+            const textarea = wrapper.querySelector('textarea');
+            // Skip jika sudah diinisialisasi
+            if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
+                return;
+            }
+            
+            window.initCKEditor(textarea.id);
+        }
+    }, 500);
 }
 
 function getAssessmentIndexFromElement(item) {

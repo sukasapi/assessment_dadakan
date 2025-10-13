@@ -18,18 +18,18 @@
                 </a>
             </div>
             <div id="toast" class="hidden fixed top-6 right-6 z-50"></div>
-            <!-- Petunjuk Pengisian -->
+            <!-- Petunjuk Pengerjaan -->
           <!--   @if($assessment->jenis == 'roleplay' || $assessment->jenis == 'fgd')
              @else
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengisian:</h2>
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengerjaan:</h2>
                 <div class="prose max-w-none">
                     @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
                         {!! $assessment->petunjuk !!}
                     @elseif($assessment->jenis =='in_tray')
-                        {{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada petunjuk pengisian Khusus' }}
+                        {{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada Petunjuk Pengerjaan Khusus' }}
                     @else
-                        <p class="text-gray-500 italic">Petunjuk pengisian belum tersedia.</p>
+                        <p class="text-gray-500 italic">Petunjuk Pengerjaan belum tersedia.</p>
                     @endif
                 </div>
             </div>
@@ -61,7 +61,7 @@
                                 @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
                                     <li>{!! $assessment->petunjuk !!}</li>
                                 @elseif($assessment->jenis =='in_tray')
-                                    <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada petunjuk pengisian Khusus' }}</li>
+                                    <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada Petunjuk Pengerjaan Khusus' }}</li>
                                 @else
                                 @endif
                                     <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">urutan prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
@@ -74,7 +74,7 @@
                                     @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
                                         <li>{!! $assessment->petunjuk !!}</li>
                                     @elseif($assessment->jenis =='in_tray')
-                                        <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada petunjuk pengisian Khusus' }}</li>
+                                        <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada Petunjuk Pengerjaan Khusus' }}</li>
                                     @else
                                     @endif
                                     <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo.</li>
@@ -85,7 +85,7 @@
                                 </ul>
                             @endif
                         </div>
-                        <h2 class="text-xl font-semibold text-gray-900 mt-4">Daftar Memo</h2>
+                        <!--<h2 class="text-xl font-semibold text-gray-900 mt-4">Daftar Memo</h2>-->
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'sortable' : '' }}">
                             @if($memos->count() > 0)
                                 @foreach($memos as $memo)
@@ -167,7 +167,7 @@
                         <!-- Question & Answer Section - Single question for entire in-tray assessment -->
                         <div class="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
                             <div class="p-4 md:p-5">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Pertanyaan dan Jawaban</h3>
+                                <!--<h3 class="text-lg font-semibold text-gray-900 mb-4">Pertanyaan dan Jawaban</h3>-->
                                 
                                 @php
                                     // Get the first memo with a question, or use a default question
@@ -235,7 +235,7 @@
                                 <div class="w-full border rounded-md overflow-hidden">
                                     <iframe 
                                         style="width: 100%; height: 500px; border: 1px solid #eeeeee;" 
-                                        src="{{ $pdfUrl }}#zoom=80" 
+                                        src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" 
                                         width="100%" 
                                         height="500" 
                                         frameborder="0" 

@@ -209,6 +209,7 @@
         <div class="mt-3">
             <label class="block text-sm font-medium text-gray-700">Instruksi Khusus (opsional)</label>
             <textarea name="assessments[INDEX][instruksi_khusus]" 
+                      id="instruksi-editor-INDEX"
                       rows="8"
                       class="instruksi-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Instruksi khusus untuk assessment ini"></textarea>
@@ -299,6 +300,12 @@ function addAssessment() {
         element.name = element.name.replace('INDEX', assessmentIndex);
     });
     
+    // Update ID placeholders
+    const idElements = clone.querySelectorAll('[id*="INDEX"]');
+    idElements.forEach(element => {
+        element.id = element.id.replace('INDEX', assessmentIndex);
+    });
+    
     // Update assessment number
     const numberSpan = clone.querySelector('.assessment-number');
     if (numberSpan) {
@@ -321,10 +328,31 @@ function addAssessment() {
     
     // Update available options after adding new assessment
     updateAvailableOptions();
+    
+    // Initialize CKEditor for new assessment's instruction editor
+    setTimeout(function() {
+        if (window.initCKEditor) {
+            const newInstructionEditor = clone.querySelector('.instruksi-editor');
+            if (newInstructionEditor && (!window.ckeditorInstances || !window.ckeditorInstances[newInstructionEditor.id])) {
+                window.initCKEditor(newInstructionEditor.id);
+            }
+        }
+    }, 500);
 }
 
 function removeAssessment(button) {
     const assessmentItem = button.closest('.assessment-item');
+    
+    // Clean up CKEditor instances before removing
+    if (window.destroyCKEditor) {
+        const editors = assessmentItem.querySelectorAll('.instruksi-editor, .memo-editor');
+        editors.forEach(function(editor) {
+            if (window.ckeditorInstances && window.ckeditorInstances[editor.id]) {
+                window.destroyCKEditor(editor.id);
+            }
+        });
+    }
+    
     assessmentItem.remove();
     updateOrderNumbers();
 }
@@ -348,28 +376,20 @@ document.addEventListener('DOMContentLoaded', function() {
     addAssessment();
     updateAvailableOptions();
     // Inisialisasi CKEditor untuk instruksi (bukan memo)
-    if (window.ClassicEditor) {
-        document.querySelectorAll('.instruksi-editor').forEach(function(el) {
-            ClassicEditor.create(el, {
-                toolbar: {
-                    items: [
-                        'bold', 'italic', 'underline', '|',
-                        'bulletedList', 'numberedList', '|',
-                        'outdent', 'indent', '|',
-                        'link', '|',
-                        'undo', 'redo'
-                    ]
-                },
-                list: {
-                    properties: {
-                        styles: true,
-                        startIndex: true,
-                        reversed: true
-                    }
+    function initCKEditor() {
+        if (window.initCKEditor && document.readyState === 'complete') {
+            document.querySelectorAll('.instruksi-editor').forEach(function(el) {
+                if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
+                    window.initCKEditor(el.id);
                 }
-            }).catch(err => console.error(err));
-        });
+            });
+        } else {
+            setTimeout(initCKEditor, 100);
+        }
     }
+    
+    // Start initialization
+    initCKEditor();
 
     // Tampilkan notifikasi error dari flash (jika ada)
     const flashErrorDiv = document.getElementById('flashError');
@@ -749,34 +769,30 @@ function addMemo(button) {
             <span class="text-sm text-gray-600">Memo ${memoIndex + 1}</span>
             <button type="button" class="text-red-600 hover:text-red-800 text-xs" onclick="this.closest('div.border').remove()">Hapus</button>
         </div>
-        <textarea name="assessments[INDEX][memos][]" class="memo-editor w-full" rows="10" placeholder="Tulis isi memo di sini..."></textarea>
+        <textarea name="assessments[INDEX][memos][]" id="memo-editor-INDEX-${memoIndex}" class="memo-editor w-full" rows="10" placeholder="Tulis isi memo di sini..."></textarea>
     `;
-    // Sesuaikan INDEX pada name textarea
+    // Sesuaikan INDEX pada name dan id textarea
     wrapper.querySelectorAll('textarea[name*="assessments[INDEX]"]').forEach(el => {
         el.name = el.name.replace('INDEX', getAssessmentIndexFromElement(section.closest('.assessment-item')));
     });
+    wrapper.querySelectorAll('textarea[id*="INDEX"]').forEach(el => {
+        el.id = el.id.replace('INDEX', getAssessmentIndexFromElement(section.closest('.assessment-item')));
+    });
     container.appendChild(wrapper);
 
-    if (window.ClassicEditor) {
-        ClassicEditor.create(wrapper.querySelector('textarea'), {
-            toolbar: {
-                items: [
-                    'bold', 'italic', 'underline', '|',
-                    'bulletedList', 'numberedList', '|',
-                    'outdent', 'indent', '|',
-                    'link', '|',
-                    'undo', 'redo'
-                ]
-            },
-            list: {
-                properties: {
-                    styles: true,
-                    startIndex: true,
-                    reversed: true
-                }
+    function initMemoCKEditor() {
+        if (window.initCKEditor && document.readyState === 'complete') {
+            const textarea = wrapper.querySelector('textarea');
+            if (textarea && textarea.id && (!window.ckeditorInstances || !window.ckeditorInstances[textarea.id])) {
+                window.initCKEditor(textarea.id);
             }
-        }).catch(err => console.error(err));
+        } else {
+            setTimeout(initMemoCKEditor, 100);
+        }
     }
+    
+    // Start memo initialization
+    initMemoCKEditor();
 }
 
 function getAssessmentIndexFromElement(item) {

@@ -6,34 +6,90 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin Dashboard') - Assessment Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Tinggi minimum editor WYSIWYG */
-        .ck-editor__editable[role="textbox"] {
-            min-height: 320px; /* ~8 baris+toolbar */
+        /* Summernote Styling */
+        .note-editor {
+            border-radius: 0.375rem !important;
+            border: 1px solid #d1d5db !important;
+        }
+        .note-toolbar {
+            border-radius: 0.375rem 0.375rem 0 0 !important;
+            border-bottom: 1px solid #d1d5db !important;
+            background-color: #f9fafb !important;
+        }
+        .note-editable {
+            border-radius: 0 0 0.375rem 0.375rem !important;
+            min-height: 200px !important;
+            font-family: 'Inter', sans-serif !important;
+            padding: 15px !important;
         }
         /* Fix untuk bullet dan numbering yang tidak muncul */
-        .ck-content ul { 
+        .note-editable ul { 
             list-style: disc !important; 
             list-style-position: outside !important; 
             margin-left: 1.5rem !important; 
             padding-left: 0 !important; 
         }
-        .ck-content ol { 
+        .note-editable ol { 
             list-style: decimal !important; 
             list-style-position: outside !important; 
             margin-left: 1.5rem !important; 
             padding-left: 0 !important; 
         }
-        .ck-content li {
+        .note-editable li {
             display: list-item !important;
             margin: 0.25rem 0 !important;
         }
-        .ck-editor__editable ul li::marker,
-        .ck-editor__editable ol li::marker {
+        .note-editable ul li::marker,
+        .note-editable ol li::marker {
             display: block !important;
             visibility: visible !important;
+        }
+        /* Summernote toolbar styling */
+        .note-toolbar .btn {
+            border-radius: 0.25rem !important;
+            margin: 2px !important;
+        }
+        .note-toolbar .btn:hover {
+            background-color: #e5e7eb !important;
+        }
+        .note-toolbar .btn.active {
+            background-color: #dbeafe !important;
+            color: #1e40af !important;
+        }
+        /* Summernote dropdown styling */
+        .note-dropdown-menu {
+            border-radius: 0.375rem !important;
+            border: 1px solid #d1d5db !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        }
+        /* Summernote image styling */
+        .note-editable img {
+            max-width: 100% !important;
+            height: auto !important;
+            border-radius: 0.25rem !important;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+        }
+        .note-editable img:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        }
+        /* Summernote popover styling */
+        .note-popover {
+            border-radius: 0.375rem !important;
+            border: 1px solid #d1d5db !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        }
+        .note-popover .popover-content {
+            padding: 8px !important;
+        }
+        .note-popover .btn {
+            margin: 2px !important;
+            border-radius: 0.25rem !important;
         }
     </style>
 </head>
@@ -83,8 +139,84 @@
             return confirm(message || 'Apakah Anda yakin ingin menghapus item ini?');
         }
     </script>
-    <!-- CKEditor 5 CDN -->
-    <script src="https://cdn.ckeditor.com/ckeditor5/41.1.0/classic/ckeditor.js"></script>
+    <!-- Summernote CDN (stabil dan mudah) -->
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.js"></script>
+    <script>
+        // Global Summernote configuration
+        window.summernoteConfig = {
+            height: 300,
+            lang: 'id-ID',
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['table', ['table']],
+                ['insert', ['link', 'picture']],
+                ['view', ['fullscreen', 'codeview', 'help']]
+            ],
+            styleTags: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+            placeholder: 'Tulis konten di sini...',
+            dialogsInBody: true,
+            disableDragAndDrop: true,
+            disableResizeEditor: true,
+            // Konfigurasi untuk gambar
+            popover: {
+                image: [
+                    ['image', ['resizeFull', 'resizeHalf', 'resizeQuarter', 'resizeNone']],
+                    ['float', ['floatLeft', 'floatRight', 'floatNone']],
+                    ['remove', ['removeMedia']]
+                ],
+                link: [
+                    ['link', ['linkDialogShow', 'unlink']]
+                ],
+                table: [
+                    ['add', ['addRowDown', 'addRowUp', 'addColLeft', 'addColRight']],
+                    ['delete', ['deleteRow', 'deleteCol', 'deleteTable']],
+                ],
+                air: [
+                    ['color', ['color']],
+                    ['font', ['bold', 'underline', 'clear']]
+                ]
+            },
+            callbacks: {
+                onInit: function() {
+                    console.log('Summernote initialized');
+                },
+                onImageUpload: function(files) {
+                    // Jika ingin upload file, bisa ditambahkan logic di sini
+                    console.log('Image upload:', files);
+                }
+            }
+        };
+        
+        // Function to initialize Summernote
+        window.initCKEditor = function(elementId) {
+            if (window.$ && window.$.fn.summernote && document.getElementById(elementId)) {
+                try {
+                    const editor = $('#' + elementId).summernote(window.summernoteConfig);
+                    console.log('Summernote initialized for:', elementId);
+                    window.ckeditorInstances = window.ckeditorInstances || {};
+                    window.ckeditorInstances[elementId] = editor;
+                } catch (error) {
+                    console.error('Summernote initialization error:', error);
+                }
+            }
+        };
+        
+        // Function to destroy Summernote instance
+        window.destroyCKEditor = function(elementId) {
+            if (window.$ && window.ckeditorInstances && window.ckeditorInstances[elementId]) {
+                try {
+                    $('#' + elementId).summernote('destroy');
+                    console.log('Summernote destroyed for:', elementId);
+                    delete window.ckeditorInstances[elementId];
+                } catch (error) {
+                    console.error('Summernote destruction error:', error);
+                }
+            }
+        };
+    </script>
     
     @stack('scripts')
     @yield('scripts')

@@ -26,7 +26,7 @@
                 
                 <!-- Petunjuk Pengisian -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengisian:</h2>
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengerjaan:</h2>
                     <div class="prose max-w-none">
                         @if($sesiAssessment && !empty(trim($sesiAssessment->instruksi_khusus)))
                             {!! $sesiAssessment->instruksi_khusus !!}
@@ -40,7 +40,7 @@
 
                 <!-- Deskripsi Soal -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Deskripsi Soal</h2>
+                    
                     @if($assessment->file_pdf)
                         <!-- PDF untuk Studi Kasus -->
                         @php
@@ -49,7 +49,7 @@
                         <div class="w-full border rounded-md overflow-hidden">
                             <iframe 
                                 style="width: 100%; height: 500px; border: 1px solid #eeeeee;" 
-                                src="{{ $pdfUrl }}#zoom=80" 
+                                src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" 
                                 width="100%" 
                                 height="500" 
                                 frameborder="0" 
