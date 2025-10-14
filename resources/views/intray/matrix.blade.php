@@ -3,6 +3,21 @@
 @section('title', 'Matriks Prioritas In-Tray')
 
 @section('content')
+<style>
+.memo-content-container {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.memo-content-container * {
+    max-width: 100% !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+}
+</style>
 <div class="min-h-screen bg-gray-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
@@ -59,19 +74,19 @@
                         <p class="text-sm text-red-700 mb-3 font-medium">Lakukan/putuskan segera</p>
                         <div class="space-y-2">
                             @forelse($matrix['mendesak_penting'] as $memo)
-                                <div class="bg-white border border-red-200 rounded p-3">
+                                <div class="bg-white border border-red-200 rounded p-3 overflow-hidden">
                                     <div class="flex items-start justify-between">
-                                        <div class="flex-1">
-                                            <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
+                                        <div class="flex-1 min-w-0 memo-content-container">
+                                            <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
                                             @if($memo['disposisi'])
-                                                <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
+                                                <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
                                         </div>
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ $memo['konten'] }}"
+                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,19 +116,19 @@
                         <p class="text-sm text-blue-700 mb-3 font-medium">Bisa penting/mendesak untuk orang lain. Delegasikan</p>
                         <div class="space-y-2">
                             @forelse($matrix['mendesak_tidak_penting'] as $memo)
-                                <div class="bg-white border border-blue-200 rounded p-3">
+                                <div class="bg-white border border-blue-200 rounded p-3 overflow-hidden">
                                     <div class="flex items-start justify-between">
-                                        <div class="flex-1">
-                                            <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
+                                        <div class="flex-1 min-w-0 memo-content-container">
+                                            <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
                                             @if($memo['disposisi'])
-                                                <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
+                                                <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
                                         </div>
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ $memo['konten'] }}"
+                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,19 +161,19 @@
                         <p class="text-sm text-yellow-700 mb-3 font-medium">Lakukan/putuskan ketika anda benar-benar dalam kondisi siap</p>
                         <div class="space-y-2">
                             @forelse($matrix['tidak_mendesak_penting'] as $memo)
-                                <div class="bg-white border border-yellow-200 rounded p-3">
+                                <div class="bg-white border border-yellow-200 rounded p-3 overflow-hidden">
                                     <div class="flex items-start justify-between">
-                                        <div class="flex-1">
-                                            <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
+                                        <div class="flex-1 min-w-0 memo-content-container">
+                                            <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
                                             @if($memo['disposisi'])
-                                                <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
+                                                <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
                                         </div>
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ $memo['konten'] }}"
+                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,19 +203,19 @@
                         <p class="text-sm text-green-700 mb-3 font-medium">Abaikan/kerjakan jika senggang</p>
                         <div class="space-y-2">
                             @forelse($matrix['tidak_mendesak_tidak_penting'] as $memo)
-                                <div class="bg-white border border-green-200 rounded p-3">
+                                <div class="bg-white border border-green-200 rounded p-3 overflow-hidden">
                                     <div class="flex items-start justify-between">
-                                        <div class="flex-1">
-                                            <h4 class="font-medium text-gray-900 text-sm">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
+                                        <div class="flex-1 min-w-0 memo-content-container">
+                                            <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
                                             @if($memo['disposisi'])
-                                                <p class="text-xs text-blue-600 mt-1"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
+                                                <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
                                         </div>
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ $memo['konten'] }}"
+                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,6 +287,7 @@ function showMemoDetail(id, judul, konten, disposisi) {
     // Handle content - preserve HTML formatting like in assessment
     const contentDiv = document.getElementById('memoModalContent');
     if (konten && konten.trim() !== '') {
+        // Content is already decoded from controller, just display it
         contentDiv.innerHTML = konten;
     } else {
         contentDiv.innerHTML = '<p class="text-gray-500 italic">Tidak ada konten memo</p>';
