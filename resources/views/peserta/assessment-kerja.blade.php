@@ -77,11 +77,11 @@
                                         <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada Petunjuk Pengerjaan Khusus' }}</li>
                                     @else
                                     @endif
-                                    <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo.</li>
+                                    <!--<li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo.</li>
                                     <li>Dalam detail memo, pilih <span class="font-medium">kategori prioritas</span> sesuai dengan tingkat urgensi dan kepentingan memo.</li>
                                     <li>Isi <span class="font-medium">Disposisi</span> untuk menjelaskan tindakan yang akan diambil terhadap memo.</li>
                                     <li>Kemudian Susun langkah-langkah strategis yang harus dilakukan dalam beberapa hari ke depan untuk merespon dan mengantisipasi isu-isu penting seperti yang ada dalam memo-memo penting.</li>
-                                    <li>Setelah semua informasi disimpan, ringkasannya akan muncul di bawah kartu memo.</li>
+                                    <li>Setelah semua informasi disimpan, ringkasannya akan muncul di bawah kartu memo.</li>-->
                                 </ul>
                             @endif
                         </div>
