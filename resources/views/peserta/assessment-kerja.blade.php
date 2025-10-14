@@ -41,49 +41,28 @@
                 @switch($assessment->jenis)
                     @case('in_tray')
                       
-                        
-                       <!-- {{-- Debug information untuk troubleshooting --}}
-                        @if(config('app.debug'))
-                            <div class="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-xs">
-                                <strong>Debug Info (In-Tray):</strong><br>
-                                SesiAssessment ID: {{ $sesiAssessment->id ?? 'null' }}<br>
-                                SesiAssessment Sesi ID: {{ $sesiAssessment->sesi_penilaian_id ?? 'null' }}<br>
-                                Instruksi Khusus: {{ $sesiAssessment->instruksi_khusus ?? 'null' }}<br>
-                                Assessment Petunjuk: {{ $assessment->petunjuk ?? 'null' }}<br>
-                                Requested Sesi: {{ request('sesi') ?? 'null' }}
-                            </div>
-                        @endif -->
-                        
                         <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
                             <p class="font-semibold mb-2">Petunjuk Pengerjaan:</p>
-                            @if(($intrayModel ?? 'urutan') === 'urutan')
-                                <ul class="list-disc pl-5 space-y-1">
-                                @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
-                                    <li>{!! $assessment->petunjuk !!}</li>
-                                @elseif($assessment->jenis =='in_tray')
-                                    <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada Petunjuk Pengerjaan Khusus' }}</li>
-                                @else
-                                @endif
-                                   <!-- <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">urutan prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
-                                    <li>Saat jumlah kartu banyak, gulir area daftar. Saat sedang menarik kartu dan mendekati tepi atas/bawah, daftar akan <span class="font-medium">auto-scroll</span>.</li>
-                                    <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo dan <span class="font-medium">mengisi Disposisi</span>.</li>
-                                    <li>Setelah Disposisi disimpan, ringkasannya muncul di bawah kartu pada baris <span class="italic">Disposisi</span>.</li>-->
-                                </ul>
-                            @else
-                                <ul class="list-disc pl-5 space-y-1">
+                            <div class="prose prose-sm max-w-none text-blue-800">
+                                @if(($intrayModel ?? 'urutan') === 'urutan')
+                                   <!-- <ul class="list-disc pl-5 space-y-1">-->
                                     @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
-                                        <li>{!! $assessment->petunjuk !!}</li>
+                                        {!! $assessment->petunjuk !!}
                                     @elseif($assessment->jenis =='in_tray')
-                                        <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada Petunjuk Pengerjaan Khusus' }}</li>
+                                        {!! $sesiAssessment->instruksi_khusus ?? 'Tidak ada Petunjuk Pengerjaan Khusus' !!}
                                     @else
                                     @endif
-                                    <!--<li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo.</li>
-                                    <li>Dalam detail memo, pilih <span class="font-medium">kategori prioritas</span> sesuai dengan tingkat urgensi dan kepentingan memo.</li>
-                                    <li>Isi <span class="font-medium">Disposisi</span> untuk menjelaskan tindakan yang akan diambil terhadap memo.</li>
-                                    <li>Kemudian Susun langkah-langkah strategis yang harus dilakukan dalam beberapa hari ke depan untuk merespon dan mengantisipasi isu-isu penting seperti yang ada dalam memo-memo penting.</li>
-                                    <li>Setelah semua informasi disimpan, ringkasannya akan muncul di bawah kartu memo.</li>-->
-                                </ul>
-                            @endif
+                                @else
+                                    <!-- <ul class="list-disc pl-5 space-y-1">-->
+                                        @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')
+                                            {!! $assessment->petunjuk !!}
+                                        @elseif($assessment->jenis =='in_tray')
+                                            {!! $sesiAssessment->instruksi_khusus ?? 'Tidak ada Petunjuk Pengerjaan Khusus' !!}
+                                        @else
+                                        @endif
+                                      
+                                @endif
+                            </div>
                         </div>
                         <!--<h2 class="text-xl font-semibold text-gray-900 mt-4">Daftar Memo</h2>-->
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'sortable' : '' }}">
@@ -692,6 +671,30 @@
 .ck-editor__editable[role="textbox"] { min-height: 12rem; }
 .ck-content ul { list-style: disc !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
 .ck-content ol { list-style: decimal !important; list-style-position: outside !important; margin-left: 1.5rem !important; padding-left: 0 !important; }
+
+/* Styling untuk instruksi khusus HTML content */
+.prose ul { 
+    list-style: disc !important; 
+    list-style-position: outside !important; 
+    margin-left: 1.5rem !important; 
+    padding-left: 0 !important; 
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+.prose ol { 
+    list-style: decimal !important; 
+    list-style-position: outside !important; 
+    margin-left: 1.5rem !important; 
+    padding-left: 0 !important; 
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+.prose li {
+    display: list-item !important;
+    margin: 0.25rem 0 !important;
+    padding-left: 0.25rem !important;
+}
+
 /* In-tray: memungkinkan scroll saat kartu banyak */
 #inTrayBoard { max-height: 65vh; overflow-y: auto; padding-right: 4px; }
 .memo-card { scroll-margin: 16px; }
