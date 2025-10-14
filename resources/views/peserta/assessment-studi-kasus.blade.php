@@ -327,6 +327,30 @@
     display: list-item !important;
     margin: 0.25rem 0 !important;
 }
+
+/* Styling untuk instruksi khusus HTML content */
+.prose ul { 
+    list-style: disc !important; 
+    list-style-position: outside !important; 
+    margin-left: 1.5rem !important; 
+    padding-left: 0 !important; 
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+.prose ol { 
+    list-style: decimal !important; 
+    list-style-position: outside !important; 
+    margin-left: 1.5rem !important; 
+    padding-left: 0 !important; 
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+.prose li {
+    display: list-item !important;
+    margin: 0.25rem 0 !important;
+    padding-left: 0.25rem !important;
+}
+
 /* Fix untuk bullet dan numbering yang tidak muncul */
 .ck-editor__editable ul li::marker,
 .ck-editor__editable ol li::marker {
