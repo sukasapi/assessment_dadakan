@@ -647,7 +647,7 @@ function previewCurrentPdf(index) {
             iframe.style.width = '100%';
             iframe.style.height = '500px';
             iframe.style.border = '1px solid #eeeeee';
-            iframe.src = pdfUrl + '#zoom=80';
+            iframe.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=Fit';
             iframe.frameBorder = '0';
             iframe.allowFullscreen = true;
             

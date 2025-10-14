@@ -781,7 +781,7 @@ function previewCurrentPdf(index) {
                 </a>
             </div>
             <iframe 
-                src="${pdfUrl}#zoom=80" 
+                src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" 
                 style="width: 100%; height: 500px; border: 1px solid #eeeeee;"
                 frameborder="0"
                 allowfullscreen="allowfullscreen">
