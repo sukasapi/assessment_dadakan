@@ -457,7 +457,7 @@
                                 <div class="w-full border rounded-md overflow-hidden">
                                     <iframe 
                                         style="width: 100%; height: 500px; border: 1px solid #eeeeee;" 
-                                        src="{{ $pdfUrl }}#zoom=80" 
+                                        src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" 
                                         width="100%" 
                                         height="500" 
                                         frameborder="0" 
