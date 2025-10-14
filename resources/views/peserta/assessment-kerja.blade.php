@@ -55,7 +55,7 @@
                         @endif -->
                         
                         <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-                            <p class="font-semibold mb-2">Petunjuk:</p>
+                            <p class="font-semibold mb-2">Petunjuk Pengerjaan:</p>
                             @if(($intrayModel ?? 'urutan') === 'urutan')
                                 <ul class="list-disc pl-5 space-y-1">
                                 @if(!empty($assessment->petunjuk) && $assessment->jenis != 'in_tray')

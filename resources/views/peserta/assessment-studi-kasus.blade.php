@@ -26,7 +26,7 @@
                 
                 <!-- Petunjuk Pengisian -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengerjaan:</h2>
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Petunjuk Pengerjaan Studi Kasus:</h2>
                     <div class="prose max-w-none">
                         @if($sesiAssessment && !empty(trim($sesiAssessment->instruksi_khusus)))
                             {!! $sesiAssessment->instruksi_khusus !!}
