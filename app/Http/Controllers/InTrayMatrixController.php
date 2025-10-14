@@ -108,7 +108,7 @@ class InTrayMatrixController extends Controller
                 $memoData = [
                     'id' => $memo->id,
                     'judul' => $this->extractTitleFromContent($memo->konten_memo),
-                    'konten' => $memo->konten_memo,
+                    'konten' => html_entity_decode($memo->konten_memo, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                     'disposisi' => $jawab->disposisi,
                     'prioritas_label' => $prioritas->priority_label,
                     'kategori_prioritas' => $prioritas->kategori_prioritas
@@ -192,7 +192,7 @@ class InTrayMatrixController extends Controller
                 $memoData = [
                     'id' => $memo->id,
                     'judul' => $this->extractTitleFromContent($memo->konten_memo),
-                    'konten' => $memo->konten_memo,
+                    'konten' => html_entity_decode($memo->konten_memo, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                     'disposisi' => $jawab->disposisi,
                     'prioritas_label' => $prioritas->priority_label,
                     'kategori_prioritas' => $prioritas->kategori_prioritas
@@ -218,8 +218,11 @@ class InTrayMatrixController extends Controller
             return 'Memo Tanpa Judul';
         }
         
+        // Decode HTML entities first
+        $decodedContent = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        
         // Remove HTML tags
-        $cleanContent = strip_tags($content);
+        $cleanContent = strip_tags($decodedContent);
         
         // Get first line or first 50 characters
         $lines = explode("\n", $cleanContent);
