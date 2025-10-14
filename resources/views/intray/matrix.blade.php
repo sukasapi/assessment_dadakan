@@ -78,7 +78,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1 min-w-0 memo-content-container">
                                             <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -86,7 +86,7 @@
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
+                                                data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +120,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1 min-w-0 memo-content-container">
                                             <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -128,7 +128,7 @@
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
+                                                data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +165,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1 min-w-0 memo-content-container">
                                             <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -173,7 +173,7 @@
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
+                                                data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +207,7 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1 min-w-0 memo-content-container">
                                             <h4 class="font-medium text-gray-900 text-sm break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ $memo['judul'] }}</h4>
-                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags(html_entity_decode($memo['konten'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), 100) }}</p>
+                                            <p class="text-xs text-gray-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">{{ Str::limit(strip_tags($memo['konten']), 100) }}</p>
                                             @if($memo['disposisi'])
                                                 <p class="text-xs text-blue-600 mt-1 break-words overflow-hidden" style="word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;"><strong>Disposisi:</strong> {{ $memo['disposisi'] }}</p>
                                             @endif
@@ -215,7 +215,7 @@
                                         <button class="ml-2 text-blue-600 hover:text-blue-800 text-xs view-memo-btn" 
                                                 data-id="{{ $memo['id'] }}"
                                                 data-judul="{{ $memo['judul'] }}"
-                                                data-konten="{{ htmlspecialchars($memo['konten'], ENT_QUOTES, 'UTF-8') }}"
+                                                data-konten="{{ $memo['konten'] }}"
                                                 data-disposisi="{{ $memo['disposisi'] }}"
                                                 title="Lihat Detail Memo">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,11 +284,44 @@ document.addEventListener('click', function(e) {
 function showMemoDetail(id, judul, konten, disposisi) {
     document.getElementById('modalTitle').textContent = judul;
     
-    // Handle content - preserve HTML formatting like in assessment
+    // Handle content - display formatted content instead of raw HTML
     const contentDiv = document.getElementById('memoModalContent');
     if (konten && konten.trim() !== '') {
-        // Content is already decoded from controller, just display it
+        // Content is already decoded from controller, display it as formatted HTML
         contentDiv.innerHTML = konten;
+        
+        // Apply some basic styling to make it more readable
+        contentDiv.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+        contentDiv.style.lineHeight = '1.6';
+        contentDiv.style.color = '#374151';
+        
+        // Style paragraphs
+        const paragraphs = contentDiv.querySelectorAll('p');
+        paragraphs.forEach(p => {
+            p.style.marginBottom = '1rem';
+            p.style.fontSize = '0.95rem';
+        });
+        
+        // Style lists
+        const lists = contentDiv.querySelectorAll('ul, ol');
+        lists.forEach(list => {
+            list.style.marginLeft = '1.5rem';
+            list.style.marginBottom = '1rem';
+        });
+        
+        // Style list items
+        const listItems = contentDiv.querySelectorAll('li');
+        listItems.forEach(li => {
+            li.style.marginBottom = '0.5rem';
+        });
+        
+        // Style strong/bold text
+        const strongElements = contentDiv.querySelectorAll('strong, b');
+        strongElements.forEach(strong => {
+            strong.style.fontWeight = '600';
+            strong.style.color = '#1f2937';
+        });
+        
     } else {
         contentDiv.innerHTML = '<p class="text-gray-500 italic">Tidak ada konten memo</p>';
     }
