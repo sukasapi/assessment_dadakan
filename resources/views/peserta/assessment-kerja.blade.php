@@ -64,10 +64,10 @@
                                     <li>{{ strip_tags($sesiAssessment->instruksi_khusus) ?? 'Tidak ada Petunjuk Pengerjaan Khusus' }}</li>
                                 @else
                                 @endif
-                                    <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">urutan prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
+                                   <!-- <li>Seret dan jatuhkan (drag & drop) kartu untuk mengatur <span class="font-medium">urutan prioritas</span>. Kartu di atas berarti prioritas lebih tinggi.</li>
                                     <li>Saat jumlah kartu banyak, gulir area daftar. Saat sedang menarik kartu dan mendekati tepi atas/bawah, daftar akan <span class="font-medium">auto-scroll</span>.</li>
                                     <li>Klik tombol <span class="font-medium">Lihat Detail</span> pada kartu untuk membuka detail memo dan <span class="font-medium">mengisi Disposisi</span>.</li>
-                                    <li>Setelah Disposisi disimpan, ringkasannya muncul di bawah kartu pada baris <span class="italic">Disposisi</span>.</li>
+                                    <li>Setelah Disposisi disimpan, ringkasannya muncul di bawah kartu pada baris <span class="italic">Disposisi</span>.</li>-->
                                 </ul>
                             @else
                                 <ul class="list-disc pl-5 space-y-1">
