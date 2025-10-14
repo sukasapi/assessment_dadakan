@@ -48,199 +48,14 @@
                         @endphp
                         <div class="w-full border rounded-md overflow-hidden">
                             <iframe 
-                                style="width: 100%; height: 500px; border: 1px solid #eeeeee;" 
-                                src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" 
+                                style="width: 100%; height: 600px; border: 1px solid #eeeeee;" 
+                                src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=FitBH&zoom=250" 
                                 width="100%" 
-                                height="500" 
+                                height="600" 
                                 frameborder="0" 
                                 allowfullscreen="allowfullscreen">
                             </iframe>
                         </div>
-                        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-                        <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const container = document.getElementById('studiKasusPdfViewer');
-                            const originalUrl = "{{ $pdfUrl }}";
-                            
-                            // Set PDF.js worker
-                            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                            
-                            // Disable right-click context menu
-                            container.addEventListener('contextmenu', function(e) {
-                                e.preventDefault();
-                                return false;
-                            });
-                            
-                            // Disable keyboard shortcuts for save/print
-                            document.addEventListener('keydown', function(e) {
-                                if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
-                                    e.preventDefault();
-                                    return false;
-                                }
-                            });
-                            
-                            // Fetch PDF as blob to prevent direct access
-                            fetch(originalUrl)
-                                .then(response => response.blob())
-                                .then(blob => {
-                                    const blobUrl = URL.createObjectURL(blob);
-                                    
-                                    // Load PDF using PDF.js with blob URL
-                                    return pdfjsLib.getDocument(blobUrl).promise;
-                                })
-                                .then(function(pdf) {
-                                    // Create canvas for first page
-                                    const canvas = document.createElement('canvas');
-                                    const context = canvas.getContext('2d');
-                                    
-                                    let currentPage = 1;
-                                    let currentScale = 1.0;
-                                    
-                                    // Render page function
-                                    function renderPage(pageNum) {
-                                        pdf.getPage(pageNum).then(function(page) {
-                                            const viewport = page.getViewport({ scale: currentScale });
-                                            canvas.height = viewport.height;
-                                            canvas.width = viewport.width;
-                                            
-                                            const renderContext = {
-                                                canvasContext: context,
-                                                viewport: viewport
-                                            };
-                                            
-                                            page.render(renderContext);
-                                        });
-                                    }
-                                    
-                                    // Initialize with first page
-                                    pdf.getPage(1).then(function(page) {
-                                        // Set initial scale to fit width
-                                        const containerWidth = container.clientWidth - 80; // Account for padding
-                                        const pageViewport = page.getViewport({ scale: 1.0 });
-                                        currentScale = Math.min(containerWidth / pageViewport.width, 1.5);
-                                        currentScale = Math.max(currentScale, 0.5);
-                                        
-                                        renderPage(1);
-                                        
-                                        container.innerHTML = '';
-                                        
-                                        // Create PDF viewer container
-                                        const pdfViewer = document.createElement('div');
-                                        pdfViewer.className = 'w-full bg-white border rounded-lg shadow-lg overflow-hidden';
-                                        
-                                        // Create top toolbar
-                                        const topToolbar = document.createElement('div');
-                                        topToolbar.className = 'flex justify-between items-center p-3 bg-gray-800 text-white';
-                                        
-                                        // Left side - Zoom controls
-                                        const zoomControls = document.createElement('div');
-                                        zoomControls.className = 'flex items-center gap-2';
-                                        
-                                        const zoomOutBtn = document.createElement('button');
-                                        zoomOutBtn.innerHTML = '−';
-                                        zoomOutBtn.className = 'w-8 h-8 bg-gray-600 hover:bg-gray-500 rounded flex items-center justify-center text-lg font-bold';
-                                        
-                                        const zoomInBtn = document.createElement('button');
-                                        zoomInBtn.innerHTML = '+';
-                                        zoomInBtn.className = 'w-8 h-8 bg-gray-600 hover:bg-gray-500 rounded flex items-center justify-center text-lg font-bold';
-                                        
-                                        const zoomInfo = document.createElement('span');
-                                        zoomInfo.textContent = `${Math.round(currentScale * 100)}%`;
-                                        zoomInfo.className = 'text-sm px-2';
-                                        
-                                        zoomControls.appendChild(zoomOutBtn);
-                                        zoomControls.appendChild(zoomInfo);
-                                        zoomControls.appendChild(zoomInBtn);
-                                        
-                                        // Right side - Page info
-                                        const pageInfo = document.createElement('div');
-                                        pageInfo.className = 'flex items-center gap-2';
-                                        
-                                        const pageText = document.createElement('span');
-                                        pageText.textContent = `${currentPage} of ${pdf.numPages}`;
-                                        pageText.className = 'text-sm';
-                                        
-                                        pageInfo.appendChild(pageText);
-                                        
-                                        topToolbar.appendChild(zoomControls);
-                                        topToolbar.appendChild(pageInfo);
-                                        
-                                        // Create PDF content area
-                                        const pdfContent = document.createElement('div');
-                                        pdfContent.className = 'p-4 bg-gray-100 flex justify-center overflow-auto';
-                                        pdfContent.style.maxHeight = '70vh';
-                                        pdfContent.appendChild(canvas);
-                                        
-                                        // Create bottom toolbar
-                                        const bottomToolbar = document.createElement('div');
-                                        bottomToolbar.className = 'flex justify-center items-center p-3 bg-gray-800 text-white';
-                                        
-                                        const prevBtn = document.createElement('button');
-                                        prevBtn.innerHTML = '←';
-                                        prevBtn.className = 'w-10 h-10 bg-gray-600 hover:bg-gray-500 rounded flex items-center justify-center text-lg font-bold';
-                                        
-                                        const nextBtn = document.createElement('button');
-                                        nextBtn.innerHTML = '→';
-                                        nextBtn.className = 'w-10 h-10 bg-gray-600 hover:bg-gray-500 rounded flex items-center justify-center text-lg font-bold';
-                                        
-                                        bottomToolbar.appendChild(prevBtn);
-                                        bottomToolbar.appendChild(nextBtn);
-                                        
-                                        // Assemble PDF viewer
-                                        pdfViewer.appendChild(topToolbar);
-                                        pdfViewer.appendChild(pdfContent);
-                                        pdfViewer.appendChild(bottomToolbar);
-                                        
-                                        container.appendChild(pdfViewer);
-                                        
-                                        // Event handlers
-                                        zoomOutBtn.onclick = () => {
-                                            currentScale = Math.max(0.3, currentScale - 0.2);
-                                            renderPage(currentPage);
-                                            zoomInfo.textContent = `${Math.round(currentScale * 100)}%`;
-                                        };
-                                        
-                                        zoomInBtn.onclick = () => {
-                                            currentScale = Math.min(3.0, currentScale + 0.2);
-                                            renderPage(currentPage);
-                                            zoomInfo.textContent = `${Math.round(currentScale * 100)}%`;
-                                        };
-                                        
-                                        prevBtn.onclick = () => {
-                                            if (currentPage > 1) {
-                                                currentPage--;
-                                                renderPage(currentPage);
-                                                pageText.textContent = `${currentPage} of ${pdf.numPages}`;
-                                            }
-                                        };
-                                        
-                                        nextBtn.onclick = () => {
-                                            if (currentPage < pdf.numPages) {
-                                                currentPage++;
-                                                renderPage(currentPage);
-                                                pageText.textContent = `${currentPage} of ${pdf.numPages}`;
-                                            }
-                                        };
-                                            
-                                        });
-                                    });
-                                }).catch(function(error) {
-                                    console.error('Error loading PDF:', error);
-                                    container.innerHTML = '<div class="text-center text-red-600 p-8"><p>Gagal memuat PDF. Silakan refresh halaman.</p></div>';
-                                });
-                            }).catch(function(error) {
-                                console.error('Error fetching PDF:', error);
-                                container.innerHTML = '<div class="text-center text-red-600 p-8"><p>Gagal mengambil PDF. Silakan refresh halaman.</p></div>';
-                            });
-                            
-                            // Cleanup blob URL when page unloads
-                            window.addEventListener('beforeunload', function() {
-                                if (typeof blobUrl !== 'undefined') {
-                                    URL.revokeObjectURL(blobUrl);
-                                }
-                            });
-                        });
-                        </script>
                     @else
                         <div class="flex flex-col items-center justify-center h-32 text-gray-500">
                             <p class="text-lg font-medium">Deskripsi soal belum tersedia</p>
@@ -357,6 +172,7 @@
     display: block !important;
     visibility: visible !important;
 }
+
 </style>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
