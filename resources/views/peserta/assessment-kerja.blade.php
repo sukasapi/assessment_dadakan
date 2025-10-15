@@ -217,7 +217,7 @@
                                         src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
                                         width="100%" 
                                         height="500" 
-                                        frameborder="0" 
+                                        frameborder="0"  
                                         allowfullscreen="allowfullscreen">
                                     </iframe>
                                 </div>

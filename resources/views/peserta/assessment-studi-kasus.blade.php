@@ -49,7 +49,7 @@
                         <div class="w-full border rounded-md overflow-hidden">
                             <iframe 
                                 style="width: 100%; height: 600px; border: 1px solid #eeeeee;" 
-                                src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=FitBH&zoom=250" 
+                                src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
                                 width="100%" 
                                 height="600" 
                                 frameborder="0" 
