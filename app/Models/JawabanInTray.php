@@ -76,4 +76,44 @@ class JawabanInTray extends Model
     {
         return $this->model_assessment === self::MODEL_URUTAN;
     }
+
+    // Check if memo is completed (both disposisi and prioritas are filled)
+    public function isCompleted()
+    {
+        $hasDisposisi = !empty(trim($this->disposisi));
+        
+        if ($this->isPriorityModel()) {
+            // For priority model, check if prioritas is selected
+            $hasPrioritas = $this->prioritasMemo && !empty($this->prioritasMemo->kategori_prioritas);
+        } else {
+            // For order model, check if urutan_prioritas is set (should be > 0)
+            $hasPrioritas = $this->urutan_prioritas > 0;
+        }
+        
+        return $hasDisposisi && $hasPrioritas;
+    }
+
+    // Get completion status for display
+    public function getCompletionStatus()
+    {
+        if ($this->isCompleted()) {
+            return 'completed';
+        }
+        
+        $hasDisposisi = !empty(trim($this->disposisi));
+        
+        if ($this->isPriorityModel()) {
+            $hasPrioritas = $this->prioritasMemo && !empty($this->prioritasMemo->kategori_prioritas);
+        } else {
+            $hasPrioritas = $this->urutan_prioritas > 0;
+        }
+        
+        if ($hasDisposisi && !$hasPrioritas) {
+            return 'partial_disposisi';
+        } elseif (!$hasDisposisi && $hasPrioritas) {
+            return 'partial_prioritas';
+        } else {
+            return 'not_started';
+        }
+    }
 }

@@ -68,9 +68,15 @@
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'sortable' : '' }}">
                             @if($memos->count() > 0)
                                 @foreach($memos as $memo)
-                                    <div class="memo-card border border-gray-200 rounded-lg p-4 bg-gray-50 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'cursor-move' : '' }}" 
+                                    @php
+                                        $answer = $inTrayAnswers->get($memo->id);
+                                        $completionStatus = $answer ? $answer->getCompletionStatus() : 'not_started';
+                                        $isCompleted = $answer ? $answer->isCompleted() : false;
+                                    @endphp
+                                    <div class="memo-card border rounded-lg p-4 {{ $isCompleted ? 'completed' : ($completionStatus === 'partial_disposisi' || $completionStatus === 'partial_prioritas' ? 'partial' : 'not-started') }} {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'cursor-move' : '' }}" 
                                          data-id="{{ $memo->id }}" 
-                                         data-content="{{ htmlspecialchars(json_encode(['konten_memo' => $memo->konten_memo, 'pertanyaan' => $memo->pertanyaan]), ENT_QUOTES, 'UTF-8') }}">
+                                         data-content="{{ htmlspecialchars(json_encode(['konten_memo' => $memo->konten_memo, 'pertanyaan' => $memo->pertanyaan]), ENT_QUOTES, 'UTF-8') }}"
+                                         data-completion-status="{{ $completionStatus }}">
                                         <div class="flex items-start justify-between mb-2">
                                             <div class="flex items-center gap-3">
                                                 <div class="pt-1">
@@ -78,6 +84,37 @@
                                                     <input type="number" min="1" class="memo-prioritas hidden w-20 border-black-300 m-2 rounded-md shadow-sm focus:ring-blue-500 focus:border-black-500 bg-white-100" value="1" readonly>
                                                     @if(($intrayModel ?? 'urutan') === 'urutan')
                                                     <span class="memo-prioritas-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 m-2">1</span>
+                                                    @endif
+                                                    
+                                                    <!-- Status Completion Badge -->
+                                                    @if($isCompleted)
+                                                        <span class="status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-green-100 text-green-800 border border-green-200 completed">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                            </svg>
+                                                            Selesai
+                                                        </span>
+                                                    @elseif($completionStatus === 'partial_disposisi')
+                                                        <span class="status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 partial">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                                            </svg>
+                                                            Disposisi
+                                                        </span>
+                                                    @elseif($completionStatus === 'partial_prioritas')
+                                                        <span class="status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 partial">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                                            </svg>
+                                                            Prioritas
+                                                        </span>
+                                                    @else
+                                                        <span class="status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                                            </svg>
+                                                            Belum
+                                                        </span>
                                                     @endif
                                                 </div>
                                             </div>
@@ -357,6 +394,47 @@
 /* In-tray: memungkinkan scroll saat kartu banyak */
 #inTrayBoard { max-height: 65vh; overflow-y: auto; padding-right: 4px; }
 .memo-card { scroll-margin: 16px; }
+
+/* In-tray completion indicators */
+.memo-card.completed {
+    border-color: #10b981 !important;
+    background-color: #f0fdf4 !important;
+    box-shadow: 0 1px 3px 0 rgba(16, 185, 129, 0.1), 0 1px 2px 0 rgba(16, 185, 129, 0.06);
+}
+
+.memo-card.partial {
+    border-color: #f59e0b !important;
+    background-color: #fffbeb !important;
+    box-shadow: 0 1px 3px 0 rgba(245, 158, 11, 0.1), 0 1px 2px 0 rgba(245, 158, 11, 0.06);
+}
+
+.memo-card.not-started {
+    border-color: #d1d5db !important;
+    background-color: #f9fafb !important;
+}
+
+/* Status badge animations */
+.status-badge {
+    transition: all 0.2s ease-in-out;
+}
+
+.status-badge.completed {
+    animation: pulse-green 2s infinite;
+}
+
+.status-badge.partial {
+    animation: pulse-yellow 2s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes pulse-yellow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
 </style>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
@@ -506,6 +584,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Assessment Name:', '{{ $assessment->nama }}');
     console.log('=============================');
     initializeInTrayModel(assessmentModel);
+    
+    // Initialize completion status for all memo cards
+    initializeMemoCompletionStatus();
 
     // URL simpan In-Tray
     const IN_TRAY_SAVE_URL = "{{ route('penilaian.in-tray.save', $assessment->id) }}";
@@ -804,6 +885,10 @@ function openMemoModal(html, card) {
         // Close handler
         document.getElementById('memoModalClose').addEventListener('click', () => {
             modal.classList.add('hidden');
+            // Update completion status when modal is closed
+            if (currentMemoCard) {
+                updateMemoCompletionStatus(currentMemoCard);
+            }
         });
 
         // Input sync handler
@@ -818,6 +903,9 @@ function openMemoModal(html, card) {
                     const v = (evt.target.value || '').trim();
                     textValue.textContent = v.length ? v : 'belum dimasukkan';
                 }
+                
+                // Update completion status
+                updateMemoCompletionStatus(currentMemoCard);
             }
             
             if (evt.target && evt.target.id === 'memoModalPriority') {
@@ -847,6 +935,9 @@ function openMemoModal(html, card) {
                     
                     priorityTextValue.textContent = priorityLabel;
                 }
+                
+                // Update completion status
+                updateMemoCompletionStatus(currentMemoCard);
             }
             
         });
@@ -880,6 +971,111 @@ function openMemoModal(html, card) {
     
 
     modal.classList.remove('hidden');
+}
+
+// Function to update memo completion status and visual indicators
+function updateMemoCompletionStatus(memoCard) {
+    if (!memoCard) return;
+    
+    const disposisiValue = memoCard.querySelector('.memo-disposisi')?.value?.trim() || '';
+    const priorityValue = memoCard.querySelector('.memo-priority-select')?.value?.trim() || '';
+    const intrayModel = '{{ $intrayModel ?? "urutan" }}';
+    
+    // Determine completion status
+    let completionStatus = 'not_started';
+    let isCompleted = false;
+    
+    const hasDisposisi = disposisiValue.length > 0;
+    const hasPrioritas = intrayModel === 'prioritas' ? priorityValue.length > 0 : true; // For order model, assume priority is always set
+    
+    if (hasDisposisi && hasPrioritas) {
+        completionStatus = 'completed';
+        isCompleted = true;
+    } else if (hasDisposisi && !hasPrioritas) {
+        completionStatus = 'partial_disposisi';
+    } else if (!hasDisposisi && hasPrioritas) {
+        completionStatus = 'partial_prioritas';
+    }
+    
+    // Update card classes
+    memoCard.className = memoCard.className.replace(/border-\w+-\d+|bg-\w+-\d+/g, '');
+    if (isCompleted) {
+        memoCard.classList.add('border-green-300', 'bg-green-50');
+    } else if (completionStatus.startsWith('partial')) {
+        memoCard.classList.add('border-yellow-300', 'bg-yellow-50');
+    } else {
+        memoCard.classList.add('border-gray-200', 'bg-gray-50');
+    }
+    
+    // Update data attribute
+    memoCard.setAttribute('data-completion-status', completionStatus);
+    
+    // Update status badge
+    updateStatusBadge(memoCard, completionStatus, isCompleted);
+}
+
+// Function to update status badge
+function updateStatusBadge(memoCard, completionStatus, isCompleted) {
+    // Find existing status badge
+    let statusBadge = memoCard.querySelector('.status-badge');
+    if (!statusBadge) {
+        // Find the badge container (after memo ID badge)
+        const badgeContainer = memoCard.querySelector('.pt-1');
+        if (badgeContainer) {
+            // Find the last badge and insert after it
+            const lastBadge = badgeContainer.querySelector('.memo-prioritas-badge') || badgeContainer.querySelector('.inline-flex');
+            if (lastBadge) {
+                statusBadge = document.createElement('span');
+                statusBadge.className = 'status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium ml-2';
+                lastBadge.parentNode.insertBefore(statusBadge, lastBadge.nextSibling);
+            }
+        }
+    }
+    
+    if (!statusBadge) return;
+    
+    // Clear existing classes and content
+    statusBadge.className = 'status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium ml-2';
+    statusBadge.innerHTML = '';
+    
+    let badgeClass, badgeText, badgeIcon;
+    
+    if (isCompleted) {
+        badgeClass = 'bg-green-100 text-green-800 border border-green-200 completed';
+        badgeText = 'Selesai';
+        badgeIcon = `<svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>`;
+    } else if (completionStatus === 'partial_disposisi') {
+        badgeClass = 'bg-yellow-100 text-yellow-800 border border-yellow-200 partial';
+        badgeText = 'Disposisi';
+        badgeIcon = `<svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+        </svg>`;
+    } else if (completionStatus === 'partial_prioritas') {
+        badgeClass = 'bg-yellow-100 text-yellow-800 border border-yellow-200 partial';
+        badgeText = 'Prioritas';
+        badgeIcon = `<svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+        </svg>`;
+    } else {
+        badgeClass = 'bg-gray-100 text-gray-600 border border-gray-200';
+        badgeText = 'Belum';
+        badgeIcon = `<svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+        </svg>`;
+    }
+    
+    statusBadge.className += ' ' + badgeClass;
+    statusBadge.innerHTML = badgeIcon + badgeText;
+}
+
+// Initialize completion status for all memo cards on page load
+function initializeMemoCompletionStatus() {
+    const memoCards = document.querySelectorAll('.memo-card');
+    memoCards.forEach(card => {
+        updateMemoCompletionStatus(card);
+    });
 }
 
 // Initialize in-tray model based on assessment configuration
