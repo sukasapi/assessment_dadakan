@@ -67,7 +67,7 @@
                                                                                                   <td class="px-4 py-4">
                                      <div class="text-sm font-medium text-gray-900">{{ $sesi->nama }}</div>
                                      @if($sesi->catatan)
-                                         <div class="text-sm text-gray-500">{{ Str::limit($sesi->catatan, 30) }}</div>
+                                         <div class="text-sm text-gray-500">{{ Str::limit(strip_tags($sesi->catatan), 30) }}</div>
                                      @endif
                                  </td>
                                  <td class="px-4 py-4 whitespace-nowrap">
@@ -101,7 +101,7 @@
                                      <div class="space-y-2">
                                          @foreach($sesi->assessments as $assessment)
                                              <div class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                                                 {{ $assessment->urutan }}. {{ Str::limit($assessment->penilaian->nama, 20) }}
+                                                 {{ $assessment->urutan }}. {{ Str::limit(strip_tags($assessment->penilaian->nama), 20) }}
                                              </div>
                                          @endforeach
                                      </div>

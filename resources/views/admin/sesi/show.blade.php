@@ -96,7 +96,7 @@
                 <div class="mt-6">
                     <dt class="text-sm font-medium text-gray-500">Catatan</dt>
                     <dd class="mt-1 text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
-                        {{ $sesi->catatan }}
+                        {!! $sesi->catatan !!}
                     </dd>
                 </div>
             @endif

@@ -411,7 +411,6 @@ function addAssessment(data = null) {
                                         try {
                                             const content = window.ckeditorInstances[ta.id].getData();
                                             ta.value = content;
-                                            console.log('Memo content synced on blur:', ta.id);
                                         } catch (e) {
                                             console.error('Error syncing memo on blur:', ta.id, e);
                                         }
@@ -424,7 +423,6 @@ function addAssessment(data = null) {
                                         try {
                                             const content = window.ckeditorInstances[ta.id].getData();
                                             ta.value = content;
-                                            console.log('Memo content synced on change:', ta.id);
                                         } catch (e) {
                                             console.error('Error syncing memo on change:', ta.id, e);
                                         }
@@ -796,13 +794,11 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
     });
     
     // Sync CKEditor content to textareas before submission
-    console.log('Syncing CKEditor content before form submission...');
     document.querySelectorAll('.memo-editor').forEach(function(textarea) {
         if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
             try {
                 const content = window.ckeditorInstances[textarea.id].getData();
                 textarea.value = content;
-                console.log('Synced memo editor:', textarea.id, 'Content length:', content.length);
             } catch (e) {
                 console.error('Error syncing memo editor:', textarea.id, e);
             }
@@ -815,7 +811,6 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
             try {
                 const content = window.ckeditorInstances[textarea.id].getData();
                 textarea.value = content;
-                console.log('Synced instruction editor:', textarea.id, 'Content length:', content.length);
             } catch (e) {
                 console.error('Error syncing instruction editor:', textarea.id, e);
             }
