@@ -560,6 +560,33 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
         }
     });
     
+    // Sync CKEditor content to textareas before submission
+    console.log('Syncing CKEditor content before form submission...');
+    document.querySelectorAll('.memo-editor').forEach(function(textarea) {
+        if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
+            try {
+                const content = window.ckeditorInstances[textarea.id].getData();
+                textarea.value = content;
+                console.log('Synced memo editor:', textarea.id, 'Content length:', content.length);
+            } catch (e) {
+                console.error('Error syncing memo editor:', textarea.id, e);
+            }
+        }
+    });
+    
+    // Also sync instruction editors
+    document.querySelectorAll('.instruksi-editor').forEach(function(textarea) {
+        if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
+            try {
+                const content = window.ckeditorInstances[textarea.id].getData();
+                textarea.value = content;
+                console.log('Synced instruction editor:', textarea.id, 'Content length:', content.length);
+            } catch (e) {
+                console.error('Error syncing instruction editor:', textarea.id, e);
+            }
+        }
+    });
+    
     if (!isValid) {
         e.preventDefault();
         alert('Semua field wajib diisi untuk setiap assessment.');
@@ -922,6 +949,35 @@ function addMemo(button) {
     waitForDependenciesAndInitMemo(initMemoSummernote);
     setTimeout(() => waitForDependenciesAndInitMemo(initMemoSummernote), 500);
     setTimeout(() => waitForDependenciesAndInitMemo(initMemoSummernote), 1000);
+    
+    // Add event listener untuk memastikan content ter-sync saat user mengetik
+    const textarea = wrapper.querySelector('textarea');
+    if (textarea) {
+        textarea.addEventListener('blur', function() {
+            if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
+                try {
+                    const content = window.ckeditorInstances[textarea.id].getData();
+                    textarea.value = content;
+                    console.log('Memo content synced on blur:', textarea.id);
+                } catch (e) {
+                    console.error('Error syncing memo on blur:', textarea.id, e);
+                }
+            }
+        });
+        
+        // Juga sync saat form submit
+        textarea.addEventListener('change', function() {
+            if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
+                try {
+                    const content = window.ckeditorInstances[textarea.id].getData();
+                    textarea.value = content;
+                    console.log('Memo content synced on change:', textarea.id);
+                } catch (e) {
+                    console.error('Error syncing memo on change:', textarea.id, e);
+                }
+            }
+        });
+    }
 }
 
 function getAssessmentIndexFromElement(item) {
