@@ -148,7 +148,7 @@
                                 @if($assessment->instruksi_khusus)
                                     <div class="md:col-span-2">
                                         <span class="font-medium text-gray-500">Instruksi Khusus:</span>
-                                        <p class="mt-1 text-gray-900 bg-gray-50 p-2 rounded">{{ $assessment->instruksi_khusus }}</p>
+                                        <div class="mt-1 text-gray-900 bg-gray-50 p-2 rounded prose max-w-none">{!! $assessment->instruksi_khusus !!}</div>
                                     </div>
                                 @endif
                             </div>
