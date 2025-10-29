@@ -1693,7 +1693,27 @@ class AdminController extends Controller
                         }
                         
                         $memos = $assessment['memos'] ?? [];
-                        $validMemos = array_filter($memos, fn($m) => trim((string)$m) !== '');
+                        
+                        // Log raw memo data untuk debugging
+                        Log::info('Raw memo data received', [
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'raw_memos' => $memos,
+                            'memo_count' => count($memos)
+                        ]);
+                        
+                        // Filter memo yang valid - hapus HTML tags dan whitespace, cek apakah ada konten yang bermakna
+                        $validMemos = array_filter($memos, function($m) {
+                            $cleanContent = trim(strip_tags((string)$m));
+                            $cleanContent = preg_replace('/\s+/', ' ', $cleanContent); // Normalize whitespace
+                            return !empty($cleanContent) && $cleanContent !== '&nbsp;' && $cleanContent !== '&amp;nbsp;';
+                        });
+                        
+                        // Log valid memo data
+                        Log::info('Valid memo data after filtering', [
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'valid_memos' => $validMemos,
+                            'valid_memo_count' => count($validMemos)
+                        ]);
                         
                         if (count($validMemos) > 0) {
                             // Hapus memo lama untuk sesi penilaian ini
@@ -1702,7 +1722,10 @@ class AdminController extends Controller
                                 ->delete();
                             $order = 1;
                             foreach ($memos as $memo) {
-                                if (trim((string)$memo) === '') continue;
+                                // Gunakan validasi yang sama seperti di filter
+                                $cleanContent = trim(strip_tags((string)$memo));
+                                $cleanContent = preg_replace('/\s+/', ' ', $cleanContent);
+                                if (empty($cleanContent) || $cleanContent === '&nbsp;' || $cleanContent === '&amp;nbsp;') continue;
                                 LatihanInTray::create([
                                     'penilaian_id' => $assessment['penilaian_id'],
                                     'sesi_penilaian_id' => $sesi->id,
@@ -2020,6 +2043,13 @@ class AdminController extends Controller
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
                         $memos = $assessment['memos'] ?? [];
                         
+                        // Log raw memo data untuk debugging
+                        Log::info('Raw memo data received (update)', [
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'raw_memos' => $memos,
+                            'memo_count' => count($memos)
+                        ]);
+                        
                         // Ambil memos yang sudah ada
                         $existingMemos = LatihanInTray::where('sesi_penilaian_id', $sesi->id)
                             ->where('penilaian_id', $assessment['penilaian_id'])
@@ -2027,13 +2057,27 @@ class AdminController extends Controller
                             ->orderBy('urutan')
                             ->get();
                         
-                        // Filter memo yang tidak kosong
-                        $validMemos = array_filter($memos, fn($m) => trim((string)$m) !== '');
+                        // Filter memo yang tidak kosong - hapus HTML tags dan whitespace, cek apakah ada konten yang bermakna
+                        $validMemos = array_filter($memos, function($m) {
+                            $cleanContent = trim(strip_tags((string)$m));
+                            $cleanContent = preg_replace('/\s+/', ' ', $cleanContent); // Normalize whitespace
+                            return !empty($cleanContent) && $cleanContent !== '&nbsp;' && $cleanContent !== '&amp;nbsp;';
+                        });
+                        
+                        // Log valid memo data
+                        Log::info('Valid memo data after filtering (update)', [
+                            'penilaian_id' => $assessment['penilaian_id'],
+                            'valid_memos' => $validMemos,
+                            'valid_memo_count' => count($validMemos)
+                        ]);
                         
                         if (count($validMemos) > 0) {
                             $order = 1;
                             foreach ($memos as $memo) {
-                                if (trim((string)$memo) === '') continue;
+                                // Gunakan validasi yang sama seperti di filter
+                                $cleanContent = trim(strip_tags((string)$memo));
+                                $cleanContent = preg_replace('/\s+/', ' ', $cleanContent);
+                                if (empty($cleanContent) || $cleanContent === '&nbsp;' || $cleanContent === '&amp;nbsp;') continue;
                                 
                                 // Cek apakah memo sudah ada untuk urutan ini
                                 $existingMemo = $existingMemos->where('urutan', $order)->first();

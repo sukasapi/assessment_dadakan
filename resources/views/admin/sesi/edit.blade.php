@@ -404,6 +404,32 @@ function addAssessment(data = null) {
                             // Initialize new instance
                             try {
                                 window.initCKEditor(ta.id);
+                                
+                                // Add event listener untuk memastikan content ter-sync saat user mengetik
+                                ta.addEventListener('blur', function() {
+                                    if (window.ckeditorInstances && window.ckeditorInstances[ta.id]) {
+                                        try {
+                                            const content = window.ckeditorInstances[ta.id].getData();
+                                            ta.value = content;
+                                            console.log('Memo content synced on blur:', ta.id);
+                                        } catch (e) {
+                                            console.error('Error syncing memo on blur:', ta.id, e);
+                                        }
+                                    }
+                                });
+                                
+                                // Juga sync saat form submit
+                                ta.addEventListener('change', function() {
+                                    if (window.ckeditorInstances && window.ckeditorInstances[ta.id]) {
+                                        try {
+                                            const content = window.ckeditorInstances[ta.id].getData();
+                                            ta.value = content;
+                                            console.log('Memo content synced on change:', ta.id);
+                                        } catch (e) {
+                                            console.error('Error syncing memo on change:', ta.id, e);
+                                        }
+                                    }
+                                });
                             } catch (e) {
                                 console.log('Error initializing memo Summernote:', e);
                             }
@@ -766,6 +792,33 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
         
         if (!penilaianId || !urutan) {
             isValid = false;
+        }
+    });
+    
+    // Sync CKEditor content to textareas before submission
+    console.log('Syncing CKEditor content before form submission...');
+    document.querySelectorAll('.memo-editor').forEach(function(textarea) {
+        if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
+            try {
+                const content = window.ckeditorInstances[textarea.id].getData();
+                textarea.value = content;
+                console.log('Synced memo editor:', textarea.id, 'Content length:', content.length);
+            } catch (e) {
+                console.error('Error syncing memo editor:', textarea.id, e);
+            }
+        }
+    });
+    
+    // Also sync instruction editors
+    document.querySelectorAll('.instruksi-editor').forEach(function(textarea) {
+        if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
+            try {
+                const content = window.ckeditorInstances[textarea.id].getData();
+                textarea.value = content;
+                console.log('Synced instruction editor:', textarea.id, 'Content length:', content.length);
+            } catch (e) {
+                console.error('Error syncing instruction editor:', textarea.id, e);
+            }
         }
     });
     
