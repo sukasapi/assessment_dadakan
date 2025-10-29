@@ -9,7 +9,7 @@
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Kelola Peserta Sesi</h1>
             <p class="text-gray-600 mt-2">
-                Sesi: <span class="font-semibold">{{ $sesi->nama }}</span>
+                Sesi: <span class="font-semibold">{{ strip_tags($sesi->nama) }}</span>
             </p>
             <p class="text-sm text-gray-500 mt-1">
                 Status: <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
@@ -218,7 +218,7 @@
                     <div class="mt-2 space-y-1">
                         @foreach($sesi->assessments->sortBy('urutan') as $assessment)
                             <div class="text-xs text-gray-600">
-                                {{ $assessment->urutan }}. {{ $assessment->penilaian->nama }}
+                                {{ $assessment->urutan }}. {{ strip_tags($assessment->penilaian->nama) }}
                             </div>
                         @endforeach
                     </div>

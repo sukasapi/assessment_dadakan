@@ -561,13 +561,11 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
     });
     
     // Sync CKEditor content to textareas before submission
-    console.log('Syncing CKEditor content before form submission...');
     document.querySelectorAll('.memo-editor').forEach(function(textarea) {
         if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
             try {
                 const content = window.ckeditorInstances[textarea.id].getData();
                 textarea.value = content;
-                console.log('Synced memo editor:', textarea.id, 'Content length:', content.length);
             } catch (e) {
                 console.error('Error syncing memo editor:', textarea.id, e);
             }
@@ -580,7 +578,6 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
             try {
                 const content = window.ckeditorInstances[textarea.id].getData();
                 textarea.value = content;
-                console.log('Synced instruction editor:', textarea.id, 'Content length:', content.length);
             } catch (e) {
                 console.error('Error syncing instruction editor:', textarea.id, e);
             }
@@ -958,7 +955,6 @@ function addMemo(button) {
                 try {
                     const content = window.ckeditorInstances[textarea.id].getData();
                     textarea.value = content;
-                    console.log('Memo content synced on blur:', textarea.id);
                 } catch (e) {
                     console.error('Error syncing memo on blur:', textarea.id, e);
                 }
@@ -971,7 +967,6 @@ function addMemo(button) {
                 try {
                     const content = window.ckeditorInstances[textarea.id].getData();
                     textarea.value = content;
-                    console.log('Memo content synced on change:', textarea.id);
                 } catch (e) {
                     console.error('Error syncing memo on change:', textarea.id, e);
                 }
@@ -1009,63 +1004,5 @@ function showNotification(message, type) {
     }, 4000);
 }
 
-// Add form submission logging
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            console.log('=== FORM SUBMISSION DEBUG (CREATE) ===');
-            
-            // Log all form data
-            const formData = new FormData(form);
-            const formObject = {};
-            for (let [key, value] of formData.entries()) {
-                if (formObject[key]) {
-                    if (Array.isArray(formObject[key])) {
-                        formObject[key].push(value);
-                    } else {
-                        formObject[key] = [formObject[key], value];
-                    }
-                } else {
-                    formObject[key] = value;
-                }
-            }
-            
-            console.log('Form Data:', formObject);
-            
-            // Log assessment data specifically
-            const assessments = {};
-            for (let [key, value] of formData.entries()) {
-                if (key.startsWith('assessments[')) {
-                    const match = key.match(/assessments\[(\d+)\]\[([^\]]+)\]/);
-                    if (match) {
-                        const index = match[1];
-                        const field = match[2];
-                        if (!assessments[index]) {
-                            assessments[index] = {};
-                        }
-                        assessments[index][field] = value;
-                    }
-                }
-            }
-            
-            console.log('Assessment Data:', assessments);
-            
-            // Log model_in_tray specifically
-            for (let index in assessments) {
-                const assessment = assessments[index];
-                console.log(`Assessment ${index}:`, {
-                    penilaian_id: assessment.penilaian_id,
-                    model_in_tray: assessment.model_in_tray || 'NOT SET',
-                    urutan: assessment.urutan,
-                    durasi_default: assessment.durasi_default,
-                    instruksi_khusus: assessment.instruksi_khusus
-                });
-            }
-            
-            console.log('=== END FORM SUBMISSION DEBUG (CREATE) ===');
-        });
-    }
-});
 </script>
 @endsection
