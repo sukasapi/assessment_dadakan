@@ -91,7 +91,7 @@
                     <textarea name="catatan" 
                               id="catatan" 
                               rows="3"
-                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('catatan') border-red-300 @enderror"
+                              class="catatan-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('catatan') border-red-300 @enderror"
                               placeholder="Tambahkan catatan atau instruksi khusus untuk sesi ini">{{ old('catatan', $sesi->catatan) }}</textarea>
                     @error('catatan')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -389,14 +389,27 @@ function addAssessment(data = null) {
                     });
                     memoContainer.appendChild(wrapper);
                     setTimeout(function() {
-                        if (window.initCKEditor) {
+                        if (window.initCKEditor && window.$) {
                             const ta = wrapper.querySelector('textarea');
-                            // Skip jika sudah diinisialisasi
+                            console.log('Initializing Summernote for memo:', ta.id);
+                            // Force destroy any existing instance
                             if (window.ckeditorInstances && window.ckeditorInstances[ta.id]) {
-                                return;
+                                try {
+                                    $('#' + ta.id).summernote('destroy');
+                                    delete window.ckeditorInstances[ta.id];
+                                } catch (e) {
+                                    console.log('Error destroying existing memo instance:', e);
+                                }
                             }
-                            
-                            window.initCKEditor(ta.id);
+                            // Initialize new instance
+                            try {
+                                window.initCKEditor(ta.id);
+                            } catch (e) {
+                                console.log('Error initializing memo Summernote:', e);
+                            }
+                        } else {
+                            console.log('Retrying memo Summernote initialization...');
+                            setTimeout(arguments.callee, 200);
                         }
                     }, 500);
                 });
@@ -424,15 +437,46 @@ function addAssessment(data = null) {
     // Update available options after adding new assessment
     updateAvailableOptions();
     
-    // Initialize CKEditor for new assessment's instruction editor
-    setTimeout(function() {
-        if (window.initCKEditor) {
-            const newInstructionEditor = clone.querySelector('.instruksi-editor');
-            if (newInstructionEditor && (!window.ckeditorInstances || !window.ckeditorInstances[newInstructionEditor.id])) {
-                window.initCKEditor(newInstructionEditor.id);
+    // Initialize Summernote for new assessment's instruction editor
+    function initNewAssessmentSummernote() {
+        console.log('Initializing Summernote for new assessment...');
+        const newInstructionEditor = clone.querySelector('.instruksi-editor');
+        if (newInstructionEditor) {
+            console.log('Found instruction editor:', newInstructionEditor.id);
+            // Force destroy any existing instance
+            if (window.ckeditorInstances && window.ckeditorInstances[newInstructionEditor.id]) {
+                try {
+                    $('#' + newInstructionEditor.id).summernote('destroy');
+                    delete window.ckeditorInstances[newInstructionEditor.id];
+                } catch (e) {
+                    console.log('Error destroying existing instance:', e);
+                }
             }
+            // Initialize new instance
+            try {
+                window.initCKEditor(newInstructionEditor.id);
+            } catch (e) {
+                console.log('Error initializing Summernote:', e);
+            }
+        } else {
+            console.log('Instruction editor not found');
         }
-    }, 500);
+    }
+    
+    // Wait for dependencies and initialize
+    function waitForDependenciesAndInit(callback) {
+        if (window.$ && window.$.fn.summernote && window.initCKEditor) {
+            callback();
+        } else {
+            console.log('Waiting for dependencies for new assessment...');
+            setTimeout(() => waitForDependenciesAndInit(callback), 100);
+        }
+    }
+    
+    // Try multiple times to ensure initialization
+    waitForDependenciesAndInit(initNewAssessmentSummernote);
+    setTimeout(() => waitForDependenciesAndInit(initNewAssessmentSummernote), 500);
+    setTimeout(() => waitForDependenciesAndInit(initNewAssessmentSummernote), 1000);
 }
 
 function removeAssessment(button) {
@@ -493,6 +537,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 memos: assessment.memos || []
             });
         });
+        
+        // Initialize Summernote for existing assessments after they are loaded
+        setTimeout(function() {
+            waitForDependencies(function() {
+                console.log('Initializing Summernote for loaded existing assessments...');
+                document.querySelectorAll('.instruksi-editor').forEach(function(el) {
+                    if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
+                        console.log('Initializing Summernote for existing loaded:', el.id);
+                        window.initCKEditor(el.id);
+                    }
+                });
+            });
+        }, 3000);
     } else {
         console.log('No existing assessments found, adding default');
         addAssessment();
@@ -501,19 +558,152 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update available options after loading existing assessments
     updateAvailableOptions();
 
-    // Inisialisasi CKEditor untuk instruksi (bukan memo)
-    setTimeout(function() {
-        if (window.initCKEditor) {
-            document.querySelectorAll('.instruksi-editor').forEach(function(el) {
-                // Skip jika sudah diinisialisasi
-                if (window.ckeditorInstances && window.ckeditorInstances[el.id]) {
-                    return;
-                }
-                
-                window.initCKEditor(el.id);
-            });
+    // Wait for jQuery and Summernote to be fully loaded
+    function waitForDependencies(callback) {
+        if (window.$ && window.$.fn.summernote && window.initCKEditor) {
+            callback();
+        } else {
+            console.log('Waiting for dependencies...');
+            setTimeout(() => waitForDependencies(callback), 100);
         }
-    }, 500);
+    }
+    
+    // Inisialisasi Summernote untuk instruksi dan catatan
+    function initSummernote() {
+        console.log('initSummernote called');
+        // Initialize instruction editors
+        document.querySelectorAll('.instruksi-editor').forEach(function(el) {
+            // Skip jika sudah diinisialisasi
+            if (window.ckeditorInstances && window.ckeditorInstances[el.id]) {
+                return;
+            }
+            
+            console.log('Initializing Summernote for instruction:', el.id);
+            window.initCKEditor(el.id);
+        });
+        // Initialize catatan editor
+        document.querySelectorAll('.catatan-editor').forEach(function(el) {
+            // Skip jika sudah diinisialisasi
+            if (window.ckeditorInstances && window.ckeditorInstances[el.id]) {
+                return;
+            }
+            
+            console.log('Initializing Summernote for catatan:', el.id);
+            window.initCKEditor(el.id);
+        });
+    }
+    
+    // Start initialization after dependencies are ready
+    waitForDependencies(initSummernote);
+    
+    // Add event listener for DOM changes to reinitialize Summernote
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        const instructionEditors = node.querySelectorAll ? node.querySelectorAll('.instruksi-editor') : [];
+                        const catatanEditors = node.querySelectorAll ? node.querySelectorAll('.catatan-editor') : [];
+                        
+                        instructionEditors.forEach(function(el) {
+                            if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
+                                console.log('DOM change detected, initializing Summernote for instruction:', el.id);
+                                setTimeout(function() {
+                                    window.initCKEditor(el.id);
+                                }, 100);
+                            }
+                        });
+                        
+                        catatanEditors.forEach(function(el) {
+                            if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
+                                console.log('DOM change detected, initializing Summernote for catatan:', el.id);
+                                setTimeout(function() {
+                                    window.initCKEditor(el.id);
+                                }, 100);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    });
+    
+    // Start observing
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    // Force initialize Summernote for all existing assessments and catatan
+    function forceInitSummernote() {
+        console.log('Force initializing Summernote for all existing assessments and catatan...');
+        // Initialize instruction editors
+        document.querySelectorAll('.instruksi-editor').forEach(function(el) {
+            if (el.id) {
+                console.log('Found instruction editor:', el.id);
+                // Destroy existing instance if any
+                if (window.ckeditorInstances && window.ckeditorInstances[el.id]) {
+                    try {
+                        $('#' + el.id).summernote('destroy');
+                        delete window.ckeditorInstances[el.id];
+                    } catch (e) {
+                        console.log('Error destroying existing instance:', e);
+                    }
+                }
+                // Initialize new instance
+                try {
+                    window.initCKEditor(el.id);
+                } catch (e) {
+                    console.log('Error initializing Summernote:', e);
+                }
+            }
+        });
+        // Initialize catatan editor
+        document.querySelectorAll('.catatan-editor').forEach(function(el) {
+            if (el.id) {
+                console.log('Found catatan editor:', el.id);
+                // Destroy existing instance if any
+                if (window.ckeditorInstances && window.ckeditorInstances[el.id]) {
+                    try {
+                        $('#' + el.id).summernote('destroy');
+                        delete window.ckeditorInstances[el.id];
+                    } catch (e) {
+                        console.log('Error destroying existing catatan instance:', e);
+                    }
+                }
+                // Initialize new instance
+                try {
+                    window.initCKEditor(el.id);
+                } catch (e) {
+                    console.log('Error initializing catatan Summernote:', e);
+                }
+            }
+        });
+    }
+    
+    // Try multiple times to ensure initialization
+    setTimeout(forceInitSummernote, 1000);
+    setTimeout(forceInitSummernote, 3000);
+    setTimeout(forceInitSummernote, 5000);
+    
+    // Also add a global function to reinitialize all Summernote editors
+    window.reinitializeAllSummernote = function() {
+        console.log('Reinitializing all Summernote editors...');
+        // Reinitialize instruction editors
+        document.querySelectorAll('.instruksi-editor').forEach(function(el) {
+            if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
+                console.log('Initializing Summernote for instruction:', el.id);
+                window.initCKEditor(el.id);
+            }
+        });
+        // Reinitialize catatan editor
+        document.querySelectorAll('.catatan-editor').forEach(function(el) {
+            if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
+                console.log('Initializing Summernote for catatan:', el.id);
+                window.initCKEditor(el.id);
+            }
+        });
+    };
 
     // Trigger togglePdfUpload for existing assessments
     document.querySelectorAll('select[name*="[penilaian_id]"]').forEach(function(select) {
@@ -889,14 +1079,27 @@ function addMemo(button) {
     });
     container.appendChild(wrapper);
     setTimeout(function() {
-        if (window.initCKEditor) {
+        if (window.initCKEditor && window.$) {
             const textarea = wrapper.querySelector('textarea');
-            // Skip jika sudah diinisialisasi
+            console.log('Initializing Summernote for memo:', textarea.id);
+            // Force destroy any existing instance
             if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
-                return;
+                try {
+                    $('#' + textarea.id).summernote('destroy');
+                    delete window.ckeditorInstances[textarea.id];
+                } catch (e) {
+                    console.log('Error destroying existing memo instance:', e);
+                }
             }
-            
-            window.initCKEditor(textarea.id);
+            // Initialize new instance
+            try {
+                window.initCKEditor(textarea.id);
+            } catch (e) {
+                console.log('Error initializing memo Summernote:', e);
+            }
+        } else {
+            console.log('Retrying memo Summernote initialization...');
+            setTimeout(arguments.callee, 200);
         }
     }, 500);
 }

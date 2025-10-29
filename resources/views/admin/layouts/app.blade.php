@@ -9,6 +9,9 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Summernote CDN (stabil dan mudah) -->
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -139,9 +142,6 @@
             return confirm(message || 'Apakah Anda yakin ingin menghapus item ini?');
         }
     </script>
-    <!-- Summernote CDN (stabil dan mudah) -->
-    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.js"></script>
     <script>
         // Global Summernote configuration
         window.summernoteConfig = {
@@ -192,15 +192,34 @@
         
         // Function to initialize Summernote
         window.initCKEditor = function(elementId) {
+            console.log('Attempting to initialize Summernote for:', elementId);
+            console.log('jQuery available:', !!window.$);
+            console.log('Summernote available:', !!(window.$ && window.$.fn.summernote));
+            console.log('Element exists:', !!document.getElementById(elementId));
+            
             if (window.$ && window.$.fn.summernote && document.getElementById(elementId)) {
                 try {
+                    // Check if already initialized
+                    if (window.ckeditorInstances && window.ckeditorInstances[elementId]) {
+                        console.log('Summernote already initialized for:', elementId);
+                        return;
+                    }
+                    
+                    // Destroy existing instance if any
+                    if (window.ckeditorInstances && window.ckeditorInstances[elementId]) {
+                        $('#' + elementId).summernote('destroy');
+                        delete window.ckeditorInstances[elementId];
+                    }
+                    
                     const editor = $('#' + elementId).summernote(window.summernoteConfig);
-                    console.log('Summernote initialized for:', elementId);
+                    console.log('Summernote initialized successfully for:', elementId);
                     window.ckeditorInstances = window.ckeditorInstances || {};
                     window.ckeditorInstances[elementId] = editor;
                 } catch (error) {
-                    console.error('Summernote initialization error:', error);
+                    console.error('Summernote initialization error for', elementId, ':', error);
                 }
+            } else {
+                console.warn('Summernote initialization failed for:', elementId, '- missing dependencies or element');
             }
         };
         
@@ -216,6 +235,12 @@
                 }
             }
         };
+        
+        // Initialize Summernote when DOM is ready
+        $(document).ready(function() {
+            console.log('DOM ready, initializing Summernote...');
+            // This will be called by individual pages
+        });
     </script>
     
     @stack('scripts')
