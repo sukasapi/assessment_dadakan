@@ -997,14 +997,14 @@ function updateMemoCompletionStatus(memoCard) {
         completionStatus = 'partial_prioritas';
     }
     
-    // Update card classes
-    memoCard.className = memoCard.className.replace(/border-\w+-\d+|bg-\w+-\d+/g, '');
+    // Update card classes to match CSS rules (.memo-card.completed|partial|not-started)
+    memoCard.classList.remove('completed', 'partial', 'not-started');
     if (isCompleted) {
-        memoCard.classList.add('border-green-300', 'bg-green-50');
+        memoCard.classList.add('completed');
     } else if (completionStatus.startsWith('partial')) {
-        memoCard.classList.add('border-yellow-300', 'bg-yellow-50');
+        memoCard.classList.add('partial');
     } else {
-        memoCard.classList.add('border-gray-200', 'bg-gray-50');
+        memoCard.classList.add('not-started');
     }
     
     // Update data attribute
