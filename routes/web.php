@@ -81,6 +81,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/progress/answers', [AdminController::class, 'progressAnswers'])->name('progress.answers');
     Route::get('/progress/export-answers', [AdminController::class, 'exportAnswers'])->name('progress.export-answers');
     Route::get('/progress/answer-detail', [AdminController::class, 'getAnswerDetail'])->name('progress.answer-detail');
+    Route::post('/progress/save-penilaian-studi-kasus', [AdminController::class, 'savePenilaianStudiKasus'])->name('progress.save-penilaian-studi-kasus');
     
     // Progress Individual (must be after specific routes)
     Route::get('/progress/{pesertaId}', [AdminController::class, 'progressPeserta'])->name('progress.peserta');
@@ -177,6 +178,7 @@ Route::prefix('peserta')->name('peserta.')->middleware(['auth'])->group(function
     // Studi Kasus Routes
     Route::get('/assessment/{id}/studi-kasus', [PesertaController::class, 'showStudiKasus'])->name('assessment.studi-kasus');
     Route::post('/assessment/{id}/studi-kasus', [PesertaController::class, 'storeStudiKasus'])->name('assessment.studi-kasus.store');
+    Route::get('/penilaian-studi-kasus/{penilaianId}', [PesertaController::class, 'getPenilaianStudiKasus'])->name('penilaian.studi-kasus');
     
     // Test route untuk debugging
     Route::get('/test-studi-kasus/{id}', [PesertaController::class, 'showStudiKasus'])->name('test.studi-kasus');
