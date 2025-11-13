@@ -66,6 +66,16 @@
                             <option value="fgd">LGD/FGD</option>
                         </select>
                     </div>
+                    
+                    <!-- Filter Status Jawaban (untuk Studi Kasus) -->
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Status Jawaban</label>
+                        <select id="jawabanStatusFilter" class="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Semua Status</option>
+                            <option value="final">Final - Bisa Dinilai</option>
+                            <option value="draft">Draft - Belum Final</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <!-- Right Column -->
@@ -171,6 +181,21 @@
                                             if ($jawabanData) {
                                                 $jawaban = Str::limit(strip_tags($jawabanData->jawaban), 100);
                                                 $hasAnswer = true;
+                                                
+                                                // Simpan status jawaban untuk ditampilkan di tabel
+                                                $jawabanStatus = $jawabanData->status; // 'draft' atau 'final'
+                                                
+                                                // Cek apakah sudah dinilai
+                                                $sudahDinilai = \App\Models\PenilaianStudiKasus::where('jawaban_studi_kasus_id', $jawabanData->id)
+                                                    ->orWhere(function($q) use ($peserta, $penilaian, $session) {
+                                                        $q->where('peserta_id', $peserta->id)
+                                                          ->where('penilaian_id', $penilaian->id)
+                                                          ->where('sesi_penilaian_id', $session->id);
+                                                    })
+                                                    ->exists();
+                                            } else {
+                                                $sudahDinilai = false;
+                                                $jawabanStatus = null;
                                             }
                                             break;
                                             
@@ -225,7 +250,25 @@
                                             break;
                                     }
                                     
-                                    $status = $progress->status ?? 'belum_mulai';
+                                    // Untuk studi kasus, prioritaskan status dari jawaban_studi_kasus atau kemajuan_penilaian
+                                    if ($penilaian->jenis === 'studi_kasus') {
+                                        // Jika jawaban sudah final, status adalah selesai
+                                        if (isset($jawabanStatus) && $jawabanStatus === 'final') {
+                                            $status = 'selesai';
+                                        } 
+                                        // Jika kemajuan_penilaian sudah selesai, status adalah selesai
+                                        elseif ($progress && $progress->status === 'selesai') {
+                                            $status = 'selesai';
+                                        } 
+                                        // Jika masih draft, gunakan status dari kemajuan_penilaian
+                                        else {
+                                            $status = $progress->status ?? 'belum_mulai';
+                                        }
+                                    } else {
+                                        // Untuk jenis assessment lain, gunakan status dari kemajuan_penilaian
+                                        $status = $progress->status ?? 'belum_mulai';
+                                    }
+                                    
                                     $statusColor = match($status) {
                                         'sedang_berlangsung' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
                                         'selesai' => 'bg-green-100 text-green-800 border-green-200',
@@ -238,6 +281,7 @@
                                     data-peserta-nama="{{ strtolower($peserta->nama_lengkap) }}"
                                     data-instansi="{{ strtolower($peserta->instansi ?? '') }}"
                                     data-assessment-type="{{ $penilaian->jenis === 'in_tray' ? 'in_tray_' . ($penilaian->model_in_tray ?? 'urutan') : $penilaian->jenis }}"
+                                    data-jawaban-status="{{ $penilaian->jenis === 'studi_kasus' && isset($jawabanStatus) ? $jawabanStatus : '' }}"
                                     data-search-text="{{ strtolower($session->nama . ' ' . $peserta->nama_lengkap . ' ' . ($peserta->instansi ?? '') . ' ' . $penilaian->jenis . ' ' . ($penilaian->jenis === 'in_tray' ? ($penilaian->model_in_tray ?? 'urutan') : '')) }}">
                                     <td class="px-4 py-2">{{ $row++ }}</td>
                                     <td class="px-4 py-2">
@@ -268,8 +312,19 @@
                                     </td>
                                     <td class="px-4 py-2">
                                         @if($hasAnswer)
-                                            <div class="max-w-xs">
+                                            <div class="max-w-xs space-y-1">
                                                 <div class="text-gray-900 text-sm">{!! $jawaban !!}</div>
+                                                @if($penilaian->jenis === 'studi_kasus' && isset($jawabanStatus))
+                                                    @if($jawabanStatus === 'final')
+                                                        <span class="inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
+                                                            ✓ Final - Bisa Dinilai
+                                                        </span>
+                                                    @else
+                                                        <span class="inline-block px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded">
+                                                            ⏳ Draft - Belum Final
+                                                        </span>
+                                                    @endif
+                                                @endif
                                             </div>
                                         @else
                                             <span class="text-gray-400 text-sm">Belum ada jawaban</span>
@@ -282,6 +337,15 @@
                                                         class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200 transition-colors">
                                                     Lihat Detail
                                                 </button>
+                                                @if($penilaian->jenis === 'studi_kasus' && isset($sudahDinilai) && $sudahDinilai)
+                                                    <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded text-center">
+                                                        ✓ Sudah Dinilai
+                                                    </span>
+                                                @elseif($penilaian->jenis === 'studi_kasus' && isset($sudahDinilai) && !$sudahDinilai)
+                                                    <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded text-center">
+                                                        Belum Dinilai
+                                                    </span>
+                                                @endif
                                             @endif
                                             @if(($penilaian->jenis === 'studi_kasus' || $penilaian->jenis === 'roleplay' || $penilaian->jenis === 'fgd') && $penilaian->file_pdf)
                                                 <button data-action="view-pdf" data-penilaian-id="{{ $penilaian->id }}" data-pdf-file="{{ $penilaian->file_pdf }}" 
@@ -410,6 +474,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const assessmentTypeFilter = document.getElementById('assessmentTypeFilter');
     const participantNameFilter = document.getElementById('participantNameFilter');
     const institutionFilter = document.getElementById('institutionFilter');
+    const jawabanStatusFilter = document.getElementById('jawabanStatusFilter');
     const applyFiltersBtn = document.getElementById('applyFilters');
     const resetFilters = document.getElementById('resetFilters');
     
@@ -419,7 +484,8 @@ document.addEventListener('DOMContentLoaded', function(){
         session: '',
         assessmentType: '',
         participantName: '',
-        institution: ''
+        institution: '',
+        jawabanStatus: ''
     };
     
     // Export Answers functionality
@@ -439,6 +505,7 @@ document.addEventListener('DOMContentLoaded', function(){
             currentFilters.assessmentType = assessmentTypeFilter.value;
             currentFilters.participantName = participantNameFilter.value;
             currentFilters.institution = institutionFilter.value;
+            currentFilters.jawabanStatus = jawabanStatusFilter ? jawabanStatusFilter.value : '';
             applyFilters();
         });
     }
@@ -451,7 +518,8 @@ document.addEventListener('DOMContentLoaded', function(){
             assessmentTypeFilter.value = '';
             participantNameFilter.value = '';
             institutionFilter.value = '';
-            currentFilters = { universalSearch: '', session: '', assessmentType: '', participantName: '', institution: '' };
+            if (jawabanStatusFilter) jawabanStatusFilter.value = '';
+            currentFilters = { universalSearch: '', session: '', assessmentType: '', participantName: '', institution: '', jawabanStatus: '' };
             applyFilters();
         });
     }
@@ -487,6 +555,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const assessmentType = row.getAttribute('data-assessment-type');
             const pesertaNama = row.getAttribute('data-peserta-nama');
             const instansi = row.getAttribute('data-instansi');
+            const jawabanStatus = row.getAttribute('data-jawaban-status');
             const searchText = row.getAttribute('data-search-text');
             
             // Check universal search
@@ -519,7 +588,19 @@ document.addEventListener('DOMContentLoaded', function(){
             // Check institution filter
             const institutionMatch = !currentFilters.institution || instansi.includes(currentFilters.institution.toLowerCase());
             
-            if (universalMatch && sessionMatch && assessmentTypeMatch && participantMatch && institutionMatch) {
+            // Check jawaban status filter (hanya untuk studi kasus)
+            let jawabanStatusMatch = true;
+            if (currentFilters.jawabanStatus) {
+                // Hanya filter jika assessment type adalah studi_kasus
+                if (assessmentType === 'studi_kasus') {
+                    jawabanStatusMatch = jawabanStatus === currentFilters.jawabanStatus;
+                } else {
+                    // Untuk non-studi-kasus, selalu match (tidak ada filter status)
+                    jawabanStatusMatch = true;
+                }
+            }
+            
+            if (universalMatch && sessionMatch && assessmentTypeMatch && participantMatch && institutionMatch && jawabanStatusMatch) {
                 row.style.display = '';
                 visibleCount++;
             } else {
@@ -574,6 +655,44 @@ document.addEventListener('DOMContentLoaded', function(){
                     console.log('Response data:', data);
                     modalContent.innerHTML = data.content;
                     modal.classList.remove('hidden');
+                    
+                        // Initialize Summernote untuk textarea catatan setelah modal dibuka
+                        setTimeout(function() {
+                            const catatanEditor = modalContent.querySelector('.catatan-penilaian-editor');
+                            const form = modalContent.querySelector('#formPenilaianStudiKasus');
+                            if (catatanEditor && catatanEditor.id && window.initCKEditor) {
+                                console.log('Initializing Summernote for catatan penilaian:', catatanEditor.id);
+                                
+                                // Cek apakah form disabled (status draft)
+                                const isFinal = form ? (form.getAttribute('data-is-final') === '1') : true;
+                                
+                                // Destroy existing instance if any
+                                if (window.ckeditorInstances && window.ckeditorInstances[catatanEditor.id]) {
+                                    try {
+                                        if (window.$ && window.$.fn.summernote) {
+                                            $('#' + catatanEditor.id).summernote('destroy');
+                                        }
+                                        delete window.ckeditorInstances[catatanEditor.id];
+                                    } catch (e) {
+                                        console.log('Error destroying existing Summernote instance:', e);
+                                    }
+                                }
+                                
+                                // Initialize new instance
+                                window.initCKEditor(catatanEditor.id);
+                                
+                                // Disable Summernote jika status draft
+                                if (!isFinal && window.$ && window.$.fn.summernote) {
+                                    setTimeout(function() {
+                                        try {
+                                            $('#' + catatanEditor.id).summernote('disable');
+                                        } catch (e) {
+                                            console.log('Error disabling Summernote:', e);
+                                        }
+                                    }, 100);
+                                }
+                            }
+                        }, 300);
                 })
                 .catch(error => {
                     console.error('Error loading answer detail:', error);
@@ -691,6 +810,137 @@ document.addEventListener('DOMContentLoaded', function(){
             closePdfViewer();
         }
     });
+    
+    // Handle form penilaian studi kasus
+    document.addEventListener('click', function(e) {
+        if (e.target.getAttribute('data-action') === 'save-draft' || e.target.getAttribute('data-action') === 'save-final') {
+            e.preventDefault();
+            const form = document.getElementById('formPenilaianStudiKasus');
+            if (!form) {
+                console.error('Form penilaian tidak ditemukan');
+                return;
+            }
+            
+            // Cek apakah form disabled (status draft)
+            const isFinal = form.getAttribute('data-is-final') === '1';
+            const buttonIsFinal = e.target.getAttribute('data-is-final') === '1';
+            
+            if (!isFinal || !buttonIsFinal) {
+                alert('Jawaban peserta masih dalam status draft. Penilaian hanya dapat dilakukan setelah peserta menyimpan jawaban sebagai final.');
+                return;
+            }
+            
+            const status = e.target.getAttribute('data-action') === 'save-final' ? 'final' : 'draft';
+            submitPenilaianStudiKasus(form, status);
+        }
+    });
+    
+    function submitPenilaianStudiKasus(form, status) {
+        // Validasi: pastikan semua pertanyaan sudah dijawab
+        const pertanyaan1 = form.querySelector('input[name="pertanyaan_1"]:checked');
+        const pertanyaan2 = form.querySelector('input[name="pertanyaan_2"]:checked');
+        const pertanyaan3 = form.querySelector('input[name="pertanyaan_3"]:checked');
+        
+        if (!pertanyaan1 || !pertanyaan2 || !pertanyaan3) {
+            alert('Mohon lengkapi semua pertanyaan penilaian!');
+            return;
+        }
+        
+        // Disable buttons saat submit
+        const buttons = form.querySelectorAll('button[data-action]');
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+        });
+        
+        // Prepare form data
+        const formData = new FormData(form);
+        formData.append('status', status);
+        
+        // Get Summernote content untuk catatan jika menggunakan Summernote
+        const catatanEditor = form.querySelector('.catatan-penilaian-editor');
+        if (catatanEditor && catatanEditor.id && window.$ && window.$.fn.summernote) {
+            try {
+                const summernoteContent = $('#' + catatanEditor.id).summernote('code');
+                formData.set('catatan', summernoteContent);
+            } catch (e) {
+                console.log('Error getting Summernote content, using textarea value:', e);
+                // Fallback ke textarea value jika Summernote tidak tersedia
+                formData.set('catatan', catatanEditor.value || '');
+            }
+        }
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || form.querySelector('input[name="_token"]')?.value;
+        if (csrfToken) {
+            formData.set('_token', csrfToken);
+        }
+        
+        // AJAX request
+        fetch('{{ route("admin.progress.save-penilaian-studi-kasus") }}', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'mt-4 p-3 bg-green-100 text-green-800 rounded-md text-sm';
+                messageDiv.textContent = data.message;
+                form.appendChild(messageDiv);
+                
+                // Remove message after 3 seconds
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 3000);
+                
+                // Reload modal content to show updated data
+                setTimeout(() => {
+                    // Destroy Summernote instance sebelum reload
+                    const catatanEditor = form.querySelector('.catatan-penilaian-editor');
+                    if (catatanEditor && catatanEditor.id && window.$ && window.$.fn.summernote) {
+                        try {
+                            $('#' + catatanEditor.id).summernote('destroy');
+                            if (window.ckeditorInstances && window.ckeditorInstances[catatanEditor.id]) {
+                                delete window.ckeditorInstances[catatanEditor.id];
+                            }
+                        } catch (e) {
+                            console.log('Error destroying Summernote before reload:', e);
+                        }
+                    }
+                    
+                    // Reload modal dengan klik tombol view detail
+                    const viewDetailBtn = document.querySelector('button[data-action="view-detail"]');
+                    if (viewDetailBtn) {
+                        viewDetailBtn.click();
+                    }
+                }, 1000);
+            } else {
+                alert('Error: ' + (data.message || 'Gagal menyimpan penilaian'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat menyimpan penilaian. Silakan coba lagi.');
+        })
+        .finally(() => {
+            // Re-enable buttons
+            buttons.forEach(btn => {
+                btn.disabled = false;
+                if (btn.getAttribute('data-action') === 'save-draft') {
+                    btn.textContent = 'Simpan Sementara';
+                } else {
+                    btn.textContent = 'Simpan Final';
+                }
+            });
+        });
+    }
     
     // Per page selector functionality
     const perPageSelect = document.getElementById('perPageSelect');

@@ -6,6 +6,7 @@ use App\Models\Peserta;
 use App\Models\SesiPenilaian;
 use App\Models\Penilaian;
 use App\Models\KemajuanPenilaian;
+use App\Models\PenilaianStudiKasus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -600,24 +601,37 @@ class PesertaController extends Controller
                                ->withErrors(['error' => 'Sesi belum aktif.']);
             }
 
-            // Ambil jawaban yang sudah ada (jika ada)
-            $existingJawaban = KemajuanPenilaian::where('peserta_id', $pesertaId)
+            // Ambil jawaban yang sudah ada dari tabel jawaban_studi_kasus (jika ada)
+            $jawabanStudiKasus = \App\Models\JawabanStudiKasus::where('peserta_id', $pesertaId)
                 ->where('penilaian_id', $assessment->id)
                 ->where('sesi_penilaian_id', $cekSesiId)
-                ->value('jawaban');
+                ->first();
+            
+            $existingJawaban = $jawabanStudiKasus ? $jawabanStudiKasus->jawaban : null;
+            $jawabanStatus = $jawabanStudiKasus ? $jawabanStudiKasus->status : null; // 'draft' atau 'final'
 
-            // Buat atau update progress
-            KemajuanPenilaian::updateOrCreate(
-                [
-                    'peserta_id' => $pesertaId,
-                    'penilaian_id' => $assessment->id,
-                    'sesi_penilaian_id' => $cekSesiId
-                ],
-                [
-                    'status' => 'sedang_berlangsung',
-                    'aktivitas_terakhir' => now()
+            // Cek status kemajuan penilaian
+            $kemajuanPenilaian = KemajuanPenilaian::where('peserta_id', $pesertaId)
+                ->where('penilaian_id', $assessment->id)
+                ->where('sesi_penilaian_id', $cekSesiId)
+                ->first();
+            
+            $statusKemajuan = $kemajuanPenilaian ? $kemajuanPenilaian->status : null; // 'sedang_berlangsung' atau 'selesai'
+
+            // Buat atau update progress (hanya jika belum selesai)
+            if (!$kemajuanPenilaian || $kemajuanPenilaian->status !== 'selesai') {
+                KemajuanPenilaian::updateOrCreate(
+                    [
+                        'peserta_id' => $pesertaId,
+                        'penilaian_id' => $assessment->id,
+                        'sesi_penilaian_id' => $cekSesiId
+                    ],
+                    [
+                        'status' => 'sedang_berlangsung',
+                        'aktivitas_terakhir' => now()
                     ]
-            );
+                );
+            }
 
             // Ambil daftar item pertanyaan studi kasus sesuai penilaian & aktif
             $items = ItemPenilaian::where('penilaian_id', $assessment->id)
@@ -626,13 +640,21 @@ class PesertaController extends Controller
                 ->orderBy('urutan')
                 ->get();
 
+            // Cek apakah jawaban sudah dinilai oleh admin dengan status final
+            $penilaian = PenilaianStudiKasus::where('peserta_id', $pesertaId)
+                ->where('penilaian_id', $id)
+                ->where('sesi_penilaian_id', $cekSesiId)
+                ->where('status', 'final')
+                ->first();
+
             Log::info('Successfully returning view', [
                 'view' => 'peserta.assessment-studi-kasus',
                 'peserta_id' => $pesertaId,
-                'assessment_id' => $id
+                'assessment_id' => $id,
+                'has_penilaian_final' => $penilaian ? true : false
             ]);
 
-            return view('peserta.assessment-studi-kasus', compact('peserta', 'assessment', 'existingJawaban', 'sesiAssessment', 'items'));
+            return view('peserta.assessment-studi-kasus', compact('peserta', 'assessment', 'existingJawaban', 'sesiAssessment', 'items', 'penilaian', 'jawabanStatus', 'statusKemajuan'));
             
         } catch (\Exception $e) {
             Log::error('Error in showStudiKasus: ' . $e->getMessage(), [
@@ -759,5 +781,71 @@ class PesertaController extends Controller
         }
 
         return redirect()->back()->with('success', $message);
+    }
+
+    /**
+     * Get penilaian studi kasus untuk peserta (read-only)
+     */
+    public function getPenilaianStudiKasus(Request $request, $penilaianId)
+    {
+        try {
+            $pesertaId = session('peserta_id');
+            if (!$pesertaId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            $sesiId = $request->get('sesi_id');
+            if (!$sesiId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sesi ID diperlukan'
+                ], 400);
+            }
+
+            // Query penilaian dengan status final
+            $penilaian = PenilaianStudiKasus::where('penilaian_id', $penilaianId)
+                ->where('peserta_id', $pesertaId)
+                ->where('sesi_penilaian_id', $sesiId)
+                ->where('status', 'final')
+                ->first();
+
+            if (!$penilaian) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Penilaian tidak ditemukan atau belum final'
+                ], 404);
+            }
+
+            // Pastikan peserta_id match (security check)
+            if ($penilaian->peserta_id != $pesertaId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'pertanyaan_1' => $penilaian->pertanyaan_1,
+                    'pertanyaan_2' => $penilaian->pertanyaan_2,
+                    'pertanyaan_3' => $penilaian->pertanyaan_3,
+                    'catatan' => $penilaian->catatan,
+                    'status' => $penilaian->status,
+                    'created_at' => $penilaian->created_at,
+                    'updated_at' => $penilaian->updated_at
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting penilaian studi kasus: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -66,14 +66,39 @@
 
                 <!-- Jawaban Peserta -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Jawaban Anda</h2>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Jawaban Anda</h2>
+                        @if(isset($jawabanStatus) && $jawabanStatus === 'final')
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                ✓ Status: Final - Sudah Disimpan Final
+                            </span>
+                        @elseif(isset($statusKemajuan) && $statusKemajuan === 'selesai')
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                ✓ Status: Final - Sudah Disimpan Final
+                            </span>
+                        @elseif(isset($jawabanStatus) && $jawabanStatus === 'draft')
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                ⏳ Status: Draft - Belum Final
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                Belum Ada Jawaban
+                            </span>
+                        @endif
+                    </div>
                     <div class="space-y-4">
+                        @php
+                            $isFinal = (isset($jawabanStatus) && $jawabanStatus === 'final') || (isset($statusKemajuan) && $statusKemajuan === 'selesai');
+                            $disabledAttr = $isFinal ? 'disabled' : '';
+                            $disabledClass = $isFinal ? 'opacity-60 cursor-not-allowed bg-gray-50' : '';
+                        @endphp
                         <textarea 
                             name="jawaban" 
                             id="jawaban" 
                             rows="8" 
-                            class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none {{ $disabledClass }}"
                             placeholder="Tuliskan jawaban Anda untuk studi kasus ini di sini..."
+                            {{ $disabledAttr }}
                         >{{ old('jawaban', $existingJawaban ?? '') }}</textarea>
                         
                         @error('jawaban')
@@ -81,23 +106,52 @@
                         @enderror
                     </div>
                     <div class="mt-4 flex gap-3">
-                    <button 
-                        type="submit" 
-                        class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                        onclick="setAction('draft')"
-                    >
-                        Simpan Sementara
-                    </button>
-                    <button 
-                        type="submit" 
-                        class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                        onclick="setAction('final')"
-                    >
-                        Simpan Final
-                    </button>
-                    
+                        @php
+                            $buttonDisabledClass = $isFinal ? 'opacity-50 cursor-not-allowed' : '';
+                        @endphp
+                        <button 
+                            type="submit" 
+                            class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {{ $buttonDisabledClass }}"
+                            onclick="setAction('draft')"
+                            {{ $disabledAttr }}
+                        >
+                            Simpan Sementara
+                        </button>
+                        <button 
+                            type="submit" 
+                            class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 {{ $buttonDisabledClass }}"
+                            onclick="setAction('final')"
+                            {{ $disabledAttr }}
+                        >
+                            Simpan Final
+                        </button>
                     </div>
                 </div>
+
+                <!-- Info Penilaian & Tombol Lihat Penilaian -->
+                @if(isset($penilaian) && $penilaian && $penilaian->status === 'final')
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-blue-800 font-medium">
+                                    ✓ Jawaban Anda sudah dinilai oleh admin
+                                </p>
+                                <p class="text-xs text-blue-600 mt-1">
+                                    Status: Final
+                                </p>
+                            </div>
+                            <button 
+                                type="button" 
+                                id="btnLihatPenilaian"
+                                data-penilaian-id="{{ $penilaian->penilaian_id }}"
+                                data-sesi-id="{{ request('sesi', $assessment->sesi_penilaian_id) }}"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                            >
+                                👁️ Lihat Penilaian
+                            </button>
+                        </div>
+                    </div>
+                @endif
 
                 <!-- Action Buttons -->
                 <div class="flex justify-between items-center pt-6">
@@ -205,24 +259,34 @@ function setAction(action) {
 
 // Inisialisasi CKEditor 5 Classic basic untuk jawaban studi kasus
 let jawabanEditor = null;
-ClassicEditor.create(document.getElementById('jawaban'), {
-    toolbar: {
-        items: [
-            'bold', 'italic', 'underline', '|',
-            'bulletedList', 'numberedList', '|',
-            'outdent', 'indent', '|',
-            'link', '|',
-            'undo', 'redo'
-        ]
-    },
-    list: {
-        properties: {
-            styles: true,
-            startIndex: true,
-            reversed: true
+const jawabanTextarea = document.getElementById('jawaban');
+const isDisabled = jawabanTextarea && jawabanTextarea.hasAttribute('disabled');
+
+if (jawabanTextarea && !isDisabled) {
+    ClassicEditor.create(jawabanTextarea, {
+        toolbar: {
+            items: [
+                'bold', 'italic', 'underline', '|',
+                'bulletedList', 'numberedList', '|',
+                'outdent', 'indent', '|',
+                'link', '|',
+                'undo', 'redo'
+            ]
+        },
+        list: {
+            properties: {
+                styles: true,
+                startIndex: true,
+                reversed: true
+            }
         }
-    }
-}).then(ed => { jawabanEditor = ed; }).catch(err => console.error(err));
+    }).then(ed => { 
+        jawabanEditor = ed;
+    }).catch(err => console.error(err));
+} else if (isDisabled) {
+    // Jika disabled, tidak perlu inisialisasi editor
+    console.log('Textarea disabled, skipping CKEditor initialization');
+}
 
 // Auto-save draft setiap 30 detik (ambil dari ClassicEditor)
 let autoSaveTimer;
@@ -251,9 +315,9 @@ function scheduleAutoSave() {
     }, 30000);
 }
 
-// Trigger autosave on editor change
+// Trigger autosave on editor change (hanya jika tidak disabled)
 setTimeout(() => {
-    if (jawabanEditor) {
+    if (jawabanEditor && !isDisabled) {
         jawabanEditor.model.document.on('change:data', scheduleAutoSave);
     }
 }, 300);
@@ -272,6 +336,14 @@ window.addEventListener('beforeunload', function(e) {
 
 if (formEl) {
     formEl.addEventListener('submit', async function(e) {
+        // Cek apakah form disabled (status final)
+        const jawabanTextarea = document.getElementById('jawaban');
+        if (jawabanTextarea && jawabanTextarea.hasAttribute('disabled')) {
+            e.preventDefault();
+            showPopup('Jawaban sudah disimpan sebagai final. Tidak dapat diubah lagi.', 'error', false);
+            return;
+        }
+        
         const action = document.getElementById('assessmentAction')?.value || 'draft';
         if (jawabanEditor) {
             document.getElementById('jawaban').value = jawabanEditor.getData();
@@ -345,4 +417,131 @@ if (remainingTime > 0) {
     setInterval(updateTimer, 1000);
 }
 </script>
+<!-- Modal Lihat Penilaian -->
+<div id="modalPenilaian" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Hasil Penilaian</h3>
+                <button onclick="closeModalPenilaian()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="penilaianContent" class="text-sm text-gray-700">
+                <!-- Content will be loaded here -->
+                <div class="flex items-center justify-center py-8">
+                    <div class="text-gray-500">Memuat penilaian...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle tombol Lihat Penilaian
+document.addEventListener('DOMContentLoaded', function() {
+    const btnLihatPenilaian = document.getElementById('btnLihatPenilaian');
+    if (btnLihatPenilaian) {
+        btnLihatPenilaian.addEventListener('click', function() {
+            const penilaianId = this.getAttribute('data-penilaian-id');
+            const sesiId = this.getAttribute('data-sesi-id');
+            loadPenilaian(penilaianId, sesiId);
+        });
+    }
+});
+
+function loadPenilaian(penilaianId, sesiId) {
+    const modal = document.getElementById('modalPenilaian');
+    const content = document.getElementById('penilaianContent');
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    content.innerHTML = '<div class="flex items-center justify-center py-8"><div class="text-gray-500">Memuat penilaian...</div></div>';
+    
+    // Fetch data
+    const url = '{{ route("peserta.penilaian.studi-kasus", ":id") }}'.replace(':id', penilaianId) + '?sesi_id=' + sesiId;
+    
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            renderPenilaian(data.data);
+        } else {
+            content.innerHTML = '<p class="text-red-500">Error: ' + (data.message || 'Gagal memuat penilaian') + '</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        content.innerHTML = '<p class="text-red-500">Terjadi kesalahan saat memuat penilaian.</p>';
+    });
+}
+
+function renderPenilaian(data) {
+    const content = document.getElementById('penilaianContent');
+    
+    // Map jawaban untuk display
+    const jawabanText = {
+        'ya': 'Ya',
+        'tidak': 'Tidak'
+    };
+    
+    // Map pertanyaan
+    const pertanyaan = [
+        'Apakah jawaban sudah menjawab pertanyaan soal?',
+        'Apakah jawaban sudah mencerminkan kompetensi-kompetensi?',
+        'Apakah jawaban sudah menggunakan alat analisis?'
+    ];
+    
+    let html = '<div class="space-y-4">';
+    html += '<h4 class="font-medium text-gray-900 mb-4">Penilaian:</h4>';
+    
+    // 3 Pertanyaan
+    for (let i = 1; i <= 3; i++) {
+        const jawaban = data['pertanyaan_' + i];
+        const jawabanLabel = jawabanText[jawaban] || jawaban;
+        const bgColor = jawaban === 'ya' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+        
+        html += '<div class="space-y-2">';
+        html += '<label class="block text-sm font-medium text-gray-700">' + (i) + '. ' + pertanyaan[i-1] + '</label>';
+        html += '<div class="text-sm">';
+        html += '<span class="px-3 py-1 rounded ' + bgColor + '">';
+        html += jawabanLabel;
+        html += '</span>';
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    // Catatan
+    html += '<div class="space-y-2 pt-4 border-t">';
+    html += '<label class="block text-sm font-medium text-gray-700">Catatan:</label>';
+    html += '<div class="bg-gray-50 p-4 rounded-md border border-gray-200">';
+    html += '<div class="text-sm text-gray-700">' + (data.catatan || '<em class="text-gray-400">Tidak ada catatan</em>') + '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    
+    content.innerHTML = html;
+}
+
+function closeModalPenilaian() {
+    document.getElementById('modalPenilaian').classList.add('hidden');
+}
+
+// Close modal when clicking outside
+document.getElementById('modalPenilaian').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModalPenilaian();
+    }
+});
+</script>
+
 @endsection

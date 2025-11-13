@@ -21,6 +21,7 @@ use App\Models\JawabanStudiKasus;
 use App\Models\JawabanInTray;
 use App\Models\CatatanRoleplay;
 use App\Models\CatatanFgd;
+use App\Models\PenilaianStudiKasus;
 use App\Models\LatihanInTray;
  
 
@@ -1314,8 +1315,106 @@ class AdminController extends Controller
                         ->where('sesi_penilaian_id', $sesiId)
                         ->first();
                     if ($jawaban) {
+                        // Badge status jawaban
+                        $statusBadge = '';
+                        $isFinal = ($jawaban->status === 'final');
+                        if ($isFinal) {
+                            $statusBadge = '<div class="mb-4">';
+                            $statusBadge .= '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">';
+                            $statusBadge .= '✓ Status: Final - Jawaban dapat dinilai';
+                            $statusBadge .= '</span>';
+                            $statusBadge .= '</div>';
+                        } else {
+                            $statusBadge = '<div class="mb-4">';
+                            $statusBadge .= '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">';
+                            $statusBadge .= '⏳ Status: Draft - Jawaban belum final, penilaian dinonaktifkan';
+                            $statusBadge .= '</span>';
+                            $statusBadge .= '</div>';
+                        }
+                        $content .= $statusBadge;
+                        
                         $content .= '<div class="bg-gray-50 p-4 rounded-md">';
-                        $content .= '<pre class="whitespace-pre-wrap text-sm">' . htmlspecialchars($jawaban->jawaban) . '</pre>';
+                        $content .= '<div class="whitespace-pre-wrap text-sm">' . $jawaban->jawaban . '</div>';
+                        $content .= '</div>';
+                        
+                        // Load penilaian yang sudah ada (jika ada)
+                        $penilaianExist = PenilaianStudiKasus::where('jawaban_studi_kasus_id', $jawaban->id)
+                            ->orWhere(function($q) use ($pesertaId, $penilaianId, $sesiId) {
+                                $q->where('peserta_id', $pesertaId)
+                                  ->where('penilaian_id', $penilaianId)
+                                  ->where('sesi_penilaian_id', $sesiId);
+                            })
+                            ->first();
+                        
+                        // Form Penilaian (selalu tampilkan, tapi disable jika draft)
+                        $disabledAttr = $isFinal ? '' : 'disabled';
+                        $disabledClass = $isFinal ? '' : 'opacity-60 cursor-not-allowed';
+                        
+                        $content .= '<div class="border-t pt-4 mt-4">';
+                        if (!$isFinal) {
+                            $content .= '<div class="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">';
+                            $content .= '<p class="text-sm text-yellow-800">';
+                            $content .= '⚠️ Jawaban peserta masih dalam status <strong>draft</strong>. Form penilaian hanya dapat diisi setelah peserta menyimpan jawaban sebagai <strong>final</strong>.';
+                            $content .= '</p>';
+                            $content .= '</div>';
+                        }
+                        $content .= '<h4 class="font-medium text-gray-900 mb-4">Penilaian:</h4>';
+                        $content .= '<form id="formPenilaianStudiKasus" class="space-y-4 ' . $disabledClass . '" data-is-final="' . ($isFinal ? '1' : '0') . '">';
+                        $content .= '<input type="hidden" name="jawaban_studi_kasus_id" value="' . $jawaban->id . '">';
+                        $content .= '<input type="hidden" name="peserta_id" value="' . $pesertaId . '">';
+                        $content .= '<input type="hidden" name="penilaian_id" value="' . $penilaianId . '">';
+                        $content .= '<input type="hidden" name="sesi_penilaian_id" value="' . $sesiId . '">';
+                        $content .= '<input type="hidden" name="_token" value="' . csrf_token() . '">';
+                        
+                        // Pertanyaan 1
+                        $content .= '<div class="space-y-2">';
+                        $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah menjawab pertanyaan soal?</label>';
+                        $content .= '<div class="flex gap-4">';
+                        $checked1Ya = ($penilaianExist && $penilaianExist->pertanyaan_1 === 'ya') ? 'checked' : '';
+                        $checked1Tidak = ($penilaianExist && $penilaianExist->pertanyaan_1 === 'tidak') ? 'checked' : '';
+                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_1" value="ya" class="mr-2" ' . $checked1Ya . ' ' . $disabledAttr . '> Ya</label>';
+                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_1" value="tidak" class="mr-2" ' . $checked1Tidak . ' ' . $disabledAttr . '> Tidak</label>';
+                        $content .= '</div>';
+                        $content .= '</div>';
+                        
+                        // Pertanyaan 2
+                        $content .= '<div class="space-y-2">';
+                        $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah mencerminkan kompetensi-kompetensi?</label>';
+                        $content .= '<div class="flex gap-4">';
+                        $checked2Ya = ($penilaianExist && $penilaianExist->pertanyaan_2 === 'ya') ? 'checked' : '';
+                        $checked2Tidak = ($penilaianExist && $penilaianExist->pertanyaan_2 === 'tidak') ? 'checked' : '';
+                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_2" value="ya" class="mr-2" ' . $checked2Ya . ' ' . $disabledAttr . '> Ya</label>';
+                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_2" value="tidak" class="mr-2" ' . $checked2Tidak . ' ' . $disabledAttr . '> Tidak</label>';
+                        $content .= '</div>';
+                        $content .= '</div>';
+                        
+                        // Pertanyaan 3
+                        $content .= '<div class="space-y-2">';
+                        $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah menggunakan alat analisis?</label>';
+                        $content .= '<div class="flex gap-4">';
+                        $checked3Ya = ($penilaianExist && $penilaianExist->pertanyaan_3 === 'ya') ? 'checked' : '';
+                        $checked3Tidak = ($penilaianExist && $penilaianExist->pertanyaan_3 === 'tidak') ? 'checked' : '';
+                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_3" value="ya" class="mr-2" ' . $checked3Ya . ' ' . $disabledAttr . '> Ya</label>';
+                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_3" value="tidak" class="mr-2" ' . $checked3Tidak . ' ' . $disabledAttr . '> Tidak</label>';
+                        $content .= '</div>';
+                        $content .= '</div>';
+                        
+                        // Catatan dengan Summernote
+                        $catatanValue = $penilaianExist ? ($penilaianExist->catatan ?? '') : '';
+                        $catatanId = 'catatan_penilaian_' . $jawaban->id . '_' . time();
+                        $content .= '<div class="space-y-2">';
+                        $content .= '<label class="block text-sm font-medium text-gray-700">Catatan:</label>';
+                        $content .= '<textarea id="' . $catatanId . '" name="catatan" class="catatan-penilaian-editor w-full" ' . $disabledAttr . '>' . htmlspecialchars($catatanValue) . '</textarea>';
+                        $content .= '</div>';
+                        
+                        // Tombol
+                        $buttonDisabledClass = $isFinal ? '' : 'opacity-50 cursor-not-allowed';
+                        $content .= '<div class="flex gap-2 pt-2">';
+                        $content .= '<button type="button" data-action="save-draft" data-is-final="' . ($isFinal ? '1' : '0') . '" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm ' . $buttonDisabledClass . '" ' . $disabledAttr . '>Simpan Sementara</button>';
+                        $content .= '<button type="button" data-action="save-final" data-is-final="' . ($isFinal ? '1' : '0') . '" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm ' . $buttonDisabledClass . '" ' . $disabledAttr . '>Simpan Final</button>';
+                        $content .= '</div>';
+                        
+                        $content .= '</form>';
                         $content .= '</div>';
                     } else {
                         $content .= '<p class="text-gray-500">Belum ada jawaban</p>';
@@ -1409,6 +1508,89 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             Log::error('Error getting answer detail: ' . $e->getMessage());
             return response()->json(['content' => '<p class="text-red-500">Error loading answer details</p>'], 500);
+        }
+    }
+
+    /**
+     * Save penilaian studi kasus dari admin
+     */
+    public function savePenilaianStudiKasus(\Illuminate\Http\Request $request)
+    {
+        try {
+            $request->validate([
+                'jawaban_studi_kasus_id' => 'required|exists:jawaban_studi_kasus,id',
+                'peserta_id' => 'required|exists:peserta,id',
+                'penilaian_id' => 'required|exists:penilaian,id',
+                'sesi_penilaian_id' => 'required|exists:sesi_penilaian,id',
+                'pertanyaan_1' => 'required|in:ya,tidak',
+                'pertanyaan_2' => 'required|in:ya,tidak',
+                'pertanyaan_3' => 'required|in:ya,tidak',
+                'catatan' => 'nullable|string',
+                'status' => 'required|in:draft,final'
+            ]);
+
+            $userId = Auth::id();
+            if (!$userId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Cek apakah jawaban studi kasus ada
+            $jawaban = JawabanStudiKasus::find($request->jawaban_studi_kasus_id);
+            if (!$jawaban) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Jawaban studi kasus tidak ditemukan'
+                ], 404);
+            }
+
+            // Validasi: hanya jawaban dengan status 'final' yang bisa dinilai
+            if ($jawaban->status !== 'final') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Jawaban peserta masih dalam status draft. Penilaian hanya dapat dilakukan setelah peserta menyimpan jawaban sebagai final.'
+                ], 400);
+            }
+
+            // Update atau create penilaian
+            $penilaian = PenilaianStudiKasus::updateOrCreate(
+                [
+                    'jawaban_studi_kasus_id' => $request->jawaban_studi_kasus_id
+                ],
+                [
+                    'peserta_id' => $request->peserta_id,
+                    'penilaian_id' => $request->penilaian_id,
+                    'sesi_penilaian_id' => $request->sesi_penilaian_id,
+                    'user_id' => $userId,
+                    'pertanyaan_1' => $request->pertanyaan_1,
+                    'pertanyaan_2' => $request->pertanyaan_2,
+                    'pertanyaan_3' => $request->pertanyaan_3,
+                    'catatan' => $request->catatan,
+                    'status' => $request->status
+                ]
+            );
+
+            $statusText = $request->status === 'final' ? 'final' : 'sementara';
+            return response()->json([
+                'success' => true,
+                'message' => 'Penilaian berhasil disimpan sebagai ' . $statusText,
+                'data' => $penilaian
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error saving penilaian studi kasus: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
         }
     }
 
