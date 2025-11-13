@@ -21,7 +21,8 @@ class PenilaianController extends Controller
 
         $request->validate([
             'jawaban' => 'required|string',
-            'status' => 'required|in:draft,final'
+            'status' => 'required|in:draft,final',
+            'sesi_penilaian_id' => 'required|integer|exists:sesi_penilaian,id'
         ]);
 
         $penilaian = Penilaian::findOrFail($penilaianId);
@@ -29,21 +30,25 @@ class PenilaianController extends Controller
             return response()->json(['error' => 'Penilaian tidak aktif'], 400);
         }
 
+        // Get sesi_penilaian_id from request (sesi yang sedang diakses user)
+        $sesiPenilaianId = $request->sesi_penilaian_id;
+
         $jawaban = JawabanStudiKasus::updateOrCreate(
             [
                 'peserta_id' => $pesertaId,
-                'penilaian_id' => $penilaianId
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId
             ],
             [
                 'jawaban' => $request->jawaban,
                 'status' => $request->status,
-                'waktu_simpan' => now()
+                'waktu_simpan' => now(),
+                'sesi_penilaian_id' => $sesiPenilaianId
             ]
         );
 
         // Update status kemajuan penilaian
         $statusKemajuan = $request->status === 'final' ? 'selesai' : 'sedang_berlangsung';
-        $sesiPenilaianId = $penilaian->sesi_penilaian_id;
         
         KemajuanPenilaian::updateOrCreate(
             [

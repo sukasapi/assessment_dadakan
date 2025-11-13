@@ -163,7 +163,10 @@
                                         case 'studi_kasus':
                                             $jawabanData = \App\Models\JawabanStudiKasus::where('peserta_id', $peserta->id)
                                                 ->where('penilaian_id', $penilaian->id)
-                                                ->where('sesi_penilaian_id', $session->id)
+                                                ->where(function($q) use ($session) {
+                                                    $q->where('sesi_penilaian_id', $session->id)
+                                                      ->orWhereNull('sesi_penilaian_id');
+                                                })
                                                 ->first();
                                             if ($jawabanData) {
                                                 $jawaban = Str::limit(strip_tags($jawabanData->jawaban), 100);
