@@ -716,7 +716,9 @@ class PesertaController extends Controller
         // 'draft' dipetakan ke 'sedang_berlangsung'
         $status = $request->assessment_action === 'final' ? 'selesai' : 'sedang_berlangsung';
         
-        KemajuanPenilaian::updateOrCreate(
+        // Simpan jawaban ke tabel jawaban_studi_kasus
+        $jawabanStatus = $request->assessment_action === 'final' ? 'final' : 'draft';
+        \App\Models\JawabanStudiKasus::updateOrCreate(
             [
                 'peserta_id' => $pesertaId,
                 'penilaian_id' => $id,
@@ -724,6 +726,19 @@ class PesertaController extends Controller
             ],
             [
                 'jawaban' => $request->jawaban,
+                'status' => $jawabanStatus,
+                'waktu_simpan' => now(),
+                'sesi_penilaian_id' => $cekSesiId
+            ]
+        );
+        
+        KemajuanPenilaian::updateOrCreate(
+            [
+                'peserta_id' => $pesertaId,
+                'penilaian_id' => $id,
+                'sesi_penilaian_id' => $cekSesiId
+            ],
+            [
                 'status' => $status,
                 'waktu_mulai' => now(),
                 'waktu_selesai' => $status === 'selesai' ? now() : null,
