@@ -2393,7 +2393,7 @@ class AdminController extends Controller
         // Ambil semua peserta yang tersedia untuk didaftarkan
         $availablePeserta = Peserta::where('aktif', true)
             ->whereNotIn('id', $sesi->participants->pluck('peserta_id'))
-            ->orderBy('nama_lengkap')
+            ->orderBy('id', 'desc')
             ->get();
 
         return view('admin.sesi.peserta', compact('sesi', 'availablePeserta'));
