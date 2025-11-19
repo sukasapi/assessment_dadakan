@@ -119,6 +119,10 @@
                                            class="block w-full text-center bg-green-100 hover:bg-green-200 text-green-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
                                             Peserta
                                         </a>
+                                        <a href="{{ route('admin.progress.answers', ['sesi_id' => $sesi->id]) }}" 
+                                           class="block w-full text-center bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
+                                            Progres Pengisian
+                                        </a>
                                                                                  <a href="{{ route('admin.sesi.edit', $sesi->id) }}" 
                                             class="block w-full text-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
                                              Edit

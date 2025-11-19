@@ -711,43 +711,31 @@ class AdminController extends Controller
             // Build query
             $query = \App\Models\SesiPenilaian::with(['participants.peserta', 'assessments.penilaian']);
             
-            // Apply universal search first
-            if ($request->has('universal_search') && $request->universal_search) {
-                $searchTerm = $request->universal_search;
-                $query->where(function($q) use ($searchTerm) {
-                    $q->where('nama', 'like', '%' . $searchTerm . '%')
-                      ->orWhereHas('participants.peserta', function($subQ) use ($searchTerm) {
-                          $subQ->where('nama_lengkap', 'like', '%' . $searchTerm . '%')
-                               ->orWhere('instansi', 'like', '%' . $searchTerm . '%')
-                               ->orWhere('email', 'like', '%' . $searchTerm . '%');
-                      });
-                });
-            }
-            
-            // Apply specific filters
+            // Apply session filter
             if ($request->has('session') && $request->session) {
                 $query->where('nama', 'like', '%' . $request->session . '%');
             }
             
-            if ($request->has('participant_name') && $request->participant_name) {
-                $query->whereHas('participants.peserta', function($q) use ($request) {
-                    $q->where('nama_lengkap', 'like', '%' . $request->participant_name . '%');
-                });
-            }
-            
-            if ($request->has('institution') && $request->institution) {
-                $query->whereHas('participants.peserta', function($q) use ($request) {
-                    $q->where('instansi', 'like', '%' . $request->institution . '%');
-                });
-            }
-            
             $sessions = $query->orderBy('created_at', 'desc')->get();
             
-            // Flatten data for pagination
+            // Get filter values
+            $participantNameFilter = $request->has('participant_name') && $request->participant_name ? $request->participant_name : null;
+            $institutionFilter = $request->has('institution') && $request->institution ? $request->institution : null;
+            
+            // Flatten data for pagination with participant-level filtering
             $allData = [];
             foreach ($sessions as $session) {
                 foreach ($session->participants as $participant) {
                     $peserta = $participant->peserta;
+                    
+                    // Apply participant-level filters
+                    if ($participantNameFilter && stripos($peserta->nama_lengkap, $participantNameFilter) === false) {
+                        continue; // Skip if participant name doesn't match
+                    }
+                    
+                    if ($institutionFilter && stripos($peserta->instansi ?? '', $institutionFilter) === false) {
+                        continue; // Skip if institution doesn't match
+                    }
                     
                     // Get assessment types for this session
                     $mapJenis = ['studi_kasus' => null, 'in_tray' => null, 'roleplay' => null, 'role_play' => null, 'fgd' => null];

@@ -9,21 +9,6 @@
     <!-- Filter Card -->
     <div class="mb-2 sm:mb-4">
         <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-2 sm:p-4">
-            <!-- Universal Search Bar -->
-            <div class="mb-2 sm:mb-3">
-            <div class="relative">
-                <input type="text" 
-                           id="universalSearch" 
-                           placeholder="Cari berdasarkan nama sesi, nama peserta, instansi, dll..."
-                           class="w-full px-3 py-2 pl-9 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
-            </div>
-            </div>
-            
             <!-- Filter Fields -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-2 sm:mb-3">
                 <!-- Left Column -->
@@ -65,10 +50,10 @@
             
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row justify-end gap-1 sm:gap-2">
-                <button id="resetFilters" class="w-full sm:w-auto px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <button type="button" id="resetFilters" class="w-full sm:w-auto px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                     Reset
                 </button>
-                <button id="applyFilters" class="w-full sm:w-auto px-2 sm:px-3 py-1 sm:py-1.5 border border-transparent rounded-md text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <button type="button" id="applyFilters" class="w-full sm:w-auto px-2 sm:px-3 py-1 sm:py-1.5 border border-transparent rounded-md text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                     Search
                 </button>
             </div>
@@ -180,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const csvDelimiter = document.getElementById('csvDelimiter');
     const progressTable = document.getElementById('progressTable');
     const noResultsMessage = document.getElementById('noResultsMessage');
-    const universalSearch = document.getElementById('universalSearch');
     const sessionFilter = document.getElementById('sessionFilter');
     const participantNameFilter = document.getElementById('participantNameFilter');
     const institutionFilter = document.getElementById('institutionFilter');
@@ -201,7 +185,6 @@ document.addEventListener('DOMContentLoaded', function(){
     let totalPages = 1;
     let perPage = 10;
     let currentFilters = {
-        universalSearch: '',
         session: '',
         assessmentType: '',
         participantName: '',
@@ -230,26 +213,13 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     }
     
-    // Universal search functionality
-    if (universalSearch) {
-    let searchTimeout;
-        universalSearch.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                currentFilters.universalSearch = this.value.trim();
-                currentPage = 1;
-                loadData();
-            }, 500); // 500ms delay for better UX
-        });
-    }
-    
     // Apply filters button
     if (applyFiltersBtn) {
-        applyFiltersBtn.addEventListener('click', function() {
-            currentFilters.universalSearch = universalSearch.value.trim();
-            currentFilters.session = sessionFilter.value;
-            currentFilters.participantName = participantNameFilter.value;
-            currentFilters.institution = institutionFilter.value;
+        applyFiltersBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (sessionFilter) currentFilters.session = sessionFilter.value;
+            if (participantNameFilter) currentFilters.participantName = participantNameFilter.value.trim();
+            if (institutionFilter) currentFilters.institution = institutionFilter.value.trim();
             currentPage = 1;
             loadData();
         });
@@ -258,11 +228,10 @@ document.addEventListener('DOMContentLoaded', function(){
     // Reset filters
     if (resetFilters) {
         resetFilters.addEventListener('click', function() {
-            universalSearch.value = '';
             sessionFilter.value = '';
             participantNameFilter.value = '';
             institutionFilter.value = '';
-            currentFilters = { universalSearch: '', session: '', assessmentType: '', participantName: '', institution: '' };
+            currentFilters = { session: '', assessmentType: '', participantName: '', institution: '' };
             currentPage = 1;
             loadData();
         });
@@ -307,7 +276,6 @@ document.addEventListener('DOMContentLoaded', function(){
     
     function buildFilterParams() {
         let params = '';
-        if (currentFilters.universalSearch) params += '&universal_search=' + encodeURIComponent(currentFilters.universalSearch);
         if (currentFilters.session) params += '&session=' + encodeURIComponent(currentFilters.session);
         if (currentFilters.participantName) params += '&participant_name=' + encodeURIComponent(currentFilters.participantName);
         if (currentFilters.institution) params += '&institution=' + encodeURIComponent(currentFilters.institution);
@@ -318,22 +286,32 @@ document.addEventListener('DOMContentLoaded', function(){
         const params = new URLSearchParams({
             page: currentPage,
             per_page: perPage,
-            universal_search: currentFilters.universalSearch,
-            session: currentFilters.session,
-            assessment_type: currentFilters.assessmentType,
-            participant_name: currentFilters.participantName,
-            institution: currentFilters.institution
+            session: currentFilters.session || '',
+            assessment_type: currentFilters.assessmentType || '',
+            participant_name: currentFilters.participantName || '',
+            institution: currentFilters.institution || ''
         });
         
         fetch('{{ route("admin.progress.data") }}?' + params.toString())
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
                 updateTable(data.data);
                 updatePagination(data);
             })
             .catch(error => {
                 console.error('Error loading data:', error);
-                document.getElementById('progressTableBody').innerHTML = '<tr><td colspan="10" class="px-4 py-2 text-center text-red-500">Error loading data</td></tr>';
+                const tbody = document.getElementById('progressTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="px-4 py-2 text-center text-red-500">Error loading data: ' + error.message + '</td></tr>';
+                }
             });
     }
     

@@ -895,32 +895,47 @@ document.addEventListener('DOMContentLoaded', function(){
                 messageDiv.textContent = data.message;
                 form.appendChild(messageDiv);
                 
-                // Remove message after 3 seconds
-                setTimeout(() => {
-                    messageDiv.remove();
-                }, 3000);
-                
-                // Reload modal content to show updated data
-                setTimeout(() => {
-                    // Destroy Summernote instance sebelum reload
-                    const catatanEditor = form.querySelector('.catatan-penilaian-editor');
-                    if (catatanEditor && catatanEditor.id && window.$ && window.$.fn.summernote) {
-                        try {
-                            $('#' + catatanEditor.id).summernote('destroy');
-                            if (window.ckeditorInstances && window.ckeditorInstances[catatanEditor.id]) {
-                                delete window.ckeditorInstances[catatanEditor.id];
-                            }
-                        } catch (e) {
-                            console.log('Error destroying Summernote before reload:', e);
+                // Jika status adalah 'final', refresh halaman untuk update status "Belum Dinilai" / "Sudah Dinilai"
+                if (status === 'final') {
+                    // Tutup modal jika ada
+                    const modal = form.closest('.modal, [role="dialog"]');
+                    if (modal) {
+                        // Cari dan klik tombol close modal
+                        const closeBtn = modal.querySelector('[data-dismiss="modal"], .close, button[aria-label="Close"]');
+                        if (closeBtn) {
+                            closeBtn.click();
                         }
                     }
                     
-                    // Reload modal dengan klik tombol view detail
-                    const viewDetailBtn = document.querySelector('button[data-action="view-detail"]');
-                    if (viewDetailBtn) {
-                        viewDetailBtn.click();
-                    }
-                }, 1000);
+                    // Refresh halaman setelah 1 detik untuk update status
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    // Untuk status draft, hanya reload modal content
+                    setTimeout(() => {
+                        messageDiv.remove();
+                        
+                        // Destroy Summernote instance sebelum reload
+                        const catatanEditor = form.querySelector('.catatan-penilaian-editor');
+                        if (catatanEditor && catatanEditor.id && window.$ && window.$.fn.summernote) {
+                            try {
+                                $('#' + catatanEditor.id).summernote('destroy');
+                                if (window.ckeditorInstances && window.ckeditorInstances[catatanEditor.id]) {
+                                    delete window.ckeditorInstances[catatanEditor.id];
+                                }
+                            } catch (e) {
+                                console.log('Error destroying Summernote before reload:', e);
+                            }
+                        }
+                        
+                        // Reload modal dengan klik tombol view detail
+                        const viewDetailBtn = document.querySelector('button[data-action="view-detail"]');
+                        if (viewDetailBtn) {
+                            viewDetailBtn.click();
+                        }
+                    }, 1000);
+                }
             } else {
                 alert('Error: ' + (data.message || 'Gagal menyimpan penilaian'));
             }
