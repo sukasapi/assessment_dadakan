@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sesi_assessment', function (Blueprint $table) {
-            $table->enum('model_in_tray', ['urutan', 'prioritas'])->default('urutan')->after('instruksi_khusus');
-        });
+        if (Schema::hasTable('sesi_assessment') && !Schema::hasColumn('sesi_assessment', 'model_in_tray')) {
+            Schema::table('sesi_assessment', function (Blueprint $table) {
+                $table->enum('model_in_tray', ['urutan', 'prioritas'])->default('urutan')->after('instruksi_khusus');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sesi_assessment', function (Blueprint $table) {
-            $table->dropColumn('model_in_tray');
-        });
+        if (Schema::hasTable('sesi_assessment') && Schema::hasColumn('sesi_assessment', 'model_in_tray')) {
+            Schema::table('sesi_assessment', function (Blueprint $table) {
+                $table->dropColumn('model_in_tray');
+            });
+        }
     }
 };

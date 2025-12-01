@@ -23,6 +23,10 @@ use App\Models\CatatanRoleplay;
 use App\Models\CatatanFgd;
 use App\Models\PenilaianStudiKasus;
 use App\Models\LatihanInTray;
+use App\Models\KategoriStudiKasus;
+use App\Models\AspekPenilaianStudiKasus;
+use App\Models\LevelPenilaianStudiKasus;
+use App\Models\DetailPenilaianStudiKasus;
  
 
 use Carbon\Carbon;
@@ -1326,13 +1330,25 @@ class AdminController extends Controller
                         $content .= '</div>';
                         
                         // Load penilaian yang sudah ada (jika ada)
-                        $penilaianExist = PenilaianStudiKasus::where('jawaban_studi_kasus_id', $jawaban->id)
+                        $penilaianExist = PenilaianStudiKasus::with(['detailPenilaian', 'kategoriStudiKasus'])
+                            ->where('jawaban_studi_kasus_id', $jawaban->id)
                             ->orWhere(function($q) use ($pesertaId, $penilaianId, $sesiId) {
                                 $q->where('peserta_id', $pesertaId)
                                   ->where('penilaian_id', $penilaianId)
                                   ->where('sesi_penilaian_id', $sesiId);
                             })
                             ->first();
+                        
+                        // Deteksi sistem: jika penilaianExist ada dan kategori_studi_kasus_id NULL = sistem lama
+                        $isOldSystem = $penilaianExist && $penilaianExist->isOldSystem();
+                        
+                        // Ambil detail penilaian yang sudah ada (untuk pre-fill form sistem baru)
+                        $detailPenilaianExist = [];
+                        if ($penilaianExist && $penilaianExist->detailPenilaian) {
+                            foreach ($penilaianExist->detailPenilaian as $detail) {
+                                $detailPenilaianExist[$detail->aspek_penilaian_studi_kasus_id] = $detail->level_terpilih;
+                            }
+                        }
                         
                         // Form Penilaian (selalu tampilkan, tapi disable jika draft)
                         $disabledAttr = $isFinal ? '' : 'disabled';
@@ -1346,46 +1362,139 @@ class AdminController extends Controller
                             $content .= '</p>';
                             $content .= '</div>';
                         }
+                        
+                        // Badge indikator sistem
+                        if ($penilaianExist) {
+                            $systemBadge = $isOldSystem 
+                                ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">Sistem Lama</span>'
+                                : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Sistem Baru</span>';
+                            $content .= '<div class="mb-4">' . $systemBadge . '</div>';
+                        }
+                        
                         $content .= '<h4 class="font-medium text-gray-900 mb-4">Penilaian:</h4>';
-                        $content .= '<form id="formPenilaianStudiKasus" class="space-y-4 ' . $disabledClass . '" data-is-final="' . ($isFinal ? '1' : '0') . '">';
+                        $content .= '<form id="formPenilaianStudiKasus" class="space-y-6 ' . $disabledClass . '" data-is-final="' . ($isFinal ? '1' : '0') . '" data-is-old-system="' . ($isOldSystem ? '1' : '0') . '">';
                         $content .= '<input type="hidden" name="jawaban_studi_kasus_id" value="' . $jawaban->id . '">';
                         $content .= '<input type="hidden" name="peserta_id" value="' . $pesertaId . '">';
                         $content .= '<input type="hidden" name="penilaian_id" value="' . $penilaianId . '">';
                         $content .= '<input type="hidden" name="sesi_penilaian_id" value="' . $sesiId . '">';
                         $content .= '<input type="hidden" name="_token" value="' . csrf_token() . '">';
                         
-                        // Pertanyaan 1
-                        $content .= '<div class="space-y-2">';
-                        $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah menjawab pertanyaan soal?</label>';
-                        $content .= '<div class="flex gap-4">';
-                        $checked1Ya = ($penilaianExist && $penilaianExist->pertanyaan_1 === 'ya') ? 'checked' : '';
-                        $checked1Tidak = ($penilaianExist && $penilaianExist->pertanyaan_1 === 'tidak') ? 'checked' : '';
-                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_1" value="ya" class="mr-2" ' . $checked1Ya . ' ' . $disabledAttr . '> Ya</label>';
-                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_1" value="tidak" class="mr-2" ' . $checked1Tidak . ' ' . $disabledAttr . '> Tidak</label>';
-                        $content .= '</div>';
-                        $content .= '</div>';
-                        
-                        // Pertanyaan 2
-                        $content .= '<div class="space-y-2">';
-                        $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah mencerminkan kompetensi-kompetensi?</label>';
-                        $content .= '<div class="flex gap-4">';
-                        $checked2Ya = ($penilaianExist && $penilaianExist->pertanyaan_2 === 'ya') ? 'checked' : '';
-                        $checked2Tidak = ($penilaianExist && $penilaianExist->pertanyaan_2 === 'tidak') ? 'checked' : '';
-                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_2" value="ya" class="mr-2" ' . $checked2Ya . ' ' . $disabledAttr . '> Ya</label>';
-                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_2" value="tidak" class="mr-2" ' . $checked2Tidak . ' ' . $disabledAttr . '> Tidak</label>';
-                        $content .= '</div>';
-                        $content .= '</div>';
-                        
-                        // Pertanyaan 3
-                        $content .= '<div class="space-y-2">';
-                        $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah menggunakan alat analisis?</label>';
-                        $content .= '<div class="flex gap-4">';
-                        $checked3Ya = ($penilaianExist && $penilaianExist->pertanyaan_3 === 'ya') ? 'checked' : '';
-                        $checked3Tidak = ($penilaianExist && $penilaianExist->pertanyaan_3 === 'tidak') ? 'checked' : '';
-                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_3" value="ya" class="mr-2" ' . $checked3Ya . ' ' . $disabledAttr . '> Ya</label>';
-                        $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_3" value="tidak" class="mr-2" ' . $checked3Tidak . ' ' . $disabledAttr . '> Tidak</label>';
-                        $content .= '</div>';
-                        $content .= '</div>';
+                        if ($isOldSystem) {
+                            // FORM SISTEM LAMA
+                            $checked1Ya = ($penilaianExist && $penilaianExist->pertanyaan_1 === 'ya') ? 'checked' : '';
+                            $checked1Tidak = ($penilaianExist && $penilaianExist->pertanyaan_1 === 'tidak') ? 'checked' : '';
+                            $checked2Ya = ($penilaianExist && $penilaianExist->pertanyaan_2 === 'ya') ? 'checked' : '';
+                            $checked2Tidak = ($penilaianExist && $penilaianExist->pertanyaan_2 === 'tidak') ? 'checked' : '';
+                            $checked3Ya = ($penilaianExist && $penilaianExist->pertanyaan_3 === 'ya') ? 'checked' : '';
+                            $checked3Tidak = ($penilaianExist && $penilaianExist->pertanyaan_3 === 'tidak') ? 'checked' : '';
+                            
+                            // Pertanyaan 1
+                            $content .= '<div class="space-y-2">';
+                            $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah menjawab pertanyaan soal?</label>';
+                            $content .= '<div class="flex gap-4">';
+                            $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_1" value="ya" class="mr-2" ' . $checked1Ya . ' ' . $disabledAttr . '> Ya</label>';
+                            $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_1" value="tidak" class="mr-2" ' . $checked1Tidak . ' ' . $disabledAttr . '> Tidak</label>';
+                            $content .= '</div>';
+                            $content .= '</div>';
+                            
+                            // Pertanyaan 2
+                            $content .= '<div class="space-y-2">';
+                            $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah mencerminkan kompetensi-kompetensi?</label>';
+                            $content .= '<div class="flex gap-4">';
+                            $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_2" value="ya" class="mr-2" ' . $checked2Ya . ' ' . $disabledAttr . '> Ya</label>';
+                            $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_2" value="tidak" class="mr-2" ' . $checked2Tidak . ' ' . $disabledAttr . '> Tidak</label>';
+                            $content .= '</div>';
+                            $content .= '</div>';
+                            
+                            // Pertanyaan 3
+                            $content .= '<div class="space-y-2">';
+                            $content .= '<label class="block text-sm font-medium text-gray-700">Apakah jawaban sudah menggunakan alat analisis?</label>';
+                            $content .= '<div class="flex gap-4">';
+                            $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_3" value="ya" class="mr-2" ' . $checked3Ya . ' ' . $disabledAttr . '> Ya</label>';
+                            $content .= '<label class="flex items-center"><input type="radio" name="pertanyaan_3" value="tidak" class="mr-2" ' . $checked3Tidak . ' ' . $disabledAttr . '> Tidak</label>';
+                            $content .= '</div>';
+                            $content .= '</div>';
+                        } else {
+                            // FORM SISTEM BARU
+                            // Ambil semua kategori (PQ dan BQ)
+                            $kategoris = KategoriStudiKasus::where('aktif', true)
+                                ->with(['aspekPenilaian' => function($query) {
+                                    $query->where('aktif', true)->orderBy('urutan');
+                                }, 'aspekPenilaian.levelPenilaian'])
+                                ->orderBy('kode')
+                                ->get();
+                            
+                            // Pastikan kategori ada
+                            if ($kategoris->isEmpty()) {
+                                $content .= '<div class="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">';
+                                $content .= '<p class="text-sm text-yellow-800">⚠️ Data kategori penilaian belum tersedia. Silakan jalankan seeder untuk mengisi data master.</p>';
+                                $content .= '</div>';
+                            } else {
+                                // Dropdown untuk memilih kategori
+                                $selectedKategoriId = $penilaianExist ? $penilaianExist->kategori_studi_kasus_id : null;
+                                $content .= '<div class="mb-4">';
+                                $content .= '<label class="block text-sm font-medium text-gray-700 mb-2">Pilih Kategori Penilaian:</label>';
+                                $content .= '<select name="kategori_studi_kasus_id" id="kategori_studi_kasus_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" ' . $disabledAttr . ' required>';
+                                $content .= '<option value="">-- Pilih Kategori --</option>';
+                                foreach ($kategoris as $kat) {
+                                    $selected = ($selectedKategoriId == $kat->id) ? 'selected' : '';
+                                    $content .= '<option value="' . $kat->id . '" ' . $selected . '>' . $kat->kode . ' - ' . $kat->nama . '</option>';
+                                }
+                                $content .= '</select>';
+                                $content .= '</div>';
+                                
+                                // Container untuk form aspek penilaian
+                                $content .= '<div id="form-aspek-penilaian" class="space-y-6">';
+                                
+                                // Loop untuk setiap kategori
+                                foreach ($kategoris as $kategori) {
+                                    // Jika tidak ada kategori yang dipilih, semua form hidden. Jika ada yang dipilih, hanya yang dipilih yang visible
+                                    $kategoriClass = ($selectedKategoriId && $selectedKategoriId == $kategori->id) ? '' : 'hidden';
+                                    $content .= '<div class="kategori-form border border-gray-200 rounded-lg p-4 mb-6 ' . $kategoriClass . '" data-kategori-id="' . $kategori->id . '">';
+                                    $content .= '<h5 class="font-semibold text-lg text-gray-900 mb-4 pb-2 border-b">Kategori ' . $kategori->kode . '</h5>';
+                                    
+                                    // Loop untuk setiap aspek penilaian dalam kategori (hanya yang aktif)
+                                    $aspekList = $kategori->aspekPenilaian->where('aktif', true)->sortBy('urutan');
+                                    
+                                    if ($aspekList->isEmpty()) {
+                                        $content .= '<div class="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">';
+                                        $content .= '<p class="text-sm text-yellow-800">⚠️ Belum ada aspek penilaian untuk kategori ' . $kategori->kode . '. Silakan jalankan seeder untuk mengisi data master.</p>';
+                                        $content .= '</div>';
+                                    }
+                                    
+                                    foreach ($aspekList as $aspek) {
+                                        $content .= '<div class="mb-6 p-4 bg-gray-50 rounded-lg">';
+                                        $content .= '<label class="block text-sm font-medium text-gray-700 mb-3">';
+                                        $content .= '<span class="font-semibold">Aspek ' . $aspek->nomor . ':</span> ' . htmlspecialchars($aspek->pertanyaan);
+                                        $content .= '</label>';
+                                        
+                                        // Radio button untuk level 0-3
+                                        $content .= '<div class="grid grid-cols-4 gap-3">';
+                                        
+                                        // Ambil level penilaian untuk aspek ini
+                                        $levels = $aspek->levelPenilaian->sortBy('level');
+                                        
+                                        foreach ($levels as $level) {
+                                            $levelChecked = (isset($detailPenilaianExist[$aspek->id]) && $detailPenilaianExist[$aspek->id] == $level->level) ? 'checked' : '';
+                                            $radioId = 'aspek_' . $aspek->id . '_level_' . $level->level;
+                                            
+                                            $content .= '<label class="flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-all ' . ($levelChecked ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300') . '" for="' . $radioId . '">';
+                                            $content .= '<input type="radio" id="' . $radioId . '" name="aspek[' . $aspek->id . ']" value="' . $level->level . '" class="mb-2" ' . $levelChecked . ' ' . $disabledAttr . '>';
+                                            $content .= '<span class="text-xs font-semibold text-gray-700 mb-1">Level ' . $level->level . '</span>';
+                                            $content .= '<span class="text-xs text-gray-600 text-center">' . htmlspecialchars(substr($level->deskripsi_level, 0, 80)) . (strlen($level->deskripsi_level) > 80 ? '...' : '') . '</span>';
+                                            $content .= '</label>';
+                                        }
+                                        
+                                        $content .= '</div>'; // End grid
+                                        $content .= '</div>'; // End aspek div
+                                    }
+                                    
+                                    $content .= '</div>'; // End kategori-form
+                                }
+                                
+                                $content .= '</div>'; // End form-aspek-penilaian
+                            } // End else jika kategori tidak kosong
+                        }
                         
                         // Catatan dengan Summernote
                         $catatanValue = $penilaianExist ? ($penilaianExist->catatan ?? '') : '';
@@ -1505,17 +1614,33 @@ class AdminController extends Controller
     public function savePenilaianStudiKasus(\Illuminate\Http\Request $request)
     {
         try {
-            $request->validate([
+            // Deteksi sistem: jika ada kategori_studi_kasus_id = sistem baru, jika tidak = sistem lama
+            $isOldSystem = !$request->has('kategori_studi_kasus_id') || empty($request->kategori_studi_kasus_id);
+            
+            // Validasi dasar
+            $baseRules = [
                 'jawaban_studi_kasus_id' => 'required|exists:jawaban_studi_kasus,id',
                 'peserta_id' => 'required|exists:peserta,id',
                 'penilaian_id' => 'required|exists:penilaian,id',
                 'sesi_penilaian_id' => 'required|exists:sesi_penilaian,id',
-                'pertanyaan_1' => 'required|in:ya,tidak',
-                'pertanyaan_2' => 'required|in:ya,tidak',
-                'pertanyaan_3' => 'required|in:ya,tidak',
                 'catatan' => 'nullable|string',
                 'status' => 'required|in:draft,final'
-            ]);
+            ];
+            
+            // Validasi sesuai sistem
+            if ($isOldSystem) {
+                // Sistem lama: validasi pertanyaan_1, pertanyaan_2, pertanyaan_3
+                $baseRules['pertanyaan_1'] = 'required|in:ya,tidak';
+                $baseRules['pertanyaan_2'] = 'required|in:ya,tidak';
+                $baseRules['pertanyaan_3'] = 'required|in:ya,tidak';
+            } else {
+                // Sistem baru: validasi kategori dan aspek
+                $baseRules['kategori_studi_kasus_id'] = 'required|exists:kategori_studi_kasus,id';
+                $baseRules['aspek'] = 'required|array';
+                $baseRules['aspek.*'] = 'required|integer|in:0,1,2,3';
+            }
+            
+            $request->validate($baseRules);
 
             $userId = Auth::id();
             if (!$userId) {
@@ -1542,30 +1667,117 @@ class AdminController extends Controller
                 ], 400);
             }
 
-            // Update atau create penilaian
-            $penilaian = PenilaianStudiKasus::updateOrCreate(
-                [
-                    'jawaban_studi_kasus_id' => $request->jawaban_studi_kasus_id
-                ],
-                [
-                    'peserta_id' => $request->peserta_id,
-                    'penilaian_id' => $request->penilaian_id,
-                    'sesi_penilaian_id' => $request->sesi_penilaian_id,
-                    'user_id' => $userId,
-                    'pertanyaan_1' => $request->pertanyaan_1,
-                    'pertanyaan_2' => $request->pertanyaan_2,
-                    'pertanyaan_3' => $request->pertanyaan_3,
-                    'catatan' => $request->catatan,
-                    'status' => $request->status
-                ]
-            );
+            // Cek apakah penilaian sudah ada untuk menentukan sistem
+            $penilaianExist = PenilaianStudiKasus::where('jawaban_studi_kasus_id', $request->jawaban_studi_kasus_id)->first();
+            if ($penilaianExist && $penilaianExist->isOldSystem()) {
+                $isOldSystem = true; // Jika sudah ada dan sistem lama, tetap gunakan sistem lama
+            }
 
-            $statusText = $request->status === 'final' ? 'final' : 'sementara';
-            return response()->json([
-                'success' => true,
-                'message' => 'Penilaian berhasil disimpan sebagai ' . $statusText,
-                'data' => $penilaian
-            ]);
+            DB::beginTransaction();
+
+            try {
+                if ($isOldSystem) {
+                    // SISTEM LAMA: Simpan ke pertanyaan_1, pertanyaan_2, pertanyaan_3
+                    $penilaian = PenilaianStudiKasus::updateOrCreate(
+                        [
+                            'jawaban_studi_kasus_id' => $request->jawaban_studi_kasus_id
+                        ],
+                        [
+                            'peserta_id' => $request->peserta_id,
+                            'penilaian_id' => $request->penilaian_id,
+                            'sesi_penilaian_id' => $request->sesi_penilaian_id,
+                            'user_id' => $userId,
+                            'kategori_studi_kasus_id' => null, // Pastikan NULL untuk sistem lama
+                            'pertanyaan_1' => $request->pertanyaan_1,
+                            'pertanyaan_2' => $request->pertanyaan_2,
+                            'pertanyaan_3' => $request->pertanyaan_3,
+                            'catatan' => $request->catatan,
+                            'status' => $request->status
+                        ]
+                    );
+                } else {
+                    // SISTEM BARU: Simpan ke kategori + detail penilaian
+                    // Validasi: pastikan semua aspek penilaian untuk kategori tersebut sudah dipilih
+                    $kategori = KategoriStudiKasus::find($request->kategori_studi_kasus_id);
+                    if (!$kategori) {
+                        throw new \Exception('Kategori studi kasus tidak ditemukan');
+                    }
+
+                    $aspekPenilaian = AspekPenilaianStudiKasus::where('kategori_studi_kasus_id', $kategori->id)
+                        ->where('aktif', true)
+                        ->get();
+
+                    // Validasi: semua aspek harus dipilih
+                    foreach ($aspekPenilaian as $aspek) {
+                        if (!isset($request->aspek[$aspek->id])) {
+                            throw new \Exception('Semua aspek penilaian harus dipilih. Aspek ' . $aspek->nomor . ' belum dipilih.');
+                        }
+                    }
+
+                    // Update atau create penilaian
+                    $penilaian = PenilaianStudiKasus::updateOrCreate(
+                        [
+                            'jawaban_studi_kasus_id' => $request->jawaban_studi_kasus_id
+                        ],
+                        [
+                            'peserta_id' => $request->peserta_id,
+                            'penilaian_id' => $request->penilaian_id,
+                            'sesi_penilaian_id' => $request->sesi_penilaian_id,
+                            'user_id' => $userId,
+                            'kategori_studi_kasus_id' => $request->kategori_studi_kasus_id,
+                            'pertanyaan_1' => null, // Pastikan NULL untuk sistem baru
+                            'pertanyaan_2' => null,
+                            'pertanyaan_3' => null,
+                            'catatan' => $request->catatan,
+                            'status' => $request->status
+                        ]
+                    );
+
+                    // Hapus detail penilaian yang lama
+                    DetailPenilaianStudiKasus::where('penilaian_studi_kasus_id', $penilaian->id)->delete();
+
+                    // Simpan detail penilaian untuk setiap aspek
+                    foreach ($request->aspek as $aspekId => $levelTerpilih) {
+                        // Validasi aspek penilaian ada dan sesuai kategori
+                        $aspek = AspekPenilaianStudiKasus::where('id', $aspekId)
+                            ->where('kategori_studi_kasus_id', $kategori->id)
+                            ->where('aktif', true)
+                            ->first();
+
+                        if (!$aspek) {
+                            throw new \Exception('Aspek penilaian tidak valid: ' . $aspekId);
+                        }
+
+                        // Validasi level penilaian ada untuk aspek ini
+                        $levelPenilaian = LevelPenilaianStudiKasus::where('aspek_penilaian_studi_kasus_id', $aspek->id)
+                            ->where('level', $levelTerpilih)
+                            ->first();
+
+                        if (!$levelPenilaian) {
+                            throw new \Exception('Level penilaian tidak valid untuk aspek ' . $aspek->nomor);
+                        }
+
+                        DetailPenilaianStudiKasus::create([
+                            'penilaian_studi_kasus_id' => $penilaian->id,
+                            'aspek_penilaian_studi_kasus_id' => $aspek->id,
+                            'level_terpilih' => $levelTerpilih
+                        ]);
+                    }
+                }
+
+                DB::commit();
+
+                $statusText = $request->status === 'final' ? 'final' : 'sementara';
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Penilaian berhasil disimpan sebagai ' . $statusText,
+                    'data' => $penilaian->load(['detailPenilaian', 'kategoriStudiKasus'])
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
