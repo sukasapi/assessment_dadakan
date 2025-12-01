@@ -473,7 +473,7 @@ function loadPenilaian(penilaianId, sesiId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            renderPenilaian(data.data);
+            renderPenilaian(data.data, data.system || 'old');
         } else {
             content.innerHTML = '<p class="text-red-500">Error: ' + (data.message || 'Gagal memuat penilaian') + '</p>';
         }
@@ -484,42 +484,78 @@ function loadPenilaian(penilaianId, sesiId) {
     });
 }
 
-function renderPenilaian(data) {
+function renderPenilaian(data, system) {
     const content = document.getElementById('penilaianContent');
-    
-    // Map jawaban untuk display
-    const jawabanText = {
-        'ya': 'Ya',
-        'tidak': 'Tidak'
-    };
-    
-    // Map pertanyaan
-    const pertanyaan = [
-        'Apakah jawaban sudah menjawab pertanyaan soal?',
-        'Apakah jawaban sudah mencerminkan kompetensi-kompetensi?',
-        'Apakah jawaban sudah menggunakan alat analisis?'
-    ];
-    
     let html = '<div class="space-y-4">';
-    html += '<h4 class="font-medium text-gray-900 mb-4">Penilaian:</h4>';
     
-    // 3 Pertanyaan
-    for (let i = 1; i <= 3; i++) {
-        const jawaban = data['pertanyaan_' + i];
-        const jawabanLabel = jawabanText[jawaban] || jawaban;
-        const bgColor = jawaban === 'ya' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-        
-        html += '<div class="space-y-2">';
-        html += '<label class="block text-sm font-medium text-gray-700">' + (i) + '. ' + pertanyaan[i-1] + '</label>';
-        html += '<div class="text-sm">';
-        html += '<span class="px-3 py-1 rounded ' + bgColor + '">';
-        html += jawabanLabel;
-        html += '</span>';
-        html += '</div>';
-        html += '</div>';
+    // Badge sistem
+    if (system === 'old') {
+        html += '<div class="mb-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">Sistem Lama</span></div>';
+    } else {
+        html += '<div class="mb-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Sistem Baru - Kategori ' + (data.kategori || '') + '</span></div>';
     }
     
-    // Catatan
+    html += '<h4 class="font-medium text-gray-900 mb-4">Penilaian:</h4>';
+    
+    if (system === 'old') {
+        // SISTEM LAMA: Tampilkan 3 pertanyaan
+        const jawabanText = {
+            'ya': 'Ya',
+            'tidak': 'Tidak'
+        };
+        
+        const pertanyaan = [
+            'Apakah jawaban sudah menjawab pertanyaan soal?',
+            'Apakah jawaban sudah mencerminkan kompetensi-kompetensi?',
+            'Apakah jawaban sudah menggunakan alat analisis?'
+        ];
+        
+        // 3 Pertanyaan
+        for (let i = 1; i <= 3; i++) {
+            const jawaban = data['pertanyaan_' + i];
+            const jawabanLabel = jawabanText[jawaban] || jawaban;
+            const bgColor = jawaban === 'ya' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+            
+            html += '<div class="space-y-2">';
+            html += '<label class="block text-sm font-medium text-gray-700">' + (i) + '. ' + pertanyaan[i-1] + '</label>';
+            html += '<div class="text-sm">';
+            html += '<span class="px-3 py-1 rounded ' + bgColor + '">';
+            html += jawabanLabel;
+            html += '</span>';
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // Total Ya
+        if (data.total_ya !== undefined) {
+            html += '<div class="pt-2 border-t">';
+            html += '<p class="text-sm font-medium text-gray-700">Total Ya: <span class="font-bold text-blue-600">' + data.total_ya + '</span> dari 3 pertanyaan</p>';
+            html += '</div>';
+        }
+    } else {
+        // SISTEM BARU: Tampilkan report berdasarkan level
+        if (data.reports && data.reports.length > 0) {
+            data.reports.forEach(function(report, index) {
+                html += '<div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">';
+                html += '<div class="flex items-center justify-between mb-2">';
+                html += '<h5 class="font-semibold text-gray-900">Aspek ' + report.aspek_nomor + ' (Level ' + report.level + ')</h5>';
+                html += '<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">Level ' + report.level + '</span>';
+                html += '</div>';
+                html += '<p class="text-sm text-gray-600 mb-2">' + report.aspek_pertanyaan + '</p>';
+                html += '<div class="mt-3 p-3 bg-white rounded border-l-4 border-blue-500">';
+                html += '<p class="text-sm text-gray-700 whitespace-pre-wrap">' + report.text_report + '</p>';
+                html += '</div>';
+                html += '</div>';
+            });
+        } else if (data.report_text) {
+            // Fallback: gunakan report_text jika reports tidak ada
+            html += '<div class="p-4 bg-gray-50 rounded-lg border border-gray-200">';
+            html += '<div class="text-sm text-gray-700 whitespace-pre-wrap">' + data.report_text + '</div>';
+            html += '</div>';
+        }
+    }
+    
+    // Catatan (untuk kedua sistem)
     html += '<div class="space-y-2 pt-4 border-t">';
     html += '<label class="block text-sm font-medium text-gray-700">Catatan:</label>';
     html += '<div class="bg-gray-50 p-4 rounded-md border border-gray-200">';

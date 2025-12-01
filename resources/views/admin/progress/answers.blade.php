@@ -656,6 +656,24 @@ document.addEventListener('DOMContentLoaded', function(){
                     modalContent.innerHTML = data.content;
                     modal.classList.remove('hidden');
                     
+                    // Inisialisasi form penilaian studi kasus setelah content dimuat
+                    // Gunakan beberapa timeout untuk memastikan DOM sudah siap
+                    let initAttempts = 0;
+                    const maxAttempts = 5;
+                    
+                    function tryInit() {
+                        initAttempts++;
+                        const success = initPenilaianForm();
+                        if (!success && initAttempts < maxAttempts) {
+                            setTimeout(tryInit, 200);
+                        }
+                    }
+                    
+                    setTimeout(tryInit, 100);
+                    setTimeout(tryInit, 300);
+                    setTimeout(tryInit, 500);
+                    setTimeout(tryInit, 1000);
+                    
                         // Initialize Summernote untuk textarea catatan setelah modal dibuka
                         setTimeout(function() {
                             const catatanEditor = modalContent.querySelector('.catatan-penilaian-editor');
@@ -835,15 +853,187 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     });
     
-    function submitPenilaianStudiKasus(form, status) {
-        // Validasi: pastikan semua pertanyaan sudah dijawab
-        const pertanyaan1 = form.querySelector('input[name="pertanyaan_1"]:checked');
-        const pertanyaan2 = form.querySelector('input[name="pertanyaan_2"]:checked');
-        const pertanyaan3 = form.querySelector('input[name="pertanyaan_3"]:checked');
+    // Handle perubahan dropdown kategori menggunakan event delegation
+    // Gunakan event delegation untuk menangkap event dari elemen yang di-load dinamis
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.name === 'kategori_studi_kasus_id') {
+            console.log('🔄 Event delegation: Kategori dipilih:', e.target.value);
+            const form = e.target.closest('#formPenilaianStudiKasus');
+            if (!form) {
+                console.log('Form tidak ditemukan');
+                return;
+            }
+            
+            const selectedKategoriId = e.target.value;
+            showKategoriForm(selectedKategoriId, form);
+        }
+    });
+    
+    // Function untuk inisialisasi form setelah dimuat
+    function initPenilaianForm() {
+        const form = document.getElementById('formPenilaianStudiKasus');
+        if (!form) {
+            console.log('Form penilaian studi kasus tidak ditemukan');
+            return false;
+        }
         
-        if (!pertanyaan1 || !pertanyaan2 || !pertanyaan3) {
-            alert('Mohon lengkapi semua pertanyaan penilaian!');
+        const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
+        if (!kategoriSelect) {
+            console.log('Dropdown kategori tidak ditemukan - mungkin menggunakan sistem lama');
+            return false;
+        }
+        
+        console.log('✓ Inisialisasi form penilaian studi kasus - Sistem Baru');
+        
+        // Jika sudah ada nilai yang dipilih, tampilkan form aspek penilaian
+        if (kategoriSelect.value) {
+            showKategoriForm(kategoriSelect.value, form);
+        }
+        
+        // Pastikan event listener sudah terpasang
+        // Hapus listener lama jika ada (dengan clone node)
+        const oldSelect = kategoriSelect;
+        const newSelect = oldSelect.cloneNode(true);
+        oldSelect.parentNode.replaceChild(newSelect, oldSelect);
+        
+        // Tambahkan event listener baru
+        newSelect.addEventListener('change', function() {
+            const selectedKategoriId = this.value;
+            console.log('🔄 Event change dipicu - Kategori dipilih:', selectedKategoriId);
+            showKategoriForm(selectedKategoriId, form);
+        });
+        
+        // Jika sudah ada nilai yang dipilih, tampilkan form
+        if (newSelect.value) {
+            console.log('📋 Kategori sudah dipilih saat inisialisasi:', newSelect.value);
+            showKategoriForm(newSelect.value, form);
+        }
+        
+        return true;
+    }
+    
+    // Function untuk menampilkan form aspek penilaian berdasarkan kategori yang dipilih
+    function showKategoriForm(selectedKategoriId, form) {
+        console.log('showKategoriForm dipanggil dengan kategori ID:', selectedKategoriId);
+        
+        if (!selectedKategoriId) {
+            // Jika tidak ada kategori yang dipilih, sembunyikan semua form
+            const formAspekPenilaian = form.querySelector('#form-aspek-penilaian');
+            if (formAspekPenilaian) {
+                const kategoriForms = formAspekPenilaian.querySelectorAll('.kategori-form');
+                kategoriForms.forEach(kategoriForm => {
+                    kategoriForm.classList.add('hidden');
+                });
+            }
             return;
+        }
+        
+        const formAspekPenilaian = form.querySelector('#form-aspek-penilaian');
+        if (!formAspekPenilaian) {
+            console.error('❌ Container form aspek penilaian (#form-aspek-penilaian) tidak ditemukan');
+            console.log('Form HTML:', form.innerHTML.substring(0, 500));
+            return;
+        }
+        
+        const kategoriForms = formAspekPenilaian.querySelectorAll('.kategori-form');
+        console.log('✓ Jumlah form kategori ditemukan:', kategoriForms.length, 'Kategori yang dipilih:', selectedKategoriId);
+        
+        if (kategoriForms.length === 0) {
+            console.error('❌ Tidak ada form kategori ditemukan di dalam #form-aspek-penilaian');
+            console.log('Container HTML:', formAspekPenilaian.innerHTML.substring(0, 500));
+            return;
+        }
+        
+        let found = false;
+        kategoriForms.forEach(kategoriForm => {
+            const kategoriId = kategoriForm.getAttribute('data-kategori-id');
+            console.log('Memproses form kategori ID:', kategoriId, 'Dipilih:', selectedKategoriId, 'Match:', kategoriId === selectedKategoriId);
+            if (kategoriId === selectedKategoriId) {
+                kategoriForm.classList.remove('hidden');
+                found = true;
+                console.log('✓✓✓ Menampilkan form kategori:', kategoriId);
+                // Scroll ke form yang ditampilkan
+                setTimeout(() => {
+                    kategoriForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            } else {
+                kategoriForm.classList.add('hidden');
+            }
+        });
+        
+        if (!found) {
+            console.error('❌ Form kategori dengan ID', selectedKategoriId, 'tidak ditemukan');
+            console.log('Daftar kategori ID yang tersedia:');
+            kategoriForms.forEach(kf => {
+                console.log('  - Kategori ID:', kf.getAttribute('data-kategori-id'));
+            });
+        } else {
+            console.log('✓✓✓ Form kategori berhasil ditampilkan');
+        }
+    }
+    
+    // Inisialisasi saat DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+        initPenilaianForm();
+    });
+    
+    // Juga inisialisasi setelah beberapa detik (untuk form yang di-load via AJAX)
+    setTimeout(function() {
+        initPenilaianForm();
+    }, 500);
+    
+    function submitPenilaianStudiKasus(form, status) {
+        // Deteksi sistem: cek apakah form menggunakan sistem lama atau baru
+        const isOldSystem = form.getAttribute('data-is-old-system') === '1';
+        
+        if (isOldSystem) {
+            // VALIDASI SISTEM LAMA
+            const pertanyaan1 = form.querySelector('input[name="pertanyaan_1"]:checked');
+            const pertanyaan2 = form.querySelector('input[name="pertanyaan_2"]:checked');
+            const pertanyaan3 = form.querySelector('input[name="pertanyaan_3"]:checked');
+            
+            if (!pertanyaan1 || !pertanyaan2 || !pertanyaan3) {
+                alert('Mohon lengkapi semua pertanyaan penilaian!');
+                return;
+            }
+        } else {
+            // VALIDASI SISTEM BARU
+            // Validasi: pastikan kategori dipilih
+            const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
+            if (!kategoriSelect || !kategoriSelect.value) {
+                alert('Mohon pilih kategori penilaian terlebih dahulu!');
+                return;
+            }
+            
+            // Validasi: pastikan semua aspek penilaian untuk kategori yang dipilih sudah dijawab
+            const kategoriId = kategoriSelect.value;
+            const kategoriForm = form.querySelector('.kategori-form[data-kategori-id="' + kategoriId + '"]');
+            if (!kategoriForm) {
+                alert('Form aspek penilaian untuk kategori yang dipilih tidak ditemukan!');
+                return;
+            }
+            
+            const aspekInputs = kategoriForm.querySelectorAll('input[name^="aspek["]:checked');
+            if (aspekInputs.length === 0) {
+                alert('Mohon lengkapi semua aspek penilaian untuk kategori yang dipilih!');
+                return;
+            }
+            
+            // Validasi: pastikan semua aspek penilaian sudah dipilih (harus ada 6 aspek)
+            const aspekIds = new Set();
+            aspekInputs.forEach(input => {
+                const match = input.name.match(/aspek\[(\d+)\]/);
+                if (match) {
+                    aspekIds.add(match[1]);
+                }
+            });
+            
+            // Cek apakah ada aspek yang belum dipilih (harus ada 6 aspek)
+            const totalAspek = kategoriForm.querySelectorAll('input[name^="aspek["]').length / 4; // 4 level per aspek
+            if (aspekIds.size < totalAspek) {
+                alert('Mohon lengkapi semua aspek penilaian! Masih ada aspek yang belum dipilih.');
+                return;
+            }
         }
         
         // Disable buttons saat submit
@@ -856,6 +1046,32 @@ document.addEventListener('DOMContentLoaded', function(){
         // Prepare form data
         const formData = new FormData(form);
         formData.append('status', status);
+        
+        if (!isOldSystem) {
+            // SISTEM BARU: Pastikan kategori_studi_kasus_id terkirim
+            const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
+            if (kategoriSelect && kategoriSelect.value) {
+                formData.set('kategori_studi_kasus_id', kategoriSelect.value);
+            }
+            
+            // Pastikan hanya aspek dari kategori yang dipilih yang terkirim
+            // Hapus semua aspek dari formData terlebih dahulu
+            const allAspekInputs = form.querySelectorAll('input[name^="aspek["]');
+            allAspekInputs.forEach(input => {
+                formData.delete(input.name);
+            });
+            
+            // Tambahkan kembali hanya aspek dari kategori yang dipilih
+            const kategoriId = kategoriSelect.value;
+            const kategoriForm = form.querySelector('.kategori-form[data-kategori-id="' + kategoriId + '"]');
+            if (kategoriForm) {
+                const aspekInputs = kategoriForm.querySelectorAll('input[name^="aspek["]:checked');
+                aspekInputs.forEach(input => {
+                    formData.append(input.name, input.value);
+                });
+            }
+        }
+        // SISTEM LAMA: pertanyaan_1, pertanyaan_2, pertanyaan_3 sudah otomatis terkirim via FormData
         
         // Get Summernote content untuk catatan jika menggunakan Summernote
         const catatanEditor = form.querySelector('.catatan-penilaian-editor');

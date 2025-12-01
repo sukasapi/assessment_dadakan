@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -13,6 +14,20 @@ return new class extends Migration
     {
         // Migration ini untuk memperbaiki masalah migration sebelumnya
         // yang gagal karena mencoba menghapus foreign key yang tidak ada
+        
+        // Bersihkan nilai deleted_at yang tidak valid (0000-00-00 00:00:00) menjadi NULL
+        // Menggunakan raw query untuk menghindari error strict mode MySQL
+        if (Schema::hasColumn('latihan_in_tray', 'deleted_at')) {
+            try {
+                // Nonaktifkan strict mode sementara
+                DB::statement("SET sql_mode = ''");
+                DB::statement("UPDATE latihan_in_tray SET deleted_at = NULL WHERE deleted_at = '0000-00-00 00:00:00' OR deleted_at = '0000-00-00' OR deleted_at = ''");
+                // Aktifkan kembali strict mode
+                DB::statement("SET sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
+            } catch (\Exception $e) {
+                // Jika gagal, lanjutkan saja
+            }
+        }
         
         // Cek apakah kolom sesi_penilaian_id sudah ada
         if (!Schema::hasColumn('latihan_in_tray', 'sesi_penilaian_id')) {

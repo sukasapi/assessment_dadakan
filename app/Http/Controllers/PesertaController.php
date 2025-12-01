@@ -827,18 +827,40 @@ class PesertaController extends Controller
                 ], 403);
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'pertanyaan_1' => $penilaian->pertanyaan_1,
-                    'pertanyaan_2' => $penilaian->pertanyaan_2,
-                    'pertanyaan_3' => $penilaian->pertanyaan_3,
-                    'catatan' => $penilaian->catatan,
-                    'status' => $penilaian->status,
-                    'created_at' => $penilaian->created_at,
-                    'updated_at' => $penilaian->updated_at
-                ]
-            ]);
+            // Return data sesuai sistem
+            if ($penilaian->isOldSystem()) {
+                // Sistem lama
+                return response()->json([
+                    'success' => true,
+                    'system' => 'old',
+                    'data' => [
+                        'pertanyaan_1' => $penilaian->pertanyaan_1,
+                        'pertanyaan_2' => $penilaian->pertanyaan_2,
+                        'pertanyaan_3' => $penilaian->pertanyaan_3,
+                        'catatan' => $penilaian->catatan,
+                        'status' => $penilaian->status,
+                        'total_ya' => $penilaian->total_ya,
+                        'created_at' => $penilaian->created_at,
+                        'updated_at' => $penilaian->updated_at
+                    ]
+                ]);
+            } else {
+                // Sistem baru: return report text
+                $reportData = $penilaian->getReportText();
+                return response()->json([
+                    'success' => true,
+                    'system' => 'new',
+                    'data' => [
+                        'kategori' => $reportData['kategori'],
+                        'reports' => $reportData['reports'],
+                        'catatan' => $reportData['catatan'],
+                        'status' => $penilaian->status,
+                        'report_text' => $penilaian->getReportTextAsString(),
+                        'created_at' => $penilaian->created_at,
+                        'updated_at' => $penilaian->updated_at
+                    ]
+                ]);
+            }
 
         } catch (\Exception $e) {
             Log::error('Error getting penilaian studi kasus: ' . $e->getMessage());
