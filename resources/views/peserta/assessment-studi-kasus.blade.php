@@ -91,15 +91,27 @@
                             $isFinal = (isset($jawabanStatus) && $jawabanStatus === 'final') || (isset($statusKemajuan) && $statusKemajuan === 'selesai');
                             $disabledAttr = $isFinal ? 'disabled' : '';
                             $disabledClass = $isFinal ? 'opacity-60 cursor-not-allowed bg-gray-50' : '';
+                            // Escape HTML untuk textarea jika disabled, atau gunakan HTML jika CKEditor aktif
+                            $jawabanValue = old('jawaban', $existingJawaban ?? '');
                         @endphp
-                        <textarea 
-                            name="jawaban" 
-                            id="jawaban" 
-                            rows="8" 
-                            class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none {{ $disabledClass }}"
-                            placeholder="Tuliskan jawaban Anda untuk studi kasus ini di sini..."
-                            {{ $disabledAttr }}
-                        >{{ old('jawaban', $existingJawaban ?? '') }}</textarea>
+                        @if($isFinal)
+                            {{-- Jika final, tampilkan sebagai HTML yang sudah diformat --}}
+                            <div class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 prose max-w-none">
+                                {!! $jawabanValue ?: '<p class="text-gray-400 italic">Belum ada jawaban</p>' !!}
+                            </div>
+                            {{-- Hidden input untuk form submission --}}
+                            <input type="hidden" name="jawaban" value="{{ htmlspecialchars($jawabanValue) }}">
+                        @else
+                            {{-- Jika belum final, gunakan textarea dengan CKEditor --}}
+                            <textarea 
+                                name="jawaban" 
+                                id="jawaban" 
+                                rows="8" 
+                                class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none {{ $disabledClass }}"
+                                placeholder="Tuliskan jawaban Anda untuk studi kasus ini di sini..."
+                                {{ $disabledAttr }}
+                            >{!! old('jawaban', $existingJawaban ?? '') !!}</textarea>
+                        @endif
                         
                         @error('jawaban')
                             <p class="text-red-600 text-sm">{{ $message }}</p>
@@ -263,6 +275,9 @@ const jawabanTextarea = document.getElementById('jawaban');
 const isDisabled = jawabanTextarea && jawabanTextarea.hasAttribute('disabled');
 
 if (jawabanTextarea && !isDisabled) {
+    // Ambil value dari textarea (bisa berisi HTML)
+    const initialData = jawabanTextarea.value || '';
+    
     ClassicEditor.create(jawabanTextarea, {
         toolbar: {
             items: [
@@ -282,6 +297,10 @@ if (jawabanTextarea && !isDisabled) {
         }
     }).then(ed => { 
         jawabanEditor = ed;
+        // Set initial data jika ada (untuk menampilkan HTML yang sudah ada)
+        if (initialData) {
+            ed.setData(initialData);
+        }
     }).catch(err => console.error(err));
 } else if (isDisabled) {
     // Jika disabled, tidak perlu inisialisasi editor
@@ -495,7 +514,18 @@ function renderPenilaian(data, system) {
         html += '<div class="mb-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Sistem Baru - Kategori ' + (data.kategori || '') + '</span></div>';
     }
     
-    html += '<h4 class="font-medium text-gray-900 mb-4">Penilaian:</h4>';
+    // REVIEW UMUM (hanya untuk sistem baru)
+    if (system === 'new' && data.review_umum) {
+        html += '<div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">';
+        html += '<h4 class="font-semibold text-gray-900 mb-3 text-base">Review secara umum:</h4>';
+        html += '<div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">';
+        html += data.review_umum;
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    // DETAIL PENILAIAN (label diubah dari "Penilaian:" menjadi "Detail Penilaian:")
+    html += '<h4 class="font-medium text-gray-900 mb-4">Detail Penilaian:</h4>';
     
     if (system === 'old') {
         // SISTEM LAMA: Tampilkan 3 pertanyaan

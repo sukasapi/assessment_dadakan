@@ -168,4 +168,59 @@ class PenilaianStudiKasus extends Model
             return $text;
         }
     }
+
+    // Method untuk generate review umum dengan menggabungkan text_report dari setiap aspek
+    public function getReviewUmum(): ?string
+    {
+        // Hanya untuk sistem baru
+        if ($this->isOldSystem()) {
+            return null;
+        }
+        
+        // Ambil detail penilaian dengan relasi
+        $detailPenilaian = $this->detailPenilaian()
+            ->with(['aspekPenilaianStudiKasus'])
+            ->get();
+        
+        // Urutkan berdasarkan nomor aspek
+        $detailPenilaian = $detailPenilaian->sortBy(function($detail) {
+            return $detail->aspekPenilaianStudiKasus->nomor ?? 999;
+        });
+        
+        // Template untuk setiap aspek
+        $templates = [
+            1 => "Secara struktur penulisan, ",
+            2 => "Dalam proses mengidentifikasi masalah yang ada pada soal, ",
+            3 => "Setelah mengidentifikasi masalah, Asesi perlu mengusulkan strategi penyelesaian masalah. ",
+            4 => "Untuk menjalankan strategi tersebut, Asesi kemudian diarahkan untuk membuat rumusan program utama atau langkah-langkah eksekusinya. ",
+            5 => "Berkaitan dengan rumusan program, perlu dilakukan mitigasi terhadap kendala baru yang mungkin timbul. Untuk itu, ",
+            6 => "Berkaitan dengan pemanfaatan informasi keuangan untuk menjawab studi kasus, "
+        ];
+        
+        // Build review umum
+        $review = "Review secara umum:\n\n";
+        
+        foreach ($detailPenilaian as $detail) {
+            $aspek = $detail->aspekPenilaianStudiKasus;
+            if (!$aspek) {
+                continue;
+            }
+            
+            $nomor = $aspek->nomor;
+            
+            // Ambil level penilaian untuk mendapatkan text_report
+            $levelPenilaian = LevelPenilaianStudiKasus::where('aspek_penilaian_studi_kasus_id', $detail->aspek_penilaian_studi_kasus_id)
+                ->where('level', $detail->level_terpilih)
+                ->first();
+            
+            if ($levelPenilaian && isset($templates[$nomor])) {
+                $textReport = $levelPenilaian->text_report ?? '';
+                if ($textReport) {
+                    $review .= $templates[$nomor] . $textReport . "\n\n";
+                }
+            }
+        }
+        
+        return trim($review);
+    }
 }
