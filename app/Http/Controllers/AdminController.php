@@ -1438,7 +1438,7 @@ class AdminController extends Controller
                                 $content .= '<option value="">-- Pilih Kategori --</option>';
                                 foreach ($kategoris as $kat) {
                                     $selected = ($selectedKategoriId == $kat->id) ? 'selected' : '';
-                                    $content .= '<option value="' . $kat->id . '" ' . $selected . '>' . $kat->kode . ' - ' . $kat->nama . '</option>';
+                                    $content .= '<option value="' . $kat->id . '" ' . $selected . '>' . 'Studi Kasus - ' . $kat->nama . '</option>';
                                 }
                                 $content .= '</select>';
                                 $content .= '</div>';
