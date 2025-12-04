@@ -805,8 +805,9 @@ class PesertaController extends Controller
                 ], 400);
             }
 
-            // Query penilaian dengan status final
-            $penilaian = PenilaianStudiKasus::where('penilaian_id', $penilaianId)
+            // Query penilaian dengan status final (dengan eager loading relasi)
+            $penilaian = PenilaianStudiKasus::with(['detailPenilaian.aspekPenilaianStudiKasus', 'kategoriStudiKasus'])
+                ->where('penilaian_id', $penilaianId)
                 ->where('peserta_id', $pesertaId)
                 ->where('sesi_penilaian_id', $sesiId)
                 ->where('status', 'final')
@@ -845,13 +846,14 @@ class PesertaController extends Controller
                     ]
                 ]);
             } else {
-                // Sistem baru: return report text
+                // Sistem baru: return report text dengan review umum
                 $reportData = $penilaian->getReportText();
                 return response()->json([
                     'success' => true,
                     'system' => 'new',
                     'data' => [
                         'kategori' => $reportData['kategori'],
+                        'review_umum' => $penilaian->getReviewUmum(), // NEW: Review umum
                         'reports' => $reportData['reports'],
                         'catatan' => $reportData['catatan'],
                         'status' => $penilaian->status,
