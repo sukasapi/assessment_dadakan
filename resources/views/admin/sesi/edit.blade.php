@@ -931,9 +931,9 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
             errorMessage = 'Semua field wajib diisi untuk setiap assessment.';
         }
         
-        // Validasi: jika jenis assessment adalah studi_kasus DAN sesi_id >= 13, kategori_studi_kasus_id wajib dipilih
+        // Validasi: jika jenis assessment adalah studi_kasus DAN sesi_id > 12, kategori_studi_kasus_id wajib dipilih
         const sesiId = {{ $sesi->id }};
-        const useNewSystem = sesiId >= 13;
+        const useNewSystem = sesiId > 12;
         if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus' && useNewSystem) {
             const kategoriSelect = assessment.querySelector('select[name*="[kategori_studi_kasus_id]"]');
             if (kategoriSelect && !kategoriSelect.value) {

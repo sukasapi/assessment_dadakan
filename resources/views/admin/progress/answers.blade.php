@@ -979,49 +979,58 @@ document.addEventListener('DOMContentLoaded', function(){
             }
         } else {
             // VALIDASI SISTEM BARU
-            // Validasi: pastikan kategori dipilih (bisa dari dropdown atau hidden input)
-            const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
-            const kategoriHiddenInput = form.querySelector('input[type="hidden"][name="kategori_studi_kasus_id"]');
+            // Cek sesi_id: validasi kategori hanya berlaku untuk sesi_id > 12
+            const sesiPenilaianIdInput = form.querySelector('input[name="sesi_penilaian_id"]');
+            const sesiId = sesiPenilaianIdInput ? parseInt(sesiPenilaianIdInput.value) : 0;
+            const useNewSystem = sesiId > 12;
             
-            let kategoriId = null;
-            if (kategoriSelect && kategoriSelect.value) {
-                kategoriId = kategoriSelect.value;
-            } else if (kategoriHiddenInput && kategoriHiddenInput.value) {
-                kategoriId = kategoriHiddenInput.value;
-            }
-            
-            if (!kategoriId) {
-                alert('Kategori penilaian belum dipilih. Silakan edit sesi dan pilih kategori (BQ/PQ) untuk assessment studi kasus ini terlebih dahulu.');
-                return;
-            }
-            
-            // Validasi: pastikan semua aspek penilaian untuk kategori yang dipilih sudah dijawab
-            const kategoriForm = form.querySelector('.kategori-form[data-kategori-id="' + kategoriId + '"]');
-            if (!kategoriForm) {
-                alert('Form aspek penilaian untuk kategori yang dipilih tidak ditemukan!');
-                return;
-            }
-            
-            const aspekInputs = kategoriForm.querySelectorAll('input[name^="aspek["]:checked');
-            if (aspekInputs.length === 0) {
-                alert('Mohon lengkapi semua aspek penilaian untuk kategori yang dipilih!');
-                return;
-            }
-            
-            // Validasi: pastikan semua aspek penilaian sudah dipilih (harus ada 6 aspek)
-            const aspekIds = new Set();
-            aspekInputs.forEach(input => {
-                const match = input.name.match(/aspek\[(\d+)\]/);
-                if (match) {
-                    aspekIds.add(match[1]);
+            // Validasi: pastikan kategori dipilih (hanya untuk sesi_id > 12)
+            if (useNewSystem) {
+                const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
+                const kategoriHiddenInput = form.querySelector('input[type="hidden"][name="kategori_studi_kasus_id"]');
+                
+                let kategoriId = null;
+                if (kategoriSelect && kategoriSelect.value) {
+                    kategoriId = kategoriSelect.value;
+                } else if (kategoriHiddenInput && kategoriHiddenInput.value) {
+                    kategoriId = kategoriHiddenInput.value;
                 }
-            });
+                
+                if (!kategoriId) {
+                    alert('Kategori penilaian belum dipilih. Silakan edit sesi dan pilih kategori (BQ/PQ) untuk assessment studi kasus ini terlebih dahulu.');
+                    return;
+                }
+            }
             
-            // Cek apakah ada aspek yang belum dipilih (harus ada 6 aspek)
-            const totalAspek = kategoriForm.querySelectorAll('input[name^="aspek["]').length / 4; // 4 level per aspek
-            if (aspekIds.size < totalAspek) {
-                alert('Mohon lengkapi semua aspek penilaian! Masih ada aspek yang belum dipilih.');
-                return;
+            // Validasi: pastikan semua aspek penilaian untuk kategori yang dipilih sudah dijawab (hanya untuk sesi_id > 12)
+            if (useNewSystem) {
+                const kategoriForm = form.querySelector('.kategori-form[data-kategori-id="' + kategoriId + '"]');
+                if (!kategoriForm) {
+                    alert('Form aspek penilaian untuk kategori yang dipilih tidak ditemukan!');
+                    return;
+                }
+                
+                const aspekInputs = kategoriForm.querySelectorAll('input[name^="aspek["]:checked');
+                if (aspekInputs.length === 0) {
+                    alert('Mohon lengkapi semua aspek penilaian untuk kategori yang dipilih!');
+                    return;
+                }
+                
+                // Validasi: pastikan semua aspek penilaian sudah dipilih (harus ada 6 aspek)
+                const aspekIds = new Set();
+                aspekInputs.forEach(input => {
+                    const match = input.name.match(/aspek\[(\d+)\]/);
+                    if (match) {
+                        aspekIds.add(match[1]);
+                    }
+                });
+                
+                // Cek apakah ada aspek yang belum dipilih (harus ada 6 aspek)
+                const totalAspek = kategoriForm.querySelectorAll('input[name^="aspek["]').length / 4; // 4 level per aspek
+                if (aspekIds.size < totalAspek) {
+                    alert('Mohon lengkapi semua aspek penilaian! Masih ada aspek yang belum dipilih.');
+                    return;
+                }
             }
         }
         
@@ -1037,35 +1046,41 @@ document.addEventListener('DOMContentLoaded', function(){
         formData.append('status', status);
         
         if (!isOldSystem) {
-            // SISTEM BARU: Pastikan kategori_studi_kasus_id terkirim (bisa dari dropdown atau hidden input)
-            const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
-            const kategoriHiddenInput = form.querySelector('input[type="hidden"][name="kategori_studi_kasus_id"]');
+            // SISTEM BARU: Pastikan kategori_studi_kasus_id terkirim (hanya untuk sesi_id > 12)
+            const sesiPenilaianIdInput = form.querySelector('input[name="sesi_penilaian_id"]');
+            const sesiId = sesiPenilaianIdInput ? parseInt(sesiPenilaianIdInput.value) : 0;
+            const useNewSystem = sesiId > 12;
             
-            let kategoriId = null;
-            if (kategoriSelect && kategoriSelect.value) {
-                kategoriId = kategoriSelect.value;
-            } else if (kategoriHiddenInput && kategoriHiddenInput.value) {
-                kategoriId = kategoriHiddenInput.value;
-            }
-            
-            if (kategoriId) {
-                formData.set('kategori_studi_kasus_id', kategoriId);
-            }
-            
-            // Pastikan hanya aspek dari kategori yang dipilih yang terkirim
-            // Hapus semua aspek dari formData terlebih dahulu
-            const allAspekInputs = form.querySelectorAll('input[name^="aspek["]');
-            allAspekInputs.forEach(input => {
-                formData.delete(input.name);
-            });
-            
-            // Tambahkan kembali hanya aspek dari kategori yang dipilih
-            const kategoriForm = form.querySelector('.kategori-form[data-kategori-id="' + kategoriId + '"]');
-            if (kategoriForm) {
-                const aspekInputs = kategoriForm.querySelectorAll('input[name^="aspek["]:checked');
-                aspekInputs.forEach(input => {
-                    formData.append(input.name, input.value);
+            if (useNewSystem) {
+                const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
+                const kategoriHiddenInput = form.querySelector('input[type="hidden"][name="kategori_studi_kasus_id"]');
+                
+                let kategoriId = null;
+                if (kategoriSelect && kategoriSelect.value) {
+                    kategoriId = kategoriSelect.value;
+                } else if (kategoriHiddenInput && kategoriHiddenInput.value) {
+                    kategoriId = kategoriHiddenInput.value;
+                }
+                
+                if (kategoriId) {
+                    formData.set('kategori_studi_kasus_id', kategoriId);
+                }
+                
+                // Pastikan hanya aspek dari kategori yang dipilih yang terkirim
+                // Hapus semua aspek dari formData terlebih dahulu
+                const allAspekInputs = form.querySelectorAll('input[name^="aspek["]');
+                allAspekInputs.forEach(input => {
+                    formData.delete(input.name);
                 });
+                
+                // Tambahkan kembali hanya aspek dari kategori yang dipilih
+                const kategoriForm = form.querySelector('.kategori-form[data-kategori-id="' + kategoriId + '"]');
+                if (kategoriForm) {
+                    const aspekInputs = kategoriForm.querySelectorAll('input[name^="aspek["]:checked');
+                    aspekInputs.forEach(input => {
+                        formData.append(input.name, input.value);
+                    });
+                }
             }
         }
         // SISTEM LAMA: pertanyaan_1, pertanyaan_2, pertanyaan_3 sudah otomatis terkirim via FormData
