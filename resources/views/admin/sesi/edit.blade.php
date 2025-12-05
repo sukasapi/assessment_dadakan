@@ -967,6 +967,29 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
         }
     });
     
+    // Hapus atribut required dari select kategori_studi_kasus_id yang tersembunyi
+    // untuk mencegah error "invalid form control is not focusable"
+    document.querySelectorAll('.kategori-studi-kasus-select').forEach(function(select) {
+        const section = select.closest('.kategori-studi-kasus-section');
+        if (section && (section.style.display === 'none' || window.getComputedStyle(section).display === 'none')) {
+            select.removeAttribute('required');
+        } else {
+            // Pastikan required ada jika section terlihat dan jenis assessment adalah studi_kasus
+            const assessmentItem = select.closest('.assessment-item');
+            if (assessmentItem) {
+                const penilaianSelect = assessmentItem.querySelector('select[name*="[penilaian_id]"]');
+                if (penilaianSelect) {
+                    const selectedOption = penilaianSelect.options[penilaianSelect.selectedIndex];
+                    const sesiId = {{ $sesi->id }};
+                    const useNewSystem = sesiId >= 13;
+                    if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus' && useNewSystem) {
+                        select.setAttribute('required', 'required');
+                    }
+                }
+            }
+        }
+    });
+    
     if (!isValid) {
         e.preventDefault();
         alert(errorMessage || 'Semua field wajib diisi untuk setiap assessment.');
