@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 updatePagination(data);
             })
             .catch(error => {
-                console.error('Error loading data:', error);
+                // Silent fail
                 const tbody = document.getElementById('progressTableBody');
                 if (tbody) {
                     tbody.innerHTML = '<tr><td colspan="10" class="px-4 py-2 text-center text-red-500">Error loading data: ' + error.message + '</td></tr>';
@@ -415,7 +415,6 @@ document.addEventListener('DOMContentLoaded', function(){
             e.preventDefault();
             const pesertaId = e.target.getAttribute('data-peserta-id');
             const sesiId = e.target.getAttribute('data-sesi-id');
-            console.log('View answers clicked:', pesertaId, sesiId);
             window.location.href = '{{ route("admin.progress.answers") }}?peserta_id=' + pesertaId + '&sesi_id=' + sesiId;
         }
         
@@ -423,7 +422,6 @@ document.addEventListener('DOMContentLoaded', function(){
             e.preventDefault();
             const pesertaId = e.target.getAttribute('data-peserta-id');
             const sesiId = e.target.getAttribute('data-sesi-id');
-            console.log('View matrix clicked:', pesertaId, sesiId);
             window.location.href = '{{ route("admin.intray-matrix.show", ["sesiId" => ":sesiId", "pesertaId" => ":pesertaId"]) }}'.replace(':sesiId', sesiId).replace(':pesertaId', pesertaId);
         }
         
@@ -431,7 +429,6 @@ document.addEventListener('DOMContentLoaded', function(){
             e.preventDefault();
             const pesertaId = e.target.getAttribute('data-peserta-id');
             const sesiId = e.target.getAttribute('data-sesi-id');
-            console.log('Download data clicked:', pesertaId, sesiId);
             window.location.href = '{{ route("admin.progress.export-answers") }}?peserta_id=' + pesertaId + '&sesi_id=' + sesiId;
         }
     });

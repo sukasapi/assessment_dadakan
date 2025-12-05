@@ -224,7 +224,6 @@ function updateStatus(jawabanId, newStatus) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
         alert('Terjadi kesalahan saat mengupdate status');
         });
 }
