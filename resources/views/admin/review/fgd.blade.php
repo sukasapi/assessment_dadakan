@@ -167,7 +167,6 @@ function viewDetail(catatanId) {
             document.getElementById('detailModal').classList.remove('hidden');
         })
         .catch(error => {
-            console.error('Error:', error);
             alert('Terjadi kesalahan saat memuat detail');
         });
 }

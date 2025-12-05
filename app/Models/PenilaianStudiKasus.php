@@ -154,7 +154,7 @@ class PenilaianStudiKasus extends Model
             return $text;
         } else {
             $reports = $this->getReportText();
-            $text = "Hasil Penilaian (Sistem Baru - Kategori " . $reports['kategori'] . "):\n\n";
+            $text = "Hasil Penilaian (Studi Kasus - Kategori " . $reports['kategori'] . "):\n\n";
             
             foreach ($reports['reports'] as $report) {
                 $text .= "Aspek " . $report['aspek_nomor'] . " (Level " . $report['level'] . "):\n";

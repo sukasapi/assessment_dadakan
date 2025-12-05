@@ -181,27 +181,20 @@
             },
             callbacks: {
                 onInit: function() {
-                    console.log('Summernote initialized');
+                    // Summernote initialized
                 },
                 onImageUpload: function(files) {
                     // Jika ingin upload file, bisa ditambahkan logic di sini
-                    console.log('Image upload:', files);
                 }
             }
         };
         
         // Function to initialize Summernote
         window.initCKEditor = function(elementId) {
-            console.log('Attempting to initialize Summernote for:', elementId);
-            console.log('jQuery available:', !!window.$);
-            console.log('Summernote available:', !!(window.$ && window.$.fn.summernote));
-            console.log('Element exists:', !!document.getElementById(elementId));
-            
             if (window.$ && window.$.fn.summernote && document.getElementById(elementId)) {
                 try {
                     // Check if already initialized
                     if (window.ckeditorInstances && window.ckeditorInstances[elementId]) {
-                        console.log('Summernote already initialized for:', elementId);
                         return;
                     }
                     
@@ -212,14 +205,11 @@
                     }
                     
                     const editor = $('#' + elementId).summernote(window.summernoteConfig);
-                    console.log('Summernote initialized successfully for:', elementId);
                     window.ckeditorInstances = window.ckeditorInstances || {};
                     window.ckeditorInstances[elementId] = editor;
                 } catch (error) {
-                    console.error('Summernote initialization error for', elementId, ':', error);
+                    // Silent fail
                 }
-            } else {
-                console.warn('Summernote initialization failed for:', elementId, '- missing dependencies or element');
             }
         };
         
@@ -228,17 +218,15 @@
             if (window.$ && window.ckeditorInstances && window.ckeditorInstances[elementId]) {
                 try {
                     $('#' + elementId).summernote('destroy');
-                    console.log('Summernote destroyed for:', elementId);
                     delete window.ckeditorInstances[elementId];
                 } catch (error) {
-                    console.error('Summernote destruction error:', error);
+                    // Silent fail
                 }
             }
         };
         
         // Initialize Summernote when DOM is ready
         $(document).ready(function() {
-            console.log('DOM ready, initializing Summernote...');
             // This will be called by individual pages
         });
     </script>

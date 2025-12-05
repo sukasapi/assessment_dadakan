@@ -64,6 +64,42 @@
                                 @endif
                             </div>
                         </div>
+                        
+                        <!-- PDF In-Tray Exercise (Collapsible) -->
+                        @if($assessment->file_pdf)
+                            <div class="mb-4 bg-yellow-50 rounded-lg shadow-sm border-2 border-yellow-400">
+                                <button type="button" 
+                                        id="togglePdfInTray" 
+                                        class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-t-lg transition-colors"
+                                        onclick="togglePdfInTray()">
+                                    <div class="flex items-center">
+                                        <svg class="w-5 h-5 text-yellow-700 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span class="font-semibold text-yellow-900">SITUASI ANDA DAN LATAR BELAKANG</span>
+                                    </div>
+                                    <svg id="pdfInTrayIcon" class="w-5 h-5 text-yellow-700 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                                <div id="pdfInTrayContent" class="px-4 pb-4">
+                                    @php
+                                        $pdfUrl = route('assessment.pdf.view', ['penilaianId' => $assessment->id, 'filename' => $assessment->file_pdf]);
+                                    @endphp
+                                    <div class="w-full border-2 border-yellow-300 rounded-md overflow-hidden mt-2 bg-white">
+                                        <iframe 
+                                            style="width: 100%; height: 500px; border: 1px solid #fbbf24;" 
+                                            src="{{ $pdfUrl }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
+                                            width="100%" 
+                                            height="500" 
+                                            frameborder="0" 
+                                            allowfullscreen="allowfullscreen">
+                                        </iframe>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        
                         <!--<h2 class="text-xl font-semibold text-gray-900 mt-4">Daftar Memo</h2>-->
                         <div id="inTrayBoard" class="grid grid-cols-1 gap-3 {{ ($intrayModel ?? 'urutan') === 'urutan' ? 'sortable' : '' }}">
                             @if($memos->count() > 0)
@@ -469,11 +505,8 @@ function makeSortable(container) {
     let dragSrcEl = null;
     
     const cards = container.querySelectorAll('.memo-card');
-    console.log('makeSortable: Found', cards.length, 'cards');
     
     cards.forEach((card, index) => {
-        console.log('Setting up card', index, 'with ID:', card.dataset.id);
-        
         // Clone the card to remove all existing event listeners
         const newCard = card.cloneNode(true);
         card.parentNode.replaceChild(newCard, card);
@@ -481,14 +514,12 @@ function makeSortable(container) {
         newCard.setAttribute('draggable', 'true');
         
         newCard.addEventListener('dragstart', (e) => {
-            console.log('dragstart on card', index, 'ID:', newCard.dataset.id);
             dragSrcEl = newCard;
             e.dataTransfer.effectAllowed = 'move';
             newCard.classList.add('opacity-50');
         });
         
         newCard.addEventListener('dragend', (e) => {
-            console.log('dragend on card', index, 'ID:', newCard.dataset.id);
             newCard.classList.remove('opacity-50');
             updateMemoOrders(container);
         });
@@ -499,7 +530,6 @@ function makeSortable(container) {
         });
         
         newCard.addEventListener('drop', (e) => {
-            console.log('drop on card', index, 'ID:', newCard.dataset.id);
             e.stopPropagation();
             if (dragSrcEl !== newCard) {
                 const list = Array.from(container.children);
@@ -564,8 +594,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const html = memoData.konten_memo || '';
                     openMemoModal(html, card);
                 } catch (error) {
-                    console.error('Error parsing memo data:', error);
-                    console.error('Data content:', card.getAttribute('data-content'));
                     // Fallback: get content directly from the memo card
                     const memoContent = card.querySelector('.text-sm.text-gray-700');
                     const html = memoContent ? memoContent.innerHTML : 'Konten memo tidak dapat dimuat.';
@@ -577,12 +605,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize model based on assessment type
     const assessmentModel = '{{ $intrayModel ?? "urutan" }}';
-    console.log('=== ASSESSMENT MODE DEBUG ===');
-    console.log('Assessment Model:', assessmentModel);
-    console.log('Assessment Type:', '{{ $assessment->jenis }}');
-    console.log('Assessment ID:', '{{ $assessment->id }}');
-    console.log('Assessment Name:', '{{ $assessment->nama }}');
-    console.log('=============================');
     initializeInTrayModel(assessmentModel);
     
     // Initialize completion status for all memo cards
@@ -689,7 +711,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
             .then(ed => { window.jawabanEditor = ed; if (jawabanInit) { ed.setData(jawabanInit); } })
-            .catch(err => console.error(err));
+            .catch(err => {
+                // Silent fail
+            });
     }
 
     // Inisialisasi CKEditor untuk Roleplay dan FGD agar konsisten
@@ -715,7 +739,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
             .then(ed => { window.roleplayEditor = ed; if (initVal) ed.setData(initVal); })
-            .catch(err => console.error(err));
+            .catch(err => {
+                // Silent fail
+            });
     }
     const fgdEl = document.getElementById('fgdText');
     if (fgdEl) {
@@ -739,7 +765,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
             .then(ed => { window.fgdEditor = ed; if (initVal) ed.setData(initVal); })
-            .catch(err => console.error(err));
+            .catch(err => {
+                // Silent fail
+            });
     }
 
     // Submit sederhana untuk Roleplay/FGD (draft/final)
@@ -1080,13 +1108,10 @@ function initializeMemoCompletionStatus() {
 
 // Initialize in-tray model based on assessment configuration
 function initializeInTrayModel(model = 'urutan') {
-    console.log('initializeInTrayModel called with model:', model);
     if (model === 'prioritas') {
-        console.log('✅ Enabling PRIORITAS model (4 kategori prioritas)');
         // Enable priority model
         enablePriorityModel();
     } else {
-        console.log('✅ Enabling URUTAN model (drag & drop)');
         // Enable order model (default)
         enableOrderModel();
     }
@@ -1094,15 +1119,12 @@ function initializeInTrayModel(model = 'urutan') {
 
 // Enable priority model
 function enablePriorityModel() {
-    console.log('🔧 Setting up PRIORITAS model...');
     const board = document.getElementById('inTrayBoard');
     if (!board) {
-        console.log('❌ Board not found');
         return;
     }
     
     const cards = board.querySelectorAll('.memo-card');
-    console.log('📋 Found', cards.length, 'memo cards for prioritas model');
     
     cards.forEach((card, index) => {
         // Hide order badge
@@ -1118,42 +1140,32 @@ function enablePriorityModel() {
     
     // Disable sortable functionality
     board.classList.remove('sortable');
-    console.log('✅ PRIORITAS model setup complete - No drag & drop, priority selection in modal');
 }
 
 // Enable order model
 function enableOrderModel() {
-    console.log('🔧 Setting up URUTAN model...');
     const board = document.getElementById('inTrayBoard');
     if (!board) {
-        console.log('❌ Board not found');
         return;
     }
     
     const cards = board.querySelectorAll('.memo-card');
-    console.log('📋 Found', cards.length, 'memo cards for urutan model');
     
     cards.forEach((card, index) => {
-        console.log('🎯 Setting up card', index, 'for order model, ID:', card.dataset.id);
-        
         // Show order badge
         const orderBadge = card.querySelector('.memo-prioritas-badge');
         if (orderBadge) {
             orderBadge.style.display = 'inline-flex';
-            console.log('🏷️ Order badge shown for card', index);
         }
         
         // Make card draggable
         card.setAttribute('draggable', 'true');
         card.classList.add('cursor-move');
-        console.log('🖱️ Card', index, 'made draggable');
     });
     
     // Enable sortable functionality
     board.classList.add('sortable');
-    console.log('🔄 Calling makeSortable...');
     makeSortable(board);
-    console.log('✅ URUTAN model setup complete - Drag & drop enabled, priority badges shown');
 }
 
 // Toggle between models (for testing purposes)
@@ -1212,9 +1224,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             })
             .catch(error => {
-                console.error('Error initializing CKEditor for in-tray question:', error);
+                // Silent fail
             });
     }
 });
+
+// Function to toggle PDF In-Tray section
+function togglePdfInTray() {
+    const content = document.getElementById('pdfInTrayContent');
+    const icon = document.getElementById('pdfInTrayIcon');
+    
+    if (content && icon) {
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.classList.remove('rotate-180');
+        } else {
+            content.style.display = 'none';
+            icon.classList.add('rotate-180');
+        }
+    }
+}
+
+// Initialize: PDF section is open by default (no action needed as it's visible by default)
 </script>
 @endsection

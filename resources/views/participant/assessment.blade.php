@@ -271,7 +271,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 alert('Terjadi kesalahan saat menyimpan jawaban.');
             });
         }
@@ -311,7 +310,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 alert('Terjadi kesalahan saat menyimpan catatan.');
             });
         }
@@ -346,7 +344,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 alert('Terjadi kesalahan saat menyimpan catatan.');
             });
         }

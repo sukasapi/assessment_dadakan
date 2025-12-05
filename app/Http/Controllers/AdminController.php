@@ -1339,8 +1339,23 @@ class AdminController extends Controller
                             })
                             ->first();
                         
+                        // Deteksi sistem berdasarkan sesi_id: sesi_id < 12 = sistem lama, >= 12 = sistem baru
+                        $useNewSystem = $sesiId >= 12;
+                        
                         // Deteksi sistem: jika penilaianExist ada dan kategori_studi_kasus_id NULL = sistem lama
-                        $isOldSystem = $penilaianExist && $penilaianExist->isOldSystem();
+                        $isOldSystem = false;
+                        if ($penilaianExist) {
+                            // Jika sesi_id < 12, selalu gunakan sistem lama
+                            if (!$useNewSystem) {
+                                $isOldSystem = true;
+                            } else {
+                                // Jika sesi_id >= 12, cek dari penilaianExist
+                                $isOldSystem = $penilaianExist->isOldSystem();
+                            }
+                        } else {
+                            // Jika belum ada penilaian, gunakan sistem sesuai sesi_id
+                            $isOldSystem = !$useNewSystem;
+                        }
                         
                         // Ambil detail penilaian yang sudah ada (untuk pre-fill form sistem baru)
                         $detailPenilaianExist = [];
@@ -1415,42 +1430,47 @@ class AdminController extends Controller
                             $content .= '</div>';
                             $content .= '</div>';
                         } else {
-                            // FORM SISTEM BARU
-                            // Ambil semua kategori (PQ dan BQ)
-                            $kategoris = KategoriStudiKasus::where('aktif', true)
-                                ->with(['aspekPenilaian' => function($query) {
+                            // FORM SISTEM BARU (hanya untuk sesi_id >= 12)
+                            // Ambil kategori dari sesi_assessment (sudah dipilih saat edit sesi)
+                            $sesiAssessment = SesiAssessment::where('sesi_penilaian_id', $sesiId)
+                                ->where('penilaian_id', $penilaianId)
+                                ->first();
+                            
+                            $selectedKategoriId = null;
+                            $selectedKategori = null;
+                            
+                            if ($sesiAssessment && $sesiAssessment->kategori_studi_kasus_id) {
+                                $selectedKategoriId = $sesiAssessment->kategori_studi_kasus_id;
+                                $selectedKategori = KategoriStudiKasus::with(['aspekPenilaian' => function($query) {
                                     $query->where('aktif', true)->orderBy('urutan');
                                 }, 'aspekPenilaian.levelPenilaian'])
-                                ->orderBy('kode')
-                                ->get();
+                                ->find($selectedKategoriId);
+                            }
                             
-                            // Pastikan kategori ada
-                            if ($kategoris->isEmpty()) {
-                                $content .= '<div class="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">';
-                                $content .= '<p class="text-sm text-yellow-800">⚠️ Data kategori penilaian belum tersedia. Silakan jalankan seeder untuk mengisi data master.</p>';
+                            // Jika kategori belum dipilih di sesi, tampilkan warning
+                            if (!$selectedKategori) {
+                                $content .= '<div class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">';
+                                $content .= '<p class="text-sm text-red-800">⚠️ <strong>Kategori studi kasus belum dipilih untuk assessment ini di sesi penilaian.</strong> Silakan edit sesi dan pilih kategori (BQ/PQ) untuk assessment studi kasus ini terlebih dahulu.</p>';
                                 $content .= '</div>';
                             } else {
-                                // Dropdown untuk memilih kategori
-                                $selectedKategoriId = $penilaianExist ? $penilaianExist->kategori_studi_kasus_id : null;
+                                // Tampilkan kategori yang sudah dipilih (read-only)
                                 $content .= '<div class="mb-4">';
-                                $content .= '<label class="block text-sm font-medium text-gray-700 mb-2">Pilih Kategori Penilaian:</label>';
-                                $content .= '<select name="kategori_studi_kasus_id" id="kategori_studi_kasus_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" ' . $disabledAttr . ' required>';
-                                $content .= '<option value="">-- Pilih Kategori --</option>';
-                                foreach ($kategoris as $kat) {
-                                    $selected = ($selectedKategoriId == $kat->id) ? 'selected' : '';
-                                    $content .= '<option value="' . $kat->id . '" ' . $selected . '>' . 'Studi Kasus - ' . $kat->nama . '</option>';
-                                }
-                                $content .= '</select>';
+                                $content .= '<label class="block text-sm font-medium text-gray-700 mb-2">Kategori Penilaian:</label>';
+                                $content .= '<div class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">';
+                                $content .= 'Studi Kasus - ' . htmlspecialchars($selectedKategori->kode);
                                 $content .= '</div>';
+                                $content .= '<input type="hidden" name="kategori_studi_kasus_id" value="' . $selectedKategoriId . '">';
+                                $content .= '</div>';
+                                
+                                // Ambil kategori untuk loop aspek penilaian
+                                $kategoris = collect([$selectedKategori]);
                                 
                                 // Container untuk form aspek penilaian
                                 $content .= '<div id="form-aspek-penilaian" class="space-y-6">';
                                 
-                                // Loop untuk setiap kategori
+                                // Loop untuk kategori yang dipilih (hanya satu)
                                 foreach ($kategoris as $kategori) {
-                                    // Jika tidak ada kategori yang dipilih, semua form hidden. Jika ada yang dipilih, hanya yang dipilih yang visible
-                                    $kategoriClass = ($selectedKategoriId && $selectedKategoriId == $kategori->id) ? '' : 'hidden';
-                                    $content .= '<div class="kategori-form border border-gray-200 rounded-lg p-4 mb-6 ' . $kategoriClass . '" data-kategori-id="' . $kategori->id . '">';
+                                    $content .= '<div class="kategori-form border border-gray-200 rounded-lg p-4 mb-6" data-kategori-id="' . $kategori->id . '">';
                                     $content .= '<h5 class="font-semibold text-lg text-gray-900 mb-4 pb-2 border-b">Kategori ' . $kategori->kode . '</h5>';
                                     
                                     // Loop untuk setiap aspek penilaian dalam kategori (hanya yang aktif)
@@ -1493,7 +1513,7 @@ class AdminController extends Controller
                                 }
                                 
                                 $content .= '</div>'; // End form-aspek-penilaian
-                            } // End else jika kategori tidak kosong
+                            } // End else jika kategori sudah dipilih
                         }
                         
                         // Catatan dengan Summernote
@@ -1614,8 +1634,33 @@ class AdminController extends Controller
     public function savePenilaianStudiKasus(\Illuminate\Http\Request $request)
     {
         try {
-            // Deteksi sistem: jika ada kategori_studi_kasus_id = sistem baru, jika tidak = sistem lama
-            $isOldSystem = !$request->has('kategori_studi_kasus_id') || empty($request->kategori_studi_kasus_id);
+            $sesiId = $request->sesi_penilaian_id;
+            
+            // Deteksi sistem berdasarkan sesi_id: sesi_id < 12 = sistem lama, >= 12 = sistem baru
+            $useNewSystem = $sesiId >= 12;
+            
+            $kategoriIdFromSesi = null;
+            $sesiAssessment = null;
+            
+            if ($useNewSystem) {
+                // SISTEM BARU: Ambil kategori dari sesi_assessment (sudah dipilih saat edit sesi)
+                $sesiAssessment = SesiAssessment::where('sesi_penilaian_id', $request->sesi_penilaian_id)
+                    ->where('penilaian_id', $request->penilaian_id)
+                    ->first();
+                
+                if (!$sesiAssessment || !$sesiAssessment->kategori_studi_kasus_id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Kategori studi kasus belum dipilih untuk assessment ini di sesi penilaian. Silakan edit sesi dan pilih kategori (BQ/PQ) terlebih dahulu.'
+                    ], 400);
+                }
+                
+                $kategoriIdFromSesi = $sesiAssessment->kategori_studi_kasus_id;
+            }
+            
+            // Deteksi sistem: jika sesi_id < 12 = sistem lama, jika >= 12 = sistem baru
+            // Tapi jika sudah ada penilaian dengan sistem lama, tetap gunakan sistem lama
+            $isOldSystem = !$useNewSystem;
             
             // Validasi dasar
             $baseRules = [
@@ -1634,8 +1679,7 @@ class AdminController extends Controller
                 $baseRules['pertanyaan_2'] = 'required|in:ya,tidak';
                 $baseRules['pertanyaan_3'] = 'required|in:ya,tidak';
             } else {
-                // Sistem baru: validasi kategori dan aspek
-                $baseRules['kategori_studi_kasus_id'] = 'required|exists:kategori_studi_kasus,id';
+                // Sistem baru: validasi aspek (kategori sudah dari sesi_assessment)
                 $baseRules['aspek'] = 'required|array';
                 $baseRules['aspek.*'] = 'required|integer|in:0,1,2,3';
             }
@@ -1672,6 +1716,11 @@ class AdminController extends Controller
             if ($penilaianExist && $penilaianExist->isOldSystem()) {
                 $isOldSystem = true; // Jika sudah ada dan sistem lama, tetap gunakan sistem lama
             }
+            
+            // Jika sesi_id < 12, selalu gunakan sistem lama
+            if (!$useNewSystem) {
+                $isOldSystem = true;
+            }
 
             DB::beginTransaction();
 
@@ -1696,11 +1745,20 @@ class AdminController extends Controller
                         ]
                     );
                 } else {
-                    // SISTEM BARU: Simpan ke kategori + detail penilaian
-                    // Validasi: pastikan semua aspek penilaian untuk kategori tersebut sudah dipilih
-                    $kategori = KategoriStudiKasus::find($request->kategori_studi_kasus_id);
+                    // SISTEM BARU: Simpan ke kategori + detail penilaian (hanya untuk sesi_id >= 12)
+                    // Gunakan kategori dari sesi_assessment (bukan dari request)
+                    if (!$kategoriIdFromSesi) {
+                        throw new \Exception('Kategori studi kasus belum dipilih untuk sesi ini');
+                    }
+                    
+                    $kategori = KategoriStudiKasus::find($kategoriIdFromSesi);
                     if (!$kategori) {
                         throw new \Exception('Kategori studi kasus tidak ditemukan');
+                    }
+                    
+                    // Validasi: kategori dari request harus sama dengan kategori dari sesi_assessment
+                    if ($request->has('kategori_studi_kasus_id') && $request->kategori_studi_kasus_id != $kategoriIdFromSesi) {
+                        throw new \Exception('Kategori yang dipilih tidak sesuai dengan kategori yang ditetapkan di sesi penilaian');
                     }
 
                     $aspekPenilaian = AspekPenilaianStudiKasus::where('kategori_studi_kasus_id', $kategori->id)
@@ -1724,7 +1782,7 @@ class AdminController extends Controller
                             'penilaian_id' => $request->penilaian_id,
                             'sesi_penilaian_id' => $request->sesi_penilaian_id,
                             'user_id' => $userId,
-                            'kategori_studi_kasus_id' => $request->kategori_studi_kasus_id,
+                            'kategori_studi_kasus_id' => $kategoriIdFromSesi,
                             'pertanyaan_1' => null, // Pastikan NULL untuk sistem baru
                             'pertanyaan_2' => null,
                             'pertanyaan_3' => null,
@@ -2007,7 +2065,12 @@ class AdminController extends Controller
             ->orderBy('nama')
             ->get();
 
-        return view('admin.sesi.create', compact('assessmentTypes'));
+        // Ambil data kategori studi kasus untuk dropdown
+        $kategoriStudiKasus = KategoriStudiKasus::where('aktif', true)
+            ->orderBy('kode')
+            ->get();
+        
+        return view('admin.sesi.create', compact('assessmentTypes', 'kategoriStudiKasus'));
     }
 
     /**
@@ -2015,7 +2078,8 @@ class AdminController extends Controller
      */
     public function sesiStore(Request $request)
     {
-        $request->validate([
+        // Validasi dasar
+        $rules = [
             'nama' => 'required|string|max:255',
             'durasi_menit' => 'nullable|integer|min:1',
             'catatan' => 'nullable|string',
@@ -2026,10 +2090,17 @@ class AdminController extends Controller
             'assessments.*.instruksi_khusus' => 'nullable|string',
             'assessments.*.file_pdf' => 'nullable|file|mimes:pdf|max:10240',
             'assessments.*.model_in_tray' => 'nullable|in:urutan,prioritas',
+            'assessments.*.kategori_studi_kasus_id' => 'nullable|exists:kategori_studi_kasus,id',
             'assessments.*.memos' => 'nullable|array',
             'assessments.*.memos.*.konten_memo' => 'nullable|string',
             'assessments.*.memos.*.pertanyaan' => 'nullable|string'
-        ]);
+        ];
+        
+        // Untuk create sesi baru, kategori_studi_kasus_id tidak wajib
+        // (akan ditentukan setelah sesi dibuat berdasarkan id yang didapat)
+        // Validasi kategori_studi_kasus_id hanya dilakukan di sesiUpdate berdasarkan id
+        
+        $request->validate($rules);
 
         try {
             DB::beginTransaction();
@@ -2052,6 +2123,7 @@ class AdminController extends Controller
                     'urutan' => $assessment['urutan'],
                     'durasi_default' => $assessment['durasi_default'] ?? null,
                     'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                    'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                     'aktif' => true
                 ]);
 
@@ -2105,10 +2177,10 @@ class AdminController extends Controller
                     Log::error('Gagal menyimpan memos in-tray (create): ' . $e->getMessage());
                 }
 
-                // Jika jenis studi_kasus, roleplay, atau fgd dan ada file upload, simpan ke Penilaian
+                // Jika jenis studi_kasus, roleplay, fgd, atau in_tray dan ada file upload, simpan ke Penilaian
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
-                    if ($penilaian && in_array($penilaian->jenis, ['studi_kasus', 'roleplay', 'fgd'])) {
+                    if ($penilaian && in_array($penilaian->jenis, ['studi_kasus', 'roleplay', 'fgd', 'in_tray'])) {
                         if ($request->hasFile("assessments.$index.file_pdf")) {
                             // Hapus file lama jika ada
                             if (!empty($penilaian->file_pdf)) {
@@ -2213,6 +2285,7 @@ class AdminController extends Controller
                     'instruksi_khusus' => $sesiAssessment->instruksi_khusus,
                     'model_in_tray' => $modelInTray,
                     'memos' => $memos,
+                    'kategori_studi_kasus_id' => $sesiAssessment->kategori_studi_kasus_id,
                 ];
             });
 
@@ -2223,7 +2296,12 @@ class AdminController extends Controller
             'existing_assessments_data' => $existingAssessments->toArray()
         ]);
 
-        return view('admin.sesi.edit', compact('sesi', 'assessmentTypes', 'existingAssessments'));
+        // Ambil data kategori studi kasus untuk dropdown
+        $kategoriStudiKasus = KategoriStudiKasus::where('aktif', true)
+            ->orderBy('kode')
+            ->get();
+
+        return view('admin.sesi.edit', compact('sesi', 'assessmentTypes', 'existingAssessments', 'kategoriStudiKasus'));
     }
 
     /**
@@ -2238,7 +2316,8 @@ class AdminController extends Controller
             'assessments_data' => $request->input('assessments', [])
         ]);
         
-        $request->validate([
+        // Validasi dasar
+        $rules = [
             'nama' => 'required|string|max:255',
             'durasi_menit' => 'nullable|integer|min:1',
             'catatan' => 'nullable|string',
@@ -2248,10 +2327,26 @@ class AdminController extends Controller
             'assessments.*.durasi_default' => 'nullable|integer|min:1',
             'assessments.*.instruksi_khusus' => 'nullable|string',
             'assessments.*.model_in_tray' => 'nullable|in:urutan,prioritas',
+            'assessments.*.kategori_studi_kasus_id' => 'nullable|exists:kategori_studi_kasus,id',
             'assessments.*.memos' => 'nullable|array',
             'assessments.*.memos.*.konten_memo' => 'nullable|string',
             'assessments.*.memos.*.pertanyaan' => 'nullable|string'
-        ]);
+        ];
+        
+        // Cek apakah sesi_id >= 13 untuk menentukan apakah kategori_studi_kasus_id required
+        $useNewSystem = $id >= 13;
+        
+        // Jika sesi_id >= 13, minta kategori_studi_kasus_id untuk jenis studi_kasus
+        if ($useNewSystem) {
+            foreach ($request->assessments as $index => $assessment) {
+                $penilaian = Penilaian::find($assessment['penilaian_id']);
+                if ($penilaian && $penilaian->jenis === 'studi_kasus') {
+                    $rules["assessments.$index.kategori_studi_kasus_id"] = 'required|exists:kategori_studi_kasus,id';
+                }
+            }
+        }
+        
+        $request->validate($rules);
 
         try {
             DB::beginTransaction();
@@ -2285,6 +2380,14 @@ class AdminController extends Controller
 
             // Update atau create assessment baru
             foreach ($request->assessments as $index => $assessment) {
+                // Validasi: jika jenis assessment adalah studi_kasus DAN sesi_id >= 13, kategori_studi_kasus_id wajib dipilih
+                $penilaian = Penilaian::find($assessment['penilaian_id']);
+                if ($penilaian && $penilaian->jenis === 'studi_kasus' && $useNewSystem) {
+                    if (empty($assessment['kategori_studi_kasus_id'])) {
+                        throw new \Exception("Kategori studi kasus (BQ/PQ) wajib dipilih untuk assessment studi kasus pada urutan ke-" . ($index + 1));
+                    }
+                }
+                
                 // Cek apakah assessment sudah ada untuk sesi ini (termasuk yang soft deleted)
                 $existingAssessment = SesiAssessment::withTrashed()
                     ->where('sesi_penilaian_id', $sesi->id)
@@ -2306,6 +2409,7 @@ class AdminController extends Controller
                             'urutan' => $assessment['urutan'],
                             'durasi_default' => $assessment['durasi_default'] ?? null,
                             'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                            'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                         ]);
                     } else {
                         // Update assessment yang sudah ada
@@ -2320,6 +2424,7 @@ class AdminController extends Controller
                             'urutan' => $assessment['urutan'],
                             'durasi_default' => $assessment['durasi_default'] ?? null,
                             'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                            'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                         ]);
                     }
                     
@@ -2339,6 +2444,7 @@ class AdminController extends Controller
                         'urutan' => $assessment['urutan'],
                         'durasi_default' => $assessment['durasi_default'] ?? null,
                         'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                        'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                         'aktif' => true
                     ]);
                 }
@@ -2420,10 +2526,10 @@ class AdminController extends Controller
                     Log::error('Gagal menyimpan memos in-tray (update): ' . $e->getMessage());
                 }
 
-                // Jika jenis studi_kasus, roleplay, atau fgd dan ada file upload, simpan ke Penilaian
+                // Jika jenis studi_kasus, roleplay, fgd, atau in_tray dan ada file upload, simpan ke Penilaian
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
-                    if ($penilaian && in_array($penilaian->jenis, ['studi_kasus', 'roleplay', 'fgd'])) {
+                    if ($penilaian && in_array($penilaian->jenis, ['studi_kasus', 'roleplay', 'fgd', 'in_tray'])) {
                         if ($request->hasFile("assessments.$index.file_pdf")) {
                             // Hapus file lama jika ada
                             if (!empty($penilaian->file_pdf)) {

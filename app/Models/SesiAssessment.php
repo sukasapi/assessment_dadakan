@@ -21,6 +21,7 @@ class SesiAssessment extends Model
     protected $fillable = [
         'sesi_penilaian_id',
         'penilaian_id',
+        'kategori_studi_kasus_id',
         'urutan',
         'aktif',
         'durasi_default',
@@ -49,6 +50,14 @@ class SesiAssessment extends Model
     public function penilaian(): BelongsTo
     {
         return $this->belongsTo(Penilaian::class, 'penilaian_id');
+    }
+
+    /**
+     * Get the kategori studi kasus
+     */
+    public function kategoriStudiKasus(): BelongsTo
+    {
+        return $this->belongsTo(KategoriStudiKasus::class, 'kategori_studi_kasus_id');
     }
 
     /**

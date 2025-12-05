@@ -221,7 +221,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error updating status:', error);
                 // Revert to original status on error
                 this.value = originalStatus;
                 updateStatusAppearance(this, originalStatus);

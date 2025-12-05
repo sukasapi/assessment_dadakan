@@ -301,10 +301,11 @@ if (jawabanTextarea && !isDisabled) {
         if (initialData) {
             ed.setData(initialData);
         }
-    }).catch(err => console.error(err));
+    }).catch(err => {
+        // Silent fail
+    });
 } else if (isDisabled) {
     // Jika disabled, tidak perlu inisialisasi editor
-    console.log('Textarea disabled, skipping CKEditor initialization');
 }
 
 // Auto-save draft setiap 30 detik (ambil dari ClassicEditor)
@@ -498,7 +499,6 @@ function loadPenilaian(penilaianId, sesiId) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
         content.innerHTML = '<p class="text-red-500">Terjadi kesalahan saat memuat penilaian.</p>';
     });
 }
@@ -511,7 +511,7 @@ function renderPenilaian(data, system) {
     if (system === 'old') {
         html += '<div class="mb-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">Sistem Lama</span></div>';
     } else {
-        html += '<div class="mb-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Sistem Baru - Kategori ' + (data.kategori || '') + '</span></div>';
+        html += '<div class="mb-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Studi Kasus - Kategori ' + (data.kategori || '') + '</span></div>';
     }
     
     // REVIEW UMUM (hanya untuk sistem baru)

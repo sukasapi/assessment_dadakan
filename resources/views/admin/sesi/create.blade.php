@@ -178,6 +178,23 @@
                 </select>
             </div>
 
+            <!-- Kategori Studi Kasus (hanya muncul jika jenis assessment adalah studi_kasus) -->
+            <div class="kategori-studi-kasus-section" style="display: none;">
+                <label class="block text-sm font-medium text-gray-700">
+                    Kategori Studi Kasus 
+                    <span class="kategori-required-indicator">*</span>
+                </label>
+                <select name="assessments[INDEX][kategori_studi_kasus_id]" 
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 kategori-studi-kasus-select">
+                    <option value="">Pilih Kategori</option>
+                    @if(isset($kategoriStudiKasus))
+                        @foreach($kategoriStudiKasus as $kategori)
+                            <option value="{{ $kategori->id }}">Studi Kasus - {{ $kategori->kode }}</option>
+                        @endforeach
+                    @endif
+                </select>
+            </div>
+
             <!-- Order -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Urutan *</label>
@@ -216,32 +233,46 @@
         </div>
 
         <!-- PDF Upload for Case Study -->
-        <div class="mt-3 pdf-upload-section" style="display: none;">
-            <label class="block text-sm font-medium text-gray-700">Upload PDF Studi Kasus</label>
-            <div class="mt-1 flex items-center space-x-3">
-                <input type="file" 
-                       name="assessments[INDEX][file_pdf]" 
-                       accept=".pdf"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                       onchange="handlePdfUpload(this, INDEX)">
-                <div class="pdf-status text-sm text-gray-600"></div>
-            </div>
-            <p class="mt-1 text-xs text-gray-500">Upload file PDF untuk deskripsi soal studi kasus (max 10MB)</p>
-            
-            <!-- Current PDF Display -->
-            <div class="mt-2 current-pdf-display" style="display: none;">
-                <p class="text-sm text-gray-600">PDF saat ini: <span class="current-pdf-name font-medium"></span></p>
-                <div class="flex gap-2 mt-2">
-                    <button type="button" 
-                            onclick="previewCurrentPdf(INDEX)"
-                            class="inline-flex items-center px-2 py-1 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        👁️ Preview PDF
-                    </button>
-                    <button type="button" 
-                            onclick="deleteCurrentPdf(INDEX)"
-                            class="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                        🗑️ Hapus PDF
-                    </button>
+        <div class="mt-4 pdf-upload-section" style="display: none;">
+            <div class="border-t border-b border-gray-300 bg-gray-50 py-4 px-4 rounded-lg">
+                <div class="flex items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <label class="ml-2 block text-sm font-semibold text-gray-800">Upload PDF Studi Kasus</label>
+                </div>
+                <div class="mt-1">
+                    <input type="file" 
+                           name="assessments[INDEX][file_pdf]" 
+                           accept=".pdf"
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                           onchange="handlePdfUpload(this, INDEX)">
+                    <div class="pdf-status text-sm text-gray-600 mt-1"></div>
+                </div>
+                <p class="mt-2 text-xs text-gray-600">Upload file PDF untuk deskripsi soal studi kasus (max 10MB)</p>
+                
+                <!-- Current PDF Display -->
+                <div class="mt-3 current-pdf-display" style="display: none;">
+                    <div class="bg-white border border-gray-200 rounded-md p-3">
+                        <p class="text-sm text-gray-700 mb-2">
+                            <span class="font-medium">PDF saat ini:</span> 
+                            <span class="current-pdf-name font-semibold text-blue-600"></span>
+                        </p>
+                        <div class="flex gap-2">
+                            <button type="button" 
+                                    onclick="previewCurrentPdf(INDEX)"
+                                    class="inline-flex items-center px-3 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                👁️ Preview PDF
+                            </button>
+                            <button type="button" 
+                                    onclick="deleteCurrentPdf(INDEX)"
+                                    class="inline-flex items-center px-3 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                🗑️ Hapus PDF
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -306,6 +337,24 @@ function addAssessment() {
         element.id = element.id.replace('INDEX', assessmentIndex);
     });
     
+    // Update onclick handlers with INDEX placeholders
+    const onclickElements = clone.querySelectorAll('[onclick*="INDEX"]');
+    onclickElements.forEach(element => {
+        const originalOnclick = element.getAttribute('onclick');
+        if (originalOnclick) {
+            element.setAttribute('onclick', originalOnclick.replace(/INDEX/g, assessmentIndex));
+        }
+    });
+    
+    // Update onchange handlers with INDEX placeholders
+    const onchangeElements = clone.querySelectorAll('[onchange*="INDEX"]');
+    onchangeElements.forEach(element => {
+        const originalOnchange = element.getAttribute('onchange');
+        if (originalOnchange) {
+            element.setAttribute('onchange', originalOnchange.replace(/INDEX/g, assessmentIndex));
+        }
+    });
+    
     // Update assessment number
     const numberSpan = clone.querySelector('.assessment-number');
     if (numberSpan) {
@@ -331,27 +380,23 @@ function addAssessment() {
     
     // Initialize Summernote for new assessment's instruction editor
     function initNewAssessmentSummernote() {
-        console.log('Initializing Summernote for new assessment...');
         const newInstructionEditor = clone.querySelector('.instruksi-editor');
         if (newInstructionEditor) {
-            console.log('Found instruction editor:', newInstructionEditor.id);
             // Force destroy any existing instance
             if (window.ckeditorInstances && window.ckeditorInstances[newInstructionEditor.id]) {
                 try {
                     $('#' + newInstructionEditor.id).summernote('destroy');
                     delete window.ckeditorInstances[newInstructionEditor.id];
                 } catch (e) {
-                    console.log('Error destroying existing instance:', e);
+                    // Silent fail
                 }
             }
             // Initialize new instance
             try {
                 window.initCKEditor(newInstructionEditor.id);
             } catch (e) {
-                console.log('Error initializing Summernote:', e);
+                // Silent fail
             }
-        } else {
-            console.log('Instruction editor not found');
         }
     }
     
@@ -360,7 +405,6 @@ function addAssessment() {
         if (window.$ && window.$.fn.summernote && window.initCKEditor) {
             callback();
         } else {
-            console.log('Waiting for dependencies for new assessment...');
             setTimeout(() => waitForDependenciesAndInit(callback), 100);
         }
     }
@@ -372,18 +416,15 @@ function addAssessment() {
     
     // Also add a global function to reinitialize all Summernote editors
     window.reinitializeAllSummernote = function() {
-        console.log('Reinitializing all Summernote editors...');
         // Reinitialize instruction editors
         document.querySelectorAll('.instruksi-editor').forEach(function(el) {
             if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
-                console.log('Initializing Summernote for instruction:', el.id);
                 window.initCKEditor(el.id);
             }
         });
         // Reinitialize catatan editor
         document.querySelectorAll('.catatan-editor').forEach(function(el) {
             if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
-                console.log('Initializing Summernote for catatan:', el.id);
                 window.initCKEditor(el.id);
             }
         });
@@ -431,25 +472,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.$ && window.$.fn.summernote && window.initCKEditor) {
             callback();
         } else {
-            console.log('Waiting for dependencies...');
             setTimeout(() => waitForDependencies(callback), 100);
         }
     }
     
     // Inisialisasi Summernote untuk instruksi dan catatan
     function initSummernote() {
-        console.log('initSummernote called');
         // Initialize instruction editors
         document.querySelectorAll('.instruksi-editor').forEach(function(el) {
             if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
-                console.log('Initializing Summernote for instruction:', el.id);
                 window.initCKEditor(el.id);
             }
         });
         // Initialize catatan editor
         document.querySelectorAll('.catatan-editor').forEach(function(el) {
             if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
-                console.log('Initializing Summernote for catatan:', el.id);
                 window.initCKEditor(el.id);
             }
         });
@@ -469,7 +506,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         instructionEditors.forEach(function(el) {
                             if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
-                                console.log('DOM change detected, initializing Summernote for instruction:', el.id);
                                 setTimeout(function() {
                                     window.initCKEditor(el.id);
                                 }, 100);
@@ -478,7 +514,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         catatanEditors.forEach(function(el) {
                             if (el.id && (!window.ckeditorInstances || !window.ckeditorInstances[el.id])) {
-                                console.log('DOM change detected, initializing Summernote for catatan:', el.id);
                                 setTimeout(function() {
                                     window.initCKEditor(el.id);
                                 }, 100);
@@ -567,7 +602,7 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
                 const content = window.ckeditorInstances[textarea.id].getData();
                 textarea.value = content;
             } catch (e) {
-                console.error('Error syncing memo editor:', textarea.id, e);
+                // Silent fail
             }
         }
     });
@@ -579,14 +614,14 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
                 const content = window.ckeditorInstances[textarea.id].getData();
                 textarea.value = content;
             } catch (e) {
-                console.error('Error syncing instruction editor:', textarea.id, e);
+                // Silent fail
             }
         }
     });
     
     if (!isValid) {
         e.preventDefault();
-        alert('Semua field wajib diisi untuk setiap assessment.');
+        alert(errorMessage || 'Semua field wajib diisi untuk setiap assessment.');
         return false;
     }
 });
@@ -605,19 +640,21 @@ function togglePdfUpload(selectElement) {
     const pdfSection = assessmentItem.querySelector('.pdf-upload-section');
     const memoSection = assessmentItem.querySelector('.memo-section');
     const intrayModelSection = assessmentItem.querySelector('.intray-model-section');
+    const kategoriStudiKasusSection = assessmentItem.querySelector('.kategori-studi-kasus-section');
     const selectedOption = selectElement.options[selectElement.selectedIndex];
     
     
-    // PDF upload tersedia untuk studi_kasus, roleplay, dan fgd
+    // PDF upload tersedia untuk studi_kasus, roleplay, fgd, dan in_tray
     if (selectedOption && (selectedOption.dataset.jenis === 'studi_kasus' || 
                           selectedOption.dataset.jenis === 'roleplay' || 
-                          selectedOption.dataset.jenis === 'fgd')) {
+                          selectedOption.dataset.jenis === 'fgd' ||
+                          selectedOption.dataset.jenis === 'in_tray')) {
         pdfSection.style.display = 'block';
         // Check if there's existing PDF
         checkExistingPdf(assessmentItem, selectedOption.value, selectedOption.dataset.file);
         
         // Update label berdasarkan jenis assessment
-        const pdfLabel = pdfSection.querySelector('label');
+        const pdfLabel = pdfSection.querySelector('.flex.items-center.mb-3 label');
         if (pdfLabel) {
             if (selectedOption.dataset.jenis === 'studi_kasus') {
                 pdfLabel.textContent = 'Upload PDF Studi Kasus';
@@ -625,6 +662,8 @@ function togglePdfUpload(selectElement) {
                 pdfLabel.textContent = 'Upload PDF Role-Play';
             } else if (selectedOption.dataset.jenis === 'fgd') {
                 pdfLabel.textContent = 'Upload PDF LGD/FGD';
+            } else if (selectedOption.dataset.jenis === 'in_tray') {
+                pdfLabel.textContent = 'Upload PDF In-Tray Exercise';
             }
         }
         
@@ -637,17 +676,55 @@ function togglePdfUpload(selectElement) {
                 pdfDescription.textContent = 'Upload file PDF untuk skenario dan instruksi role-play (max 10MB)';
             } else if (selectedOption.dataset.jenis === 'fgd') {
                 pdfDescription.textContent = 'Upload file PDF untuk topik dan panduan LGD/FGD (max 10MB)';
+            } else if (selectedOption.dataset.jenis === 'in_tray') {
+                pdfDescription.textContent = 'Upload file PDF untuk materi dan instruksi in-tray exercise (max 10MB)';
             }
         }
         
-        if (memoSection) memoSection.style.display = 'none';
-        if (intrayModelSection) intrayModelSection.style.display = 'none';
+        // Tampilkan kategori studi kasus section jika jenis adalah studi_kasus
+        // Untuk create, kategori tidak wajib (nullable)
+        if (selectedOption.dataset.jenis === 'studi_kasus' && kategoriStudiKasusSection) {
+            kategoriStudiKasusSection.style.display = 'block';
+            // Untuk create, kategori tidak wajib
+            const kategoriSelect = kategoriStudiKasusSection.querySelector('.kategori-studi-kasus-select');
+            const requiredIndicator = kategoriStudiKasusSection.querySelector('.kategori-required-indicator');
+            if (kategoriSelect) {
+                kategoriSelect.required = false;
+            }
+            if (requiredIndicator) {
+                requiredIndicator.style.display = 'none';
+            }
+        } else if (kategoriStudiKasusSection) {
+            kategoriStudiKasusSection.style.display = 'none';
+            // Hapus required
+            const kategoriSelect = kategoriStudiKasusSection.querySelector('.kategori-studi-kasus-select');
+            const requiredIndicator = kategoriStudiKasusSection.querySelector('.kategori-required-indicator');
+            if (kategoriSelect) {
+                kategoriSelect.required = false;
+            }
+            if (requiredIndicator) {
+                requiredIndicator.style.display = 'none';
+            }
+        }
+        
+        // Tampilkan section memo dan model in-tray jika jenis adalah in_tray
+        if (selectedOption.dataset.jenis === 'in_tray') {
+            if (memoSection) memoSection.style.display = 'block';
+            if (intrayModelSection) intrayModelSection.style.display = 'block';
+        } else {
+            if (memoSection) memoSection.style.display = 'none';
+            if (intrayModelSection) intrayModelSection.style.display = 'none';
+        }
     } else {
         pdfSection.style.display = 'none';
         // Clear PDF input when hiding
         const pdfInput = pdfSection.querySelector('input[type="file"]');
         if (pdfInput) {
             pdfInput.value = '';
+        }
+        // Hide kategori studi kasus section
+        if (kategoriStudiKasusSection) {
+            kategoriStudiKasusSection.style.display = 'none';
         }
     }
 
@@ -660,7 +737,6 @@ function togglePdfUpload(selectElement) {
             if (modelSelect && !modelSelect.value) {
                 // Set default value ke 'urutan'
                 modelSelect.value = 'urutan';
-                console.log('Setting model_in_tray default to urutan');
             }
         }
     } else {
@@ -672,8 +748,9 @@ function togglePdfUpload(selectElement) {
 
 // Function to check existing PDF for assessment
 function checkExistingPdf(assessmentItem, penilaianId, existingFile) {
-    const currentPdfDisplay = assessmentItem.querySelector('.current-pdf-display');
-    const currentPdfName = assessmentItem.querySelector('.current-pdf-name');
+    const pdfSection = assessmentItem.querySelector('.pdf-upload-section');
+    const currentPdfDisplay = pdfSection ? pdfSection.querySelector('.current-pdf-display') : assessmentItem.querySelector('.current-pdf-display');
+    const currentPdfName = currentPdfDisplay ? currentPdfDisplay.querySelector('.current-pdf-name') : null;
     if (existingFile && currentPdfDisplay && currentPdfName) {
         currentPdfDisplay.style.display = 'block';
         currentPdfName.textContent = existingFile.split('/').pop();
@@ -685,29 +762,66 @@ function checkExistingPdf(assessmentItem, penilaianId, existingFile) {
 // Function to handle PDF upload
 function handlePdfUpload(inputElement, index) {
     const file = inputElement.files[0];
-    const statusDiv = inputElement.parentElement.querySelector('.pdf-status');
+    const assessmentItem = inputElement.closest('.assessment-item');
+    if (!assessmentItem) return;
+    
+    const pdfSection = assessmentItem.querySelector('.pdf-upload-section');
+    const statusDiv = pdfSection ? pdfSection.querySelector('.pdf-status') : inputElement.parentElement.querySelector('.pdf-status');
+    const currentPdfDisplay = pdfSection ? pdfSection.querySelector('.current-pdf-display') : assessmentItem.querySelector('.current-pdf-display');
+    const currentPdfName = currentPdfDisplay ? currentPdfDisplay.querySelector('.current-pdf-name') : null;
     
     if (file) {
         // Validate file size (10MB)
         if (file.size > 10 * 1024 * 1024) {
-            statusDiv.textContent = 'Error: File terlalu besar (max 10MB)';
-            statusDiv.className = 'pdf-status text-sm text-red-600';
+            if (statusDiv) {
+                statusDiv.textContent = 'Error: File terlalu besar (max 10MB)';
+                statusDiv.className = 'pdf-status text-sm text-red-600';
+            }
             inputElement.value = '';
+            // Hide current PDF display if error
+            if (currentPdfDisplay) {
+                currentPdfDisplay.style.display = 'none';
+            }
             return;
         }
         
         // Validate file type
         if (file.type !== 'application/pdf') {
-            statusDiv.textContent = 'Error: Hanya file PDF yang diperbolehkan';
-            statusDiv.className = 'pdf-status text-sm text-red-600';
+            if (statusDiv) {
+                statusDiv.textContent = 'Error: Hanya file PDF yang diperbolehkan';
+                statusDiv.className = 'pdf-status text-sm text-red-600';
+            }
             inputElement.value = '';
+            // Hide current PDF display if error
+            if (currentPdfDisplay) {
+                currentPdfDisplay.style.display = 'none';
+            }
             return;
         }
         
-        statusDiv.textContent = `File dipilih: ${file.name}`;
-        statusDiv.className = 'pdf-status text-sm text-green-600';
+        // Tampilkan current PDF display dengan nama file yang dipilih
+        if (currentPdfDisplay && currentPdfName) {
+            currentPdfDisplay.style.display = 'block';
+            currentPdfName.textContent = file.name;
+            // Sembunyikan status text karena sudah ada section Current PDF Display
+            if (statusDiv) {
+                statusDiv.textContent = '';
+            }
+        } else {
+            // Fallback: tampilkan status text jika section tidak ditemukan
+            if (statusDiv) {
+                statusDiv.textContent = `File dipilih: ${file.name}`;
+                statusDiv.className = 'pdf-status text-sm text-green-600';
+            }
+        }
     } else {
-        statusDiv.textContent = '';
+        if (statusDiv) {
+            statusDiv.textContent = '';
+        }
+        // Hide current PDF display jika tidak ada file
+        if (currentPdfDisplay) {
+            currentPdfDisplay.style.display = 'none';
+        }
     }
 }
 
@@ -717,13 +831,11 @@ function previewCurrentPdf(index) {
                           document.querySelector(`[data-assessment-index="${index}"]`);
     
     if (!assessmentItem) {
-        console.error('Assessment item not found for index:', index);
         return;
     }
     
     const selectElement = assessmentItem.querySelector('select[name*="[penilaian_id]"]');
     if (!selectElement) {
-        console.error('Select element not found');
         return;
     }
     
@@ -741,7 +853,6 @@ function previewCurrentPdf(index) {
     const content = document.getElementById('pdfPreviewContent');
     
     if (!modal || !content) {
-        console.error('PDF preview modal elements not found');
         return;
     }
     
@@ -804,7 +915,6 @@ function previewCurrentPdf(index) {
             observer.observe(modal, { attributes: true });
         })
         .catch(function(error) {
-            console.error('Error fetching PDF:', error);
             content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal mengambil PDF</div>';
         });
 }
@@ -853,7 +963,6 @@ function deleteCurrentPdf(index) {
                               document.querySelector(`[data-assessment-index="${index}"]`);
         
         if (!assessmentItem) {
-            console.error('Assessment item not found for index:', index);
             return;
         }
         
@@ -910,24 +1019,22 @@ function addMemo(button) {
     container.appendChild(wrapper);
 
     function initMemoSummernote() {
-        console.log('initMemoSummernote called');
         const textarea = wrapper.querySelector('textarea');
         if (textarea && textarea.id) {
-            console.log('Initializing Summernote for memo:', textarea.id);
             // Force destroy any existing instance
             if (window.ckeditorInstances && window.ckeditorInstances[textarea.id]) {
                 try {
                     $('#' + textarea.id).summernote('destroy');
                     delete window.ckeditorInstances[textarea.id];
                 } catch (e) {
-                    console.log('Error destroying existing memo instance:', e);
+                    // Silent fail
                 }
             }
             // Initialize new instance
             try {
                 window.initCKEditor(textarea.id);
             } catch (e) {
-                console.log('Error initializing memo Summernote:', e);
+                // Silent fail
             }
         }
     }
@@ -937,7 +1044,6 @@ function addMemo(button) {
         if (window.$ && window.$.fn.summernote && window.initCKEditor) {
             callback();
         } else {
-            console.log('Waiting for dependencies for memo...');
             setTimeout(() => waitForDependenciesAndInitMemo(callback), 100);
         }
     }
@@ -956,7 +1062,7 @@ function addMemo(button) {
                     const content = window.ckeditorInstances[textarea.id].getData();
                     textarea.value = content;
                 } catch (e) {
-                    console.error('Error syncing memo on blur:', textarea.id, e);
+                    // Silent fail
                 }
             }
         });
@@ -968,7 +1074,7 @@ function addMemo(button) {
                     const content = window.ckeditorInstances[textarea.id].getData();
                     textarea.value = content;
                 } catch (e) {
-                    console.error('Error syncing memo on change:', textarea.id, e);
+                    // Silent fail
                 }
             }
         });
