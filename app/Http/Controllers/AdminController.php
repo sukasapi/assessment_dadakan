@@ -1339,8 +1339,8 @@ class AdminController extends Controller
                             })
                             ->first();
                         
-                        // Deteksi sistem berdasarkan sesi_id: sesi_id < 12 = sistem lama, >= 12 = sistem baru
-                        $useNewSystem = $sesiId >= 12;
+                        // Deteksi sistem berdasarkan sesi_id: sesi_id <= 12 = sistem lama, > 12 = sistem baru
+                        $useNewSystem = $sesiId > 12;
                         
                         // Deteksi sistem: jika penilaianExist ada dan kategori_studi_kasus_id NULL = sistem lama
                         $isOldSystem = false;
@@ -1447,8 +1447,8 @@ class AdminController extends Controller
                                 ->find($selectedKategoriId);
                             }
                             
-                            // Jika kategori belum dipilih di sesi, tampilkan warning
-                            if (!$selectedKategori) {
+                            // Jika kategori belum dipilih di sesi, tampilkan warning (hanya untuk sesi_id > 12)
+                            if (!$selectedKategori && $sesiId > 12) {
                                 $content .= '<div class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">';
                                 $content .= '<p class="text-sm text-red-800">⚠️ <strong>Kategori studi kasus belum dipilih untuk assessment ini di sesi penilaian.</strong> Silakan edit sesi dan pilih kategori (BQ/PQ) untuk assessment studi kasus ini terlebih dahulu.</p>';
                                 $content .= '</div>';
@@ -1636,8 +1636,8 @@ class AdminController extends Controller
         try {
             $sesiId = $request->sesi_penilaian_id;
             
-            // Deteksi sistem berdasarkan sesi_id: sesi_id < 12 = sistem lama, >= 12 = sistem baru
-            $useNewSystem = $sesiId >= 12;
+            // Deteksi sistem berdasarkan sesi_id: sesi_id <= 12 = sistem lama, > 12 = sistem baru
+            $useNewSystem = $sesiId > 12;
             
             $kategoriIdFromSesi = null;
             $sesiAssessment = null;
@@ -2333,8 +2333,8 @@ class AdminController extends Controller
             'assessments.*.memos.*.pertanyaan' => 'nullable|string'
         ];
         
-        // Cek apakah sesi_id >= 13 untuk menentukan apakah kategori_studi_kasus_id required
-        $useNewSystem = $id >= 13;
+        // Cek apakah sesi_id > 12 untuk menentukan apakah kategori_studi_kasus_id required
+        $useNewSystem = $id > 12;
         
         // Jika sesi_id >= 13, minta kategori_studi_kasus_id untuk jenis studi_kasus
         if ($useNewSystem) {
@@ -2380,7 +2380,7 @@ class AdminController extends Controller
 
             // Update atau create assessment baru
             foreach ($request->assessments as $index => $assessment) {
-                // Validasi: jika jenis assessment adalah studi_kasus DAN sesi_id >= 13, kategori_studi_kasus_id wajib dipilih
+                // Validasi: jika jenis assessment adalah studi_kasus DAN sesi_id > 12, kategori_studi_kasus_id wajib dipilih
                 $penilaian = Penilaian::find($assessment['penilaian_id']);
                 if ($penilaian && $penilaian->jenis === 'studi_kasus' && $useNewSystem) {
                     if (empty($assessment['kategori_studi_kasus_id'])) {

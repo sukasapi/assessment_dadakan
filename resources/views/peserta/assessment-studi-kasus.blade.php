@@ -141,7 +141,12 @@
                 </div>
 
                 <!-- Info Penilaian & Tombol Lihat Penilaian -->
-                @if(isset($penilaian) && $penilaian && $penilaian->status === 'final')
+                @php
+                    // Cek apakah ada penilaian (baik draft maupun final)
+                    $hasPenilaian = isset($penilaian) && $penilaian;
+                    $penilaianStatus = $hasPenilaian ? $penilaian->status : null;
+                @endphp
+                @if($hasPenilaian)
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                         <div class="flex items-center justify-between">
                             <div>
@@ -149,7 +154,7 @@
                                     ✓ Jawaban Anda sudah dinilai oleh admin
                                 </p>
                                 <p class="text-xs text-blue-600 mt-1">
-                                    Status: Final
+                                    Status: {{ ucfirst($penilaianStatus ?? 'Final') }}
                                 </p>
                             </div>
                             <button 

@@ -640,18 +640,21 @@ class PesertaController extends Controller
                 ->orderBy('urutan')
                 ->get();
 
-            // Cek apakah jawaban sudah dinilai oleh admin dengan status final
+            // Cek apakah jawaban sudah dinilai oleh admin (baik draft maupun final)
+            // Prioritaskan yang status 'final', jika tidak ada ambil yang 'draft'
             $penilaian = PenilaianStudiKasus::where('peserta_id', $pesertaId)
                 ->where('penilaian_id', $id)
                 ->where('sesi_penilaian_id', $cekSesiId)
-                ->where('status', 'final')
+                ->orderByRaw("CASE WHEN status = 'final' THEN 0 ELSE 1 END") // Prioritaskan 'final'
+                ->orderByDesc('created_at') // Ambil yang terbaru
                 ->first();
 
             Log::info('Successfully returning view', [
                 'view' => 'peserta.assessment-studi-kasus',
                 'peserta_id' => $pesertaId,
                 'assessment_id' => $id,
-                'has_penilaian_final' => $penilaian ? true : false
+                'has_penilaian' => $penilaian ? true : false,
+                'penilaian_status' => $penilaian ? $penilaian->status : null
             ]);
 
             return view('peserta.assessment-studi-kasus', compact('peserta', 'assessment', 'existingJawaban', 'sesiAssessment', 'items', 'penilaian', 'jawabanStatus', 'statusKemajuan'));
