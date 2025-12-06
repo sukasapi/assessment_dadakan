@@ -113,10 +113,10 @@ class Penilaian extends Model
     public function getJenisTextAttribute(): string
     {
         return match($this->jenis) {
-            'studi_kasus' => 'Studi Kasus',
+            'studi_kasus' => $this->nama, // Untuk studi kasus, tampilkan nama lengkap (misalnya "Studi Kasus BQ" atau "Studi Kasus PQ")
             'in_tray' => 'In-Tray Exercise',
             'roleplay' => 'Role-Play',
-            'fgd' => 'LGD',
+            'fgd' => $this->nama, // Untuk FGD, tampilkan nama lengkap (misalnya "FGD - Strategi Digitalisasi")
             default => 'Unknown'
         };
     }
@@ -178,5 +178,56 @@ class Penilaian extends Model
     public function isInTrayOrderModel()
     {
         return $this->jenis === 'in_tray' && $this->model_in_tray === self::MODEL_URUTAN;
+    }
+
+    /**
+     * Get kategori studi kasus berdasarkan nama penilaian
+     * Method ini digunakan untuk detect kategori (BQ/PQ) dari nama penilaian
+     * 
+     * @return KategoriStudiKasus|null
+     */
+    public function getKategoriStudiKasus()
+    {
+        // Hanya untuk jenis studi_kasus
+        if ($this->jenis !== 'studi_kasus') {
+            return null;
+        }
+
+        // Cek apakah nama mengandung "BQ" atau "PQ"
+        $nama = strtoupper($this->nama);
+        
+        if (strpos($nama, 'BQ') !== false) {
+            return KategoriStudiKasus::where('kode', 'BQ')->first();
+        } elseif (strpos($nama, 'PQ') !== false) {
+            return KategoriStudiKasus::where('kode', 'PQ')->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if this penilaian is Studi Kasus BQ
+     * 
+     * @return bool
+     */
+    public function isStudiKasusBQ(): bool
+    {
+        if ($this->jenis !== 'studi_kasus') {
+            return false;
+        }
+        return strpos(strtoupper($this->nama), 'BQ') !== false;
+    }
+
+    /**
+     * Check if this penilaian is Studi Kasus PQ
+     * 
+     * @return bool
+     */
+    public function isStudiKasusPQ(): bool
+    {
+        if ($this->jenis !== 'studi_kasus') {
+            return false;
+        }
+        return strpos(strtoupper($this->nama), 'PQ') !== false;
     }
 }

@@ -1431,26 +1431,27 @@ class AdminController extends Controller
                             $content .= '</div>';
                         } else {
                             // FORM SISTEM BARU (hanya untuk sesi_id >= 12)
-                            // Ambil kategori dari sesi_assessment (sudah dipilih saat edit sesi)
-                            $sesiAssessment = SesiAssessment::where('sesi_penilaian_id', $sesiId)
-                                ->where('penilaian_id', $penilaianId)
-                                ->first();
-                            
-                            $selectedKategoriId = null;
+                            // Untuk sistem baru, kategori dideteksi dari penilaian_id menggunakan method getKategoriStudiKasus()
                             $selectedKategori = null;
+                            $selectedKategoriId = null;
                             
-                            if ($sesiAssessment && $sesiAssessment->kategori_studi_kasus_id) {
-                                $selectedKategoriId = $sesiAssessment->kategori_studi_kasus_id;
-                                $selectedKategori = KategoriStudiKasus::with(['aspekPenilaian' => function($query) {
-                                    $query->where('aktif', true)->orderBy('urutan');
-                                }, 'aspekPenilaian.levelPenilaian'])
-                                ->find($selectedKategoriId);
+                            // Deteksi kategori dari penilaian_id (untuk sistem baru)
+                            if ($penilaian && $penilaian->jenis === 'studi_kasus') {
+                                $selectedKategori = $penilaian->getKategoriStudiKasus();
+                                if ($selectedKategori) {
+                                    $selectedKategoriId = $selectedKategori->id;
+                                    // Load aspek penilaian dan level penilaian
+                                    $selectedKategori = KategoriStudiKasus::with(['aspekPenilaian' => function($query) {
+                                        $query->where('aktif', true)->orderBy('urutan');
+                                    }, 'aspekPenilaian.levelPenilaian'])
+                                    ->find($selectedKategoriId);
+                                }
                             }
                             
-                            // Jika kategori belum dipilih di sesi, tampilkan warning (hanya untuk sesi_id > 12)
+                            // Jika kategori tidak ditemukan, tampilkan warning (hanya untuk sesi_id > 12)
                             if (!$selectedKategori && $sesiId > 12) {
                                 $content .= '<div class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">';
-                                $content .= '<p class="text-sm text-red-800">⚠️ <strong>Kategori studi kasus belum dipilih untuk assessment ini di sesi penilaian.</strong> Silakan edit sesi dan pilih kategori (BQ/PQ) untuk assessment studi kasus ini terlebih dahulu.</p>';
+                                $content .= '<p class="text-sm text-red-800">⚠️ <strong>Kategori studi kasus tidak dapat dideteksi untuk assessment ini.</strong> Pastikan penilaian adalah "Studi Kasus BQ" atau "Studi Kasus PQ".</p>';
                                 $content .= '</div>';
                             } else {
                                 // Tampilkan kategori yang sudah dipilih (read-only)
@@ -1639,23 +1640,27 @@ class AdminController extends Controller
             // Deteksi sistem berdasarkan sesi_id: sesi_id <= 12 = sistem lama, > 12 = sistem baru
             $useNewSystem = $sesiId > 12;
             
-            $kategoriIdFromSesi = null;
-            $sesiAssessment = null;
+            $kategoriIdFromPenilaian = null;
             
             if ($useNewSystem) {
-                // SISTEM BARU: Ambil kategori dari sesi_assessment (sudah dipilih saat edit sesi)
-                $sesiAssessment = SesiAssessment::where('sesi_penilaian_id', $request->sesi_penilaian_id)
-                    ->where('penilaian_id', $request->penilaian_id)
-                    ->first();
-                
-                if (!$sesiAssessment || !$sesiAssessment->kategori_studi_kasus_id) {
+                // SISTEM BARU: Ambil kategori dari penilaian_id menggunakan helper method
+                $penilaian = Penilaian::find($request->penilaian_id);
+                if (!$penilaian) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Kategori studi kasus belum dipilih untuk assessment ini di sesi penilaian. Silakan edit sesi dan pilih kategori (BQ/PQ) terlebih dahulu.'
+                        'message' => 'Penilaian tidak ditemukan'
+                    ], 404);
+                }
+                
+                $kategori = $penilaian->getKategoriStudiKasus();
+                if (!$kategori) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Kategori studi kasus tidak dapat dideteksi dari penilaian. Pastikan penilaian adalah Studi Kasus BQ atau Studi Kasus PQ.'
                     ], 400);
                 }
                 
-                $kategoriIdFromSesi = $sesiAssessment->kategori_studi_kasus_id;
+                $kategoriIdFromPenilaian = $kategori->id;
             }
             
             // Deteksi sistem: jika sesi_id < 12 = sistem lama, jika >= 12 = sistem baru
@@ -1746,19 +1751,14 @@ class AdminController extends Controller
                     );
                 } else {
                     // SISTEM BARU: Simpan ke kategori + detail penilaian (hanya untuk sesi_id >= 12)
-                    // Gunakan kategori dari sesi_assessment (bukan dari request)
-                    if (!$kategoriIdFromSesi) {
-                        throw new \Exception('Kategori studi kasus belum dipilih untuk sesi ini');
+                    // Gunakan kategori dari penilaian_id (detect dari nama penilaian)
+                    if (!$kategoriIdFromPenilaian) {
+                        throw new \Exception('Kategori studi kasus tidak dapat dideteksi dari penilaian');
                     }
                     
-                    $kategori = KategoriStudiKasus::find($kategoriIdFromSesi);
+                    $kategori = KategoriStudiKasus::find($kategoriIdFromPenilaian);
                     if (!$kategori) {
                         throw new \Exception('Kategori studi kasus tidak ditemukan');
-                    }
-                    
-                    // Validasi: kategori dari request harus sama dengan kategori dari sesi_assessment
-                    if ($request->has('kategori_studi_kasus_id') && $request->kategori_studi_kasus_id != $kategoriIdFromSesi) {
-                        throw new \Exception('Kategori yang dipilih tidak sesuai dengan kategori yang ditetapkan di sesi penilaian');
                     }
 
                     $aspekPenilaian = AspekPenilaianStudiKasus::where('kategori_studi_kasus_id', $kategori->id)
@@ -1782,7 +1782,7 @@ class AdminController extends Controller
                             'penilaian_id' => $request->penilaian_id,
                             'sesi_penilaian_id' => $request->sesi_penilaian_id,
                             'user_id' => $userId,
-                            'kategori_studi_kasus_id' => $kategoriIdFromSesi,
+                            'kategori_studi_kasus_id' => $kategoriIdFromPenilaian,
                             'pertanyaan_1' => null, // Pastikan NULL untuk sistem baru
                             'pertanyaan_2' => null,
                             'pertanyaan_3' => null,
@@ -2059,18 +2059,31 @@ class AdminController extends Controller
      */
     public function sesiCreate()
     {
+        // Untuk sesi baru, cek id terakhir untuk menentukan apakah akan menggunakan sistem baru
+        // Jika id terakhir >= 12, maka sesi baru yang dibuat akan memiliki id > 12
+        $lastSesi = SesiPenilaian::orderBy('id', 'desc')->first();
+        $lastSesiId = $lastSesi ? $lastSesi->id : 0;
+        $useNewSystem = $lastSesiId >= 12;
+        
+        // Tampilkan semua penilaian yang aktif, dengan deduplikasi berdasarkan nama
+        // Jika ada beberapa penilaian dengan nama yang sama, hanya tampilkan satu saja
         $assessmentTypes = Penilaian::select('id', 'nama', 'jenis')
-            ->whereIn('jenis', ['studi_kasus', 'in_tray', 'roleplay', 'fgd'])
+            ->where('aktif', true)
             ->orderBy('jenis')
             ->orderBy('nama')
-            ->get();
-
-        // Ambil data kategori studi kasus untuk dropdown
-        $kategoriStudiKasus = KategoriStudiKasus::where('aktif', true)
-            ->orderBy('kode')
-            ->get();
+            ->get()
+            ->unique('nama')
+            ->values();
         
-        return view('admin.sesi.create', compact('assessmentTypes', 'kategoriStudiKasus'));
+        // Log untuk debugging
+        Log::info('Sesi Create - Assessment Types Filter', [
+            'last_sesi_id' => $lastSesiId,
+            'use_new_system' => $useNewSystem,
+            'assessment_types_count' => $assessmentTypes->count(),
+            'assessment_types' => $assessmentTypes->pluck('nama', 'id')->toArray()
+        ]);
+        
+        return view('admin.sesi.create', compact('assessmentTypes', 'useNewSystem'));
     }
 
     /**
@@ -2117,13 +2130,17 @@ class AdminController extends Controller
 
             // Simpan assessment yang dipilih
             foreach ($request->assessments as $index => $assessment) {
+                // Pastikan penilaian_id ada sebelum mengaksesnya
+                if (!isset($assessment['penilaian_id']) || empty($assessment['penilaian_id'])) {
+                    continue; // Skip assessment yang tidak memiliki penilaian_id
+                }
+                
                 $sesiAssessment = SesiAssessment::create([
                     'sesi_penilaian_id' => $sesi->id,
                     'penilaian_id' => $assessment['penilaian_id'],
                     'urutan' => $assessment['urutan'],
                     'durasi_default' => $assessment['durasi_default'] ?? null,
                     'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
-                    'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                     'aktif' => true
                 ]);
 
@@ -2232,12 +2249,29 @@ class AdminController extends Controller
     {
         $sesi = SesiPenilaian::with('assessments.penilaian')->findOrFail($id);
 
-        // Sertakan file_pdf agar bisa ditampilkan pada opsi studi_kasus
+        // Deteksi sistem baru/lama berdasarkan sesi_id
+        $useNewSystem = $id > 12;
+        
+        // Tampilkan semua penilaian yang aktif, dengan deduplikasi berdasarkan nama
+        // Jika ada beberapa penilaian dengan nama yang sama, hanya tampilkan satu saja
         $assessmentTypes = Penilaian::select('id', 'nama', 'jenis', 'file_pdf')
-            ->whereIn('jenis', ['studi_kasus', 'in_tray', 'roleplay', 'fgd'])
+            ->where('aktif', true)
             ->orderBy('jenis')
             ->orderBy('nama')
-            ->get();
+            ->get()
+            ->unique('nama')
+            ->values();
+        
+        // Log untuk debugging - detail semua assessment
+        Log::info('Sesi Edit - Assessment Types Filter', [
+            'sesi_id' => $id,
+            'use_new_system' => $useNewSystem,
+            'assessment_types_count' => $assessmentTypes->count(),
+            'assessment_types_detail' => $assessmentTypes->map(function($a) {
+                return ['id' => $a->id, 'nama' => $a->nama, 'jenis' => $a->jenis];
+            })->toArray(),
+            'allowed_types' => $useNewSystem ? ['studi_kasus', 'fgd', 'in_tray', 'roleplay'] : ['studi_kasus', 'in_tray', 'roleplay', 'fgd']
+        ]);
 
         // Log query untuk mengambil data sesi dan assessments
         Log::info('Database Query - SELECT sesi_penilaian with assessments', [
@@ -2297,11 +2331,7 @@ class AdminController extends Controller
         ]);
 
         // Ambil data kategori studi kasus untuk dropdown
-        $kategoriStudiKasus = KategoriStudiKasus::where('aktif', true)
-            ->orderBy('kode')
-            ->get();
-
-        return view('admin.sesi.edit', compact('sesi', 'assessmentTypes', 'existingAssessments', 'kategoriStudiKasus'));
+        return view('admin.sesi.edit', compact('sesi', 'assessmentTypes', 'existingAssessments'));
     }
 
     /**
@@ -2313,7 +2343,41 @@ class AdminController extends Controller
         Log::info('Sesi Update Request', [
             'sesi_id' => $id,
             'all_request_data' => $request->all(),
-            'assessments_data' => $request->input('assessments', [])
+            'assessments_data' => $request->input('assessments', []),
+            'assessments_count' => count($request->input('assessments', []))
+        ]);
+        
+        // Log detail setiap assessment yang diterima
+        foreach ($request->input('assessments', []) as $idx => $assessment) {
+            Log::info('Assessment Request Detail', [
+                'index' => $idx,
+                'penilaian_id' => $assessment['penilaian_id'] ?? 'MISSING',
+                'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? 'NULL',
+                'urutan' => $assessment['urutan'] ?? 'MISSING',
+                'full_data' => $assessment
+            ]);
+        }
+        
+        // Filter assessments untuk hanya yang memiliki penilaian_id
+        $validAssessments = [];
+        if ($request->has('assessments') && is_array($request->assessments)) {
+            foreach ($request->assessments as $index => $assessment) {
+                if (isset($assessment['penilaian_id']) && !empty($assessment['penilaian_id'])) {
+                    $validAssessments[$index] = $assessment;
+                } else {
+                    // Log assessment yang tidak valid
+                    Log::warning('Assessment skipped - missing penilaian_id', [
+                        'index' => $index,
+                        'assessment_data' => $assessment,
+                        'has_kategori_studi_kasus_id' => isset($assessment['kategori_studi_kasus_id']) && !empty($assessment['kategori_studi_kasus_id'])
+                    ]);
+                }
+            }
+        }
+        
+        Log::info('Valid Assessments After Filter', [
+            'valid_count' => count($validAssessments),
+            'valid_assessments' => $validAssessments
         ]);
         
         // Validasi dasar
@@ -2322,28 +2386,19 @@ class AdminController extends Controller
             'durasi_menit' => 'nullable|integer|min:1',
             'catatan' => 'nullable|string',
             'assessments' => 'required|array|min:1',
-            'assessments.*.penilaian_id' => 'required|exists:penilaian,id',
-            'assessments.*.urutan' => 'required|integer|min:1',
-            'assessments.*.durasi_default' => 'nullable|integer|min:1',
-            'assessments.*.instruksi_khusus' => 'nullable|string',
-            'assessments.*.model_in_tray' => 'nullable|in:urutan,prioritas',
-            'assessments.*.kategori_studi_kasus_id' => 'nullable|exists:kategori_studi_kasus,id',
-            'assessments.*.memos' => 'nullable|array',
-            'assessments.*.memos.*.konten_memo' => 'nullable|string',
-            'assessments.*.memos.*.pertanyaan' => 'nullable|string'
         ];
         
-        // Cek apakah sesi_id > 12 untuk menentukan apakah kategori_studi_kasus_id required
-        $useNewSystem = $id > 12;
-        
-        // Jika sesi_id >= 13, minta kategori_studi_kasus_id untuk jenis studi_kasus
-        if ($useNewSystem) {
-            foreach ($request->assessments as $index => $assessment) {
-                $penilaian = Penilaian::find($assessment['penilaian_id']);
-                if ($penilaian && $penilaian->jenis === 'studi_kasus') {
-                    $rules["assessments.$index.kategori_studi_kasus_id"] = 'required|exists:kategori_studi_kasus,id';
-                }
-            }
+        // Hanya validasi assessment yang memiliki penilaian_id
+        foreach ($validAssessments as $index => $assessment) {
+            $rules["assessments.$index.penilaian_id"] = 'required|exists:penilaian,id';
+            $rules["assessments.$index.urutan"] = 'required|integer|min:1';
+            $rules["assessments.$index.durasi_default"] = 'nullable|integer|min:1';
+            $rules["assessments.$index.instruksi_khusus"] = 'nullable|string';
+            $rules["assessments.$index.model_in_tray"] = 'nullable|in:urutan,prioritas';
+            $rules["assessments.$index.kategori_studi_kasus_id"] = 'nullable|exists:kategori_studi_kasus,id';
+            $rules["assessments.$index.memos"] = 'nullable|array';
+            $rules["assessments.$index.memos.*.konten_memo"] = 'nullable|string';
+            $rules["assessments.$index.memos.*.pertanyaan"] = 'nullable|string';
         }
         
         $request->validate($rules);
@@ -2361,38 +2416,73 @@ class AdminController extends Controller
                 'catatan' => $request->catatan
             ]);
 
-            // Ambil semua penilaian_id yang ada dalam request
-            $requestPenilaianIds = collect($request->assessments)->pluck('penilaian_id')->toArray();
+            // Ambil semua penilaian_id yang ada dalam validAssessments
+            $requestPenilaianIds = array_column($validAssessments, 'penilaian_id');
+            
+            Log::info('Request Penilaian IDs', [
+                'penilaian_ids' => $requestPenilaianIds,
+                'count' => count($requestPenilaianIds)
+            ]);
             
             // Soft delete assessment yang tidak ada dalam request
-            $existingAssessments = SesiAssessment::where('sesi_penilaian_id', $sesi->id)
-                ->whereNotIn('penilaian_id', $requestPenilaianIds)
+            // Sekarang hanya berdasarkan penilaian_id saja (tidak lagi menggunakan kategori_studi_kasus_id)
+            $allExistingAssessments = SesiAssessment::where('sesi_penilaian_id', $sesi->id)
+                ->whereNull('deleted_at')
                 ->get();
+            
+            Log::info('All Existing Assessments', [
+                'count' => $allExistingAssessments->count(),
+                'assessments' => $allExistingAssessments->map(function($a) {
+                    return [
+                        'id' => $a->id,
+                        'penilaian_id' => $a->penilaian_id
+                    ];
+                })->toArray()
+            ]);
+            
+            $assessmentsToDelete = $allExistingAssessments->filter(function($existing) use ($requestPenilaianIds) {
+                // Cek apakah existing assessment ada di requestPenilaianIds
+                return !in_array($existing->penilaian_id, $requestPenilaianIds);
+            });
+            
+            Log::info('Assessments to Delete', [
+                'count' => $assessmentsToDelete->count(),
+                'assessments' => $assessmentsToDelete->map(function($a) {
+                    return [
+                        'id' => $a->id,
+                        'penilaian_id' => $a->penilaian_id
+                    ];
+                })->toArray()
+            ]);
                 
-            foreach ($existingAssessments as $assessmentToDelete) {
+            foreach ($assessmentsToDelete as $assessmentToDelete) {
                 Log::info('Database Query - SOFT DELETE sesi_assessment (not in request)', [
                     'query' => "UPDATE sesi_assessment SET deleted_at = NOW() WHERE id = {$assessmentToDelete->id}",
                     'sesi_assessment_id' => $assessmentToDelete->id,
-                    'penilaian_id' => $assessmentToDelete->penilaian_id
+                    'penilaian_id' => $assessmentToDelete->penilaian_id,
+                    'kategori_studi_kasus_id' => $assessmentToDelete->kategori_studi_kasus_id
                 ]);
                 $assessmentToDelete->delete();
             }
 
             // Update atau create assessment baru
-            foreach ($request->assessments as $index => $assessment) {
-                // Validasi: jika jenis assessment adalah studi_kasus DAN sesi_id > 12, kategori_studi_kasus_id wajib dipilih
-                $penilaian = Penilaian::find($assessment['penilaian_id']);
-                if ($penilaian && $penilaian->jenis === 'studi_kasus' && $useNewSystem) {
-                    if (empty($assessment['kategori_studi_kasus_id'])) {
-                        throw new \Exception("Kategori studi kasus (BQ/PQ) wajib dipilih untuk assessment studi kasus pada urutan ke-" . ($index + 1));
-                    }
-                }
+            // Hanya proses assessment yang valid (memiliki penilaian_id)
+            foreach ($validAssessments as $index => $assessment) {
                 
                 // Cek apakah assessment sudah ada untuk sesi ini (termasuk yang soft deleted)
+                // Sekarang hanya berdasarkan penilaian_id saja (tidak lagi menggunakan kategori_studi_kasus_id)
+                $penilaian = Penilaian::find($assessment['penilaian_id']);
                 $existingAssessment = SesiAssessment::withTrashed()
                     ->where('sesi_penilaian_id', $sesi->id)
                     ->where('penilaian_id', $assessment['penilaian_id'])
                     ->first();
+                
+                // Log untuk debugging
+                Log::info('Mencari existing assessment', [
+                    'penilaian_id' => $assessment['penilaian_id'],
+                    'jenis' => $penilaian ? $penilaian->jenis : null,
+                    'found' => $existingAssessment ? $existingAssessment->id : null
+                ]);
                 
                 if ($existingAssessment) {
                     if ($existingAssessment->trashed()) {
@@ -2409,7 +2499,6 @@ class AdminController extends Controller
                             'urutan' => $assessment['urutan'],
                             'durasi_default' => $assessment['durasi_default'] ?? null,
                             'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
-                            'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                         ]);
                     } else {
                         // Update assessment yang sudah ada
@@ -2424,7 +2513,6 @@ class AdminController extends Controller
                             'urutan' => $assessment['urutan'],
                             'durasi_default' => $assessment['durasi_default'] ?? null,
                             'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
-                            'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                         ]);
                     }
                     
@@ -2444,14 +2532,13 @@ class AdminController extends Controller
                         'urutan' => $assessment['urutan'],
                         'durasi_default' => $assessment['durasi_default'] ?? null,
                         'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
-                        'kategori_studi_kasus_id' => $assessment['kategori_studi_kasus_id'] ?? null,
                         'aktif' => true
                     ]);
                 }
 
                 // Update model_in_tray di tabel sesi_assessment (bukan penilaian)
                 try {
-                    $penilaian = Penilaian::find($assessment['penilaian_id']);
+                    // $penilaian sudah didefinisikan di atas sebelum log statement
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
                         // Update model_in_tray di tabel sesi_assessment
                         $modelInTrayValue = $assessment['model_in_tray'] ?? 'urutan';
