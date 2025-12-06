@@ -38,7 +38,7 @@
     @endif
 
     <!-- Form -->
-    <form action="{{ route('admin.sesi.update', $sesi->id) }}" method="POST" id="sessionForm" enctype="multipart/form-data">
+    <form action="{{ route('admin.sesi.update', $sesi->id) }}" method="POST" id="sessionForm" enctype="multipart/form-data" novalidate>
         @csrf
         @method('PUT')
         
@@ -112,8 +112,9 @@
 
                 <div class="mt-4">
                     <button type="button" 
+                            id="addAssessmentBtn"
                             onclick="addAssessment()"
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
@@ -166,9 +167,16 @@
                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         required>
                     <option value="">Pilih Assessment</option>
-                                            @foreach($assessmentTypes as $assessment)
-                            <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}" data-file="{{ $assessment->file_pdf ?? '' }}" data-url="{{ $assessment->file_pdf ? Storage::url($assessment->file_pdf) : '' }}">{{ $assessment->nama }}</option>
-                        @endforeach
+                    @php
+                        // Pastikan hanya jenis yang diizinkan yang ditampilkan
+                        $allowedTypes = ($sesi->id > 12) ? ['studi_kasus', 'fgd', 'in_tray', 'roleplay'] : ['studi_kasus', 'in_tray', 'roleplay', 'fgd'];
+                        $filteredAssessments = $assessmentTypes->filter(function($assessment) use ($allowedTypes) {
+                            return in_array($assessment->jenis, $allowedTypes);
+                        });
+                    @endphp
+                    @foreach($filteredAssessments as $assessment)
+                        <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}" data-file="{{ $assessment->file_pdf ?? '' }}" data-url="{{ $assessment->file_pdf ? Storage::url($assessment->file_pdf) : '' }}">{{ $assessment->nama }}</option>
+                    @endforeach
                 </select>
             </div>
 
@@ -182,22 +190,6 @@
                 </select>
             </div>
 
-            <!-- Kategori Studi Kasus (hanya muncul jika jenis assessment adalah studi_kasus) -->
-            <div class="kategori-studi-kasus-section" style="display: none;">
-                <label class="block text-sm font-medium text-gray-700">
-                    Kategori Studi Kasus 
-                    <span class="kategori-required-indicator">*</span>
-                </label>
-                <select name="assessments[INDEX][kategori_studi_kasus_id]" 
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 kategori-studi-kasus-select">
-                    <option value="">Pilih Kategori</option>
-                    @if(isset($kategoriStudiKasus))
-                        @foreach($kategoriStudiKasus as $kategori)
-                            <option value="{{ $kategori->id }}">Studi Kasus - {{ $kategori->kode }}</option>
-                        @endforeach
-                    @endif
-                </select>
-            </div>
 
             <!-- Order -->
             <div>
@@ -404,33 +396,7 @@ function addAssessment(data = null) {
                 // Tampilkan section kategori studi kasus jika jenis adalah studi_kasus DAN sesi_id >= 13
                 const sesiId = {{ $sesi->id }};
                 const useNewSystem = sesiId >= 13;
-                const kategoriSection = clone.querySelector('.kategori-studi-kasus-section');
-                if (selectedOption.dataset.jenis === 'studi_kasus' && useNewSystem && kategoriSection) {
-                    kategoriSection.style.display = 'block';
-                    // Set required untuk sesi_id >= 13
-                    const kategoriSelect = kategoriSection.querySelector('.kategori-studi-kasus-select');
-                    const requiredIndicator = kategoriSection.querySelector('.kategori-required-indicator');
-                    if (kategoriSelect) {
-                        kategoriSelect.required = true;
-                        // Set kategori jika ada data
-                        if (data && data.kategori_studi_kasus_id) {
-                            kategoriSelect.value = data.kategori_studi_kasus_id;
-                        }
-                    }
-                    if (requiredIndicator) {
-                        requiredIndicator.style.display = 'inline';
-                    }
-                } else if (kategoriSection) {
-                    // Hapus required untuk sesi_id < 13 atau bukan studi_kasus
-                    const kategoriSelect = kategoriSection.querySelector('.kategori-studi-kasus-select');
-                    const requiredIndicator = kategoriSection.querySelector('.kategori-required-indicator');
-                    if (kategoriSelect) {
-                        kategoriSelect.required = false;
-                    }
-                    if (requiredIndicator) {
-                        requiredIndicator.style.display = 'none';
-                    }
-                }
+                // Note: kategori_studi_kasus_id sudah dihapus, tidak perlu set kategori section lagi
             }
 
         // Tampilkan dan prefille memo jika jenis adalah in_tray
@@ -531,6 +497,7 @@ function addAssessment(data = null) {
     
     // Update available options after adding new assessment
     updateAvailableOptions();
+    checkAndUpdateAddButton();
     
     // Trigger togglePdfUpload untuk menampilkan section yang sesuai (termasuk kategori studi kasus)
     // Lakukan setelah clone ditambahkan ke DOM
@@ -544,31 +511,7 @@ function addAssessment(data = null) {
                 // Trigger togglePdfUpload untuk menampilkan section yang sesuai
                 togglePdfUpload(penilaianSelect);
                 
-                // Set kategori setelah togglePdfUpload dipanggil dan section sudah ditampilkan
-                if (data.kategori_studi_kasus_id) {
-                    // Gunakan multiple setTimeout untuk memastikan DOM sudah siap
-                    setTimeout(function() {
-                        const kategoriSelect = assessmentItem.querySelector('select[name*="[kategori_studi_kasus_id]"]');
-                        if (kategoriSelect) {
-                            // Pastikan option dengan value tersebut ada (gunakan == untuk loose comparison)
-                            const kategoriIdStr = String(data.kategori_studi_kasus_id);
-                            const optionExists = Array.from(kategoriSelect.options).some(opt => String(opt.value) === kategoriIdStr);
-                            
-                            if (optionExists) {
-                                kategoriSelect.value = kategoriIdStr;
-                                // Force trigger change event
-                                kategoriSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                                
-                                // Double check setelah 200ms
-                                setTimeout(function() {
-                                    if (String(kategoriSelect.value) !== kategoriIdStr) {
-                                        kategoriSelect.value = kategoriIdStr;
-                                    }
-                                }, 200);
-                            }
-                        }
-                    }, 200);
-                }
+                // Note: kategori_studi_kasus_id sudah dihapus, tidak perlu set kategori lagi
             }
         }, 300);
     }
@@ -625,6 +568,8 @@ function removeAssessment(button) {
     
     assessmentItem.remove();
     updateOrderNumbers();
+    updateAvailableOptions();
+    checkAndUpdateAddButton();
 }
 
 function updateOrderNumbers() {
@@ -707,28 +652,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update available options after loading existing assessments
     updateAvailableOptions();
+    checkAndUpdateAddButton();
     
-    // Set required untuk kategori studi kasus berdasarkan sesi_id
-    // Tunggu sedikit agar semua assessment sudah dimuat
-    setTimeout(function() {
-        const sesiId = {{ $sesi->id }};
-        const useNewSystem = sesiId >= 13;
-        document.querySelectorAll('.kategori-studi-kasus-select').forEach(function(select) {
-            const section = select.closest('.kategori-studi-kasus-section');
-            const requiredIndicator = section ? section.querySelector('.kategori-required-indicator') : null;
-            if (useNewSystem) {
-                select.required = true;
-                if (requiredIndicator) {
-                    requiredIndicator.style.display = 'inline';
-                }
-            } else {
-                select.required = false;
-                if (requiredIndicator) {
-                    requiredIndicator.style.display = 'none';
-                }
-            }
-        });
-    }, 500);
+    // Note: kategori_studi_kasus_id sudah dihapus, tidak perlu set required lagi
 
     // Wait for jQuery and Summernote to be fully loaded
     function waitForDependencies(callback) {
@@ -884,7 +810,7 @@ function updateAvailableOptions() {
     const selectedValues = [];
     const selects = document.querySelectorAll('select[name*="[penilaian_id]"]');
     
-    // Collect all selected values
+    // Collect all selected penilaian_id values
     selects.forEach(select => {
         if (select.value) {
             selectedValues.push(select.value);
@@ -893,27 +819,116 @@ function updateAvailableOptions() {
     
     // Update each select to disable/enable options
     selects.forEach(select => {
+        const currentValue = select.value;
         const options = select.querySelectorAll('option');
+        
         options.forEach(option => {
             if (option.value === '') {
                 // Keep placeholder option enabled
                 option.disabled = false;
-            } else if (selectedValues.includes(option.value) && select.value !== option.value) {
-                // Disable if selected elsewhere
-                option.disabled = true;
             } else {
-                // Enable if not selected elsewhere
-                option.disabled = false;
+                // Cek apakah option ini sudah dipilih di select lain
+                const isSelectedElsewhere = selectedValues.includes(option.value) && currentValue !== option.value;
+                
+                if (isSelectedElsewhere) {
+                    // Sudah dipilih di tempat lain, disable
+                    option.disabled = true;
+                } else {
+                    // Belum dipilih di tempat lain, enable
+                    option.disabled = false;
+                }
             }
         });
     });
 }
 
+// Function to check if all assessments are selected and disable add button
+function checkAndUpdateAddButton() {
+    const sesiId = {{ $sesi->id }};
+    const useNewSystem = sesiId > 12;
+    const addButton = document.getElementById('addAssessmentBtn');
+    
+    if (!addButton) return;
+    
+    const assessments = document.querySelectorAll('.assessment-item');
+    const assessmentCount = assessments.length;
+    
+    if (useNewSystem) {
+        // Untuk sesi_id > 12: maksimum 5 assessment
+        // 2 studi kasus (BQ dan PQ) + 1 fgd + 1 in_tray + 1 roleplay
+        const maxAssessments = 5;
+        
+        // Hitung jenis assessment yang sudah dipilih berdasarkan penilaian_id
+        const selectedCounts = {
+            studi_kasus_bq: 0,
+            studi_kasus_pq: 0,
+            fgd: 0,
+            in_tray: 0,
+            roleplay: 0
+        };
+        
+        assessments.forEach(assessment => {
+            const select = assessment.querySelector('select[name*="[penilaian_id]"]');
+            if (select && select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                const jenis = selectedOption ? selectedOption.dataset.jenis : '';
+                const nama = selectedOption ? selectedOption.textContent.toUpperCase() : '';
+                
+                // Deteksi BQ atau PQ dari nama penilaian
+                if (jenis === 'studi_kasus') {
+                    if (nama.includes('BQ')) {
+                        selectedCounts.studi_kasus_bq++;
+                    } else if (nama.includes('PQ')) {
+                        selectedCounts.studi_kasus_pq++;
+                    }
+                } else if (jenis === 'fgd') {
+                    selectedCounts.fgd++;
+                } else if (jenis === 'in_tray') {
+                    selectedCounts.in_tray++;
+                } else if (jenis === 'roleplay') {
+                    selectedCounts.roleplay++;
+                }
+            }
+        });
+        
+        // Cek apakah sudah mencapai maksimum
+        // Untuk new system: max 1 BQ, 1 PQ, 1 FGD, 1 In-Tray, 1 Role-Play (total 5)
+        const isMaxReached = 
+            selectedCounts.studi_kasus_bq >= 1 &&
+            selectedCounts.studi_kasus_pq >= 1 &&
+            selectedCounts.fgd >= 1 &&
+            selectedCounts.in_tray >= 1 &&
+            selectedCounts.roleplay >= 1;
+        
+        if (isMaxReached) {
+            addButton.disabled = true;
+            addButton.title = 'Semua assessment sudah dipilih (maksimum: 1 Studi Kasus BQ, 1 Studi Kasus PQ, 1 FGD, 1 In-Tray, 1 Role-Play)';
+        } else {
+            addButton.disabled = false;
+            addButton.title = '';
+        }
+    } else {
+        // Untuk sesi_id <= 12, tidak ada batasan khusus
+        // Tapi tetap perlu minimal 1 assessment
+        if (assessmentCount >= 10) { // Batasan umum untuk mencegah terlalu banyak
+            addButton.disabled = true;
+            addButton.title = 'Maksimum assessment telah tercapai';
+        } else {
+            addButton.disabled = false;
+            addButton.title = '';
+        }
+    }
+}
+
 // Form validation
 document.getElementById('sessionForm').addEventListener('submit', function(e) {
+    // PENTING: Prevent default dulu untuk mencegah browser validasi sebelum kita hapus required
+    e.preventDefault();
+    
+    // Note: kategori_studi_kasus_id sudah dihapus, tidak perlu validasi lagi
+    
     const assessments = document.querySelectorAll('.assessment-item');
     if (assessments.length === 0) {
-        e.preventDefault();
         alert('Minimal harus ada satu assessment yang dipilih.');
         return false;
     }
@@ -921,25 +936,16 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
     // Check if all required fields are filled
     let isValid = true;
     let errorMessage = '';
+    const studiKasusData = []; // Untuk tracking studi kasus dengan kategori
+    
     assessments.forEach((assessment, index) => {
-        const penilaianId = assessment.querySelector('select[name*="[penilaian_id]"]').value;
+        const penilaianSelect = assessment.querySelector('select[name*="[penilaian_id]"]');
         const urutan = assessment.querySelector('input[name*="[urutan]"]').value;
-        const selectedOption = penilaianId ? assessment.querySelector('select[name*="[penilaian_id]"]').options[assessment.querySelector('select[name*="[penilaian_id]"]').selectedIndex] : null;
         
+        const penilaianId = penilaianSelect ? penilaianSelect.value : '';
         if (!penilaianId || !urutan) {
             isValid = false;
             errorMessage = 'Semua field wajib diisi untuk setiap assessment.';
-        }
-        
-        // Validasi: jika jenis assessment adalah studi_kasus DAN sesi_id > 12, kategori_studi_kasus_id wajib dipilih
-        const sesiId = {{ $sesi->id }};
-        const useNewSystem = sesiId > 12;
-        if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus' && useNewSystem) {
-            const kategoriSelect = assessment.querySelector('select[name*="[kategori_studi_kasus_id]"]');
-            if (kategoriSelect && !kategoriSelect.value) {
-                isValid = false;
-                errorMessage = 'Kategori studi kasus (BQ/PQ) wajib dipilih untuk assessment studi kasus pada urutan ke-' + (index + 1) + '.';
-            }
         }
     });
     
@@ -967,40 +973,40 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
         }
     });
     
-    // Hapus atribut required dari select kategori_studi_kasus_id yang tersembunyi
-    // untuk mencegah error "invalid form control is not focusable"
-    document.querySelectorAll('.kategori-studi-kasus-select').forEach(function(select) {
-        const section = select.closest('.kategori-studi-kasus-section');
-        if (section && (section.style.display === 'none' || window.getComputedStyle(section).display === 'none')) {
-            select.removeAttribute('required');
-        } else {
-            // Pastikan required ada jika section terlihat dan jenis assessment adalah studi_kasus
-            const assessmentItem = select.closest('.assessment-item');
-            if (assessmentItem) {
-                const penilaianSelect = assessmentItem.querySelector('select[name*="[penilaian_id]"]');
-                if (penilaianSelect) {
-                    const selectedOption = penilaianSelect.options[penilaianSelect.selectedIndex];
-                    const sesiId = {{ $sesi->id }};
-                    const useNewSystem = sesiId >= 13;
-                    if (selectedOption && selectedOption.dataset.jenis === 'studi_kasus' && useNewSystem) {
-                        select.setAttribute('required', 'required');
-                    }
-                }
+    if (!isValid) {
+        alert(errorMessage || 'Semua field wajib diisi untuk setiap assessment.');
+        return false;
+    }
+    
+    // Jika valid, pastikan semua field penilaian_id terkirim
+    // Field yang di-disable tidak terkirim, jadi kita perlu enable dulu
+    assessments.forEach((assessment, index) => {
+        const penilaianSelect = assessment.querySelector('select[name*="[penilaian_id]"]');
+        
+        if (penilaianSelect) {
+            // Pastikan select tidak di-disable
+            penilaianSelect.disabled = false;
+            penilaianSelect.removeAttribute('disabled');
+            
+            // Jika value masih kosong, skip assessment ini dengan menghapus dari form
+            if (!penilaianSelect.value || penilaianSelect.value === '') {
+                console.warn('Assessment', index, 'has no penilaian_id after processing, removing from form');
+                assessment.remove();
             }
         }
     });
     
-    if (!isValid) {
-        e.preventDefault();
-        alert(errorMessage || 'Semua field wajib diisi untuk setiap assessment.');
-        return false;
-    }
+    // Jika valid, submit form secara programmatic
+    // Tidak perlu set required kembali karena form sudah menggunakan novalidate
+    // Submit form
+    this.submit();
 });
 
 // Add event listeners for select changes
 document.addEventListener('change', function(e) {
     if (e.target.name && e.target.name.includes('[penilaian_id]')) {
         updateAvailableOptions();
+        checkAndUpdateAddButton();
         togglePdfUpload(e.target);
         
         // Pastikan model_in_tray diupdate saat assessment berubah
@@ -1016,6 +1022,7 @@ document.addEventListener('change', function(e) {
             }
         }
     }
+    
     
     // Update status tampilan file saat memilih file
     if (e.target.type === 'file' && e.target.name && e.target.name.includes('[file_pdf]')) {
@@ -1082,7 +1089,6 @@ function togglePdfUpload(selectElement) {
     const pdfSection = assessmentItem.querySelector('.pdf-upload-section');
     const memoSection = assessmentItem.querySelector('.memo-section');
     const intrayModelSection = assessmentItem.querySelector('.intray-model-section');
-    const kategoriStudiKasusSection = assessmentItem.querySelector('.kategori-studi-kasus-section');
     const selectedOption = selectElement.options[selectElement.selectedIndex];
     
     
@@ -1123,33 +1129,6 @@ function togglePdfUpload(selectElement) {
             }
         }
         
-        // Tampilkan kategori studi kasus section jika jenis adalah studi_kasus DAN sesi_id >= 13
-        const sesiId = {{ $sesi->id }};
-        const useNewSystem = sesiId >= 13;
-        if (selectedOption.dataset.jenis === 'studi_kasus' && kategoriStudiKasusSection && useNewSystem) {
-            kategoriStudiKasusSection.style.display = 'block';
-            // Set required untuk sesi_id >= 13
-            const kategoriSelect = kategoriStudiKasusSection.querySelector('.kategori-studi-kasus-select');
-            const requiredIndicator = kategoriStudiKasusSection.querySelector('.kategori-required-indicator');
-            if (kategoriSelect) {
-                kategoriSelect.required = true;
-            }
-            if (requiredIndicator) {
-                requiredIndicator.style.display = 'inline';
-            }
-        } else if (kategoriStudiKasusSection) {
-            kategoriStudiKasusSection.style.display = 'none';
-            // Hapus required untuk sesi_id < 13
-            const kategoriSelect = kategoriStudiKasusSection.querySelector('.kategori-studi-kasus-select');
-            const requiredIndicator = kategoriStudiKasusSection.querySelector('.kategori-required-indicator');
-            if (kategoriSelect) {
-                kategoriSelect.required = false;
-            }
-            if (requiredIndicator) {
-                requiredIndicator.style.display = 'none';
-            }
-        }
-        
         // Tampilkan section memo dan model in-tray jika jenis adalah in_tray
         if (selectedOption.dataset.jenis === 'in_tray') {
             if (memoSection) memoSection.style.display = 'block';
@@ -1164,10 +1143,6 @@ function togglePdfUpload(selectElement) {
         const pdfInput = pdfSection.querySelector('input[type="file"]');
         if (pdfInput) {
             pdfInput.value = '';
-        }
-        // Hide kategori studi kasus section
-        if (kategoriStudiKasusSection) {
-            kategoriStudiKasusSection.style.display = 'none';
         }
         // Hide memo and intray model sections
         if (memoSection) memoSection.style.display = 'none';

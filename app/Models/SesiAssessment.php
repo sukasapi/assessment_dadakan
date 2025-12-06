@@ -21,7 +21,7 @@ class SesiAssessment extends Model
     protected $fillable = [
         'sesi_penilaian_id',
         'penilaian_id',
-        'kategori_studi_kasus_id',
+        'kategori_studi_kasus_id', // DEPRECATED: Hanya untuk backward compatibility dengan data lama (sesi_id <= 12). Untuk sistem baru (sesi_id > 12), kategori dideteksi dari penilaian_id menggunakan method getKategoriStudiKasus() pada model Penilaian.
         'urutan',
         'aktif',
         'durasi_default',
@@ -54,6 +54,10 @@ class SesiAssessment extends Model
 
     /**
      * Get the kategori studi kasus
+     * 
+     * NOTE: Untuk sistem baru (sesi_id > 12), kategori_studi_kasus_id tidak lagi digunakan.
+     * Kategori dideteksi dari penilaian_id menggunakan method getKategoriStudiKasus() pada model Penilaian.
+     * Relationship ini tetap ada untuk backward compatibility dengan data lama.
      */
     public function kategoriStudiKasus(): BelongsTo
     {

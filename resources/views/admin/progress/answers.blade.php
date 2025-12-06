@@ -295,7 +295,9 @@
                                     </td>
                                     <td class="px-4 py-2">
                                         @php
-                                            $jenisDisplay = ucfirst(str_replace('_', ' ', $penilaian->jenis));
+                                            // Gunakan jenis_text untuk menampilkan nama lengkap (misalnya "Studi Kasus BQ", "Studi Kasus PQ", "LGD")
+                                            $jenisDisplay = $penilaian->jenis_text;
+                                            // Untuk in_tray, tambahkan model (urutan/prioritas)
                                             if ($penilaian->jenis === 'in_tray') {
                                                 $model = $penilaian->model_in_tray ?? 'urutan';
                                                 $jenisDisplay .= ' (' . ($model === 'prioritas' ? 'Prioritas' : 'Urutan') . ')';
@@ -316,9 +318,15 @@
                                                 <div class="text-gray-900 text-sm">{!! $jawaban !!}</div>
                                                 @if($penilaian->jenis === 'studi_kasus' && isset($jawabanStatus))
                                                     @if($jawabanStatus === 'final')
-                                                        <span class="inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
-                                                            ✓ Final - Bisa Dinilai
-                                                        </span>
+                                                        @if(isset($sudahDinilai) && $sudahDinilai)
+                                                            <span class="inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
+                                                                ✓ Final - Telah Dinilai
+                                                            </span>
+                                                        @else
+                                                            <span class="inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
+                                                                ✓ Final - Bisa Dinilai
+                                                            </span>
+                                                        @endif
                                                     @else
                                                         <span class="inline-block px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded">
                                                             ⏳ Draft - Belum Final
@@ -984,12 +992,14 @@ document.addEventListener('DOMContentLoaded', function(){
             const sesiId = sesiPenilaianIdInput ? parseInt(sesiPenilaianIdInput.value) : 0;
             const useNewSystem = sesiId > 12;
             
+            // Definisikan kategoriId di scope yang lebih luas agar bisa digunakan di semua blok
+            let kategoriId = null;
+            
             // Validasi: pastikan kategori dipilih (hanya untuk sesi_id > 12)
             if (useNewSystem) {
                 const kategoriSelect = form.querySelector('select[name="kategori_studi_kasus_id"]');
                 const kategoriHiddenInput = form.querySelector('input[type="hidden"][name="kategori_studi_kasus_id"]');
                 
-                let kategoriId = null;
                 if (kategoriSelect && kategoriSelect.value) {
                     kategoriId = kategoriSelect.value;
                 } else if (kategoriHiddenInput && kategoriHiddenInput.value) {
@@ -1003,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', function(){
             }
             
             // Validasi: pastikan semua aspek penilaian untuk kategori yang dipilih sudah dijawab (hanya untuk sesi_id > 12)
-            if (useNewSystem) {
+            if (useNewSystem && kategoriId) {
                 const kategoriForm = form.querySelector('.kategori-form[data-kategori-id="' + kategoriId + '"]');
                 if (!kategoriForm) {
                     alert('Form aspek penilaian untuk kategori yang dipilih tidak ditemukan!');
@@ -1113,14 +1123,16 @@ document.addEventListener('DOMContentLoaded', function(){
             },
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                // Show success message
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'mt-4 p-3 bg-green-100 text-green-800 rounded-md text-sm';
-                messageDiv.textContent = data.message;
-                form.appendChild(messageDiv);
+                // Show success notification
+                showNotification(data.message || 'Penilaian berhasil disimpan!', 'success');
                 
                 // Jika status adalah 'final', refresh halaman untuk update status "Belum Dinilai" / "Sudah Dinilai"
                 if (status === 'final') {
@@ -1134,15 +1146,13 @@ document.addEventListener('DOMContentLoaded', function(){
                         }
                     }
                     
-                    // Refresh halaman setelah 1 detik untuk update status
+                    // Refresh halaman setelah 1.5 detik untuk update status
                     setTimeout(() => {
                         window.location.reload();
-                    }, 1000);
+                    }, 1500);
                 } else {
-                    // Untuk status draft, hanya reload modal content
+                    // Untuk status draft, hanya reload modal content setelah 1.5 detik
                     setTimeout(() => {
-                        messageDiv.remove();
-                        
                         // Destroy Summernote instance sebelum reload
                         const catatanEditor = form.querySelector('.catatan-penilaian-editor');
                         if (catatanEditor && catatanEditor.id && window.$ && window.$.fn.summernote) {
@@ -1161,14 +1171,16 @@ document.addEventListener('DOMContentLoaded', function(){
                         if (viewDetailBtn) {
                             viewDetailBtn.click();
                         }
-                    }, 1000);
+                    }, 1500);
                 }
             } else {
-                alert('Error: ' + (data.message || 'Gagal menyimpan penilaian'));
+                // Show error notification
+                showNotification(data.message || 'Gagal menyimpan penilaian. Silakan coba lagi.', 'error');
             }
         })
         .catch(error => {
-            alert('Terjadi kesalahan saat menyimpan penilaian. Silakan coba lagi.');
+            console.error('Error:', error);
+            showNotification('Terjadi kesalahan saat menyimpan penilaian. Silakan coba lagi.', 'error');
         })
         .finally(() => {
             // Re-enable buttons
@@ -1192,6 +1204,46 @@ document.addEventListener('DOMContentLoaded', function(){
             currentUrl.searchParams.set('page', '1'); // Reset to first page
             window.location.href = currentUrl.toString();
         });
+    }
+    
+    // Toast Notification function
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl transform transition-all duration-300 ease-in-out ${
+            type === 'success' 
+                ? 'bg-green-500 text-white border-l-4 border-green-600' 
+                : 'bg-red-500 text-white border-l-4 border-red-600'
+        }`;
+        notification.style.transform = 'translateX(400px)';
+        notification.style.opacity = '0';
+        
+        // Add icon based on type
+        const icon = type === 'success' 
+            ? '<svg class="w-5 h-5 mr-3 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>'
+            : '<svg class="w-5 h-5 mr-3 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+        
+        notification.innerHTML = icon + message;
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+            notification.style.opacity = '1';
+        }, 100);
+        
+        // Remove after 4 seconds with animation
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 4000);
     }
 });
 </script>

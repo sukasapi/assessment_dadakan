@@ -117,7 +117,7 @@
                                 
                                                                  <!-- Jenis Assessment -->
                                  <div class="flex flex-wrap gap-2">
-                                     @foreach($sesi->assessments->take(4) as $assessment)
+                                     @foreach($sesi->assessments as $assessment)
                                          @php
                                              $statusKemajuan = $progressMap[$assessment->penilaian->id . '_' . $sesi->id] ?? null;
                                              $isSedangBerlangsung = $statusKemajuan === 'sedang_berlangsung';
