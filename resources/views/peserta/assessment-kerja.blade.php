@@ -264,6 +264,7 @@
                                 <button type="button" id="saveInTrayFinal" class="px-4 py-2 bg-green-600 text-white rounded-md">Simpan Final</button>
                                 @if(($intrayModel ?? 'urutan') === 'prioritas')
                                     <a href="{{ route('peserta.intray-matrix.show', ['sesi' => $effectiveSesiId]) }}" 
+                                       id="lihatMatriksBtn"
                                        class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -398,6 +399,9 @@
         </div>
     </div>
 </div>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
 .ck-editor__editable[role="textbox"] { min-height: 12rem; }
@@ -609,6 +613,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize completion status for all memo cards
     initializeMemoCompletionStatus();
+    
+    // Initialize button states based on disposisi completion
+    updateButtonStates();
 
     // URL simpan In-Tray
     const IN_TRAY_SAVE_URL = "{{ route('penilaian.in-tray.save', $assessment->id) }}";
@@ -683,10 +690,171 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Function to check if all memos have disposisi
+    function checkAllMemosHaveDisposisi() {
+        const container = document.getElementById('inTrayBoard');
+        if (!container) return { allComplete: true, incompleteMemos: [] };
+        
+        const cards = Array.from(container.querySelectorAll('.memo-card'));
+        const incompleteMemos = [];
+        
+        cards.forEach((card) => {
+            const disposisiValue = card.querySelector('.memo-disposisi')?.value?.trim() || '';
+            const memoId = card.getAttribute('data-id');
+            
+            if (!disposisiValue) {
+                // Get memo number from badge (format: "Memo M-{id}")
+                // The badge has classes: inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-blue-100 text-blue-800 border border-blue-200
+                const memoBadge = card.querySelector('span.inline-flex.items-center.px-2');
+                let memoNumber = `M-${memoId}`;
+                if (memoBadge) {
+                    const badgeText = memoBadge.textContent.trim();
+                    // Extract "M-{id}" from "Memo M-{id}"
+                    const match = badgeText.match(/M-\d+/);
+                    if (match) {
+                        memoNumber = match[0];
+                    } else {
+                        // Fallback: use memoId directly
+                        memoNumber = `M-${memoId}`;
+                    }
+                }
+                
+                incompleteMemos.push({
+                    id: memoId,
+                    number: memoNumber
+                });
+            }
+        });
+        
+        return {
+            allComplete: incompleteMemos.length === 0,
+            incompleteMemos: incompleteMemos
+        };
+    }
+    
+    // Function to update button states based on disposisi completion
+    function updateButtonStates() {
+        const intrayModel = '{{ $intrayModel ?? "urutan" }}';
+        
+        // Only check for prioritas model
+        if (intrayModel !== 'prioritas') {
+            return;
+        }
+        
+        const checkResult = checkAllMemosHaveDisposisi();
+        const saveFinalBtn = document.getElementById('saveInTrayFinal');
+        const lihatMatriksBtn = document.getElementById('lihatMatriksBtn');
+        
+        if (checkResult.allComplete) {
+            // Enable buttons
+            if (saveFinalBtn) {
+                saveFinalBtn.disabled = false;
+                saveFinalBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            if (lihatMatriksBtn) {
+                lihatMatriksBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+            }
+        } else {
+            // Disable buttons
+            if (saveFinalBtn) {
+                saveFinalBtn.disabled = true;
+                saveFinalBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (lihatMatriksBtn) {
+                lihatMatriksBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+            }
+        }
+    }
+    
+    // Function to show alert for incomplete memos
+    function showIncompleteDisposisiAlert(incompleteMemos) {
+        const memoNumbers = incompleteMemos.map(m => m.number).join(', ');
+        const memoList = incompleteMemos.map(m => `• ${m.number}`).join('<br>');
+        
+        Swal.fire({
+            icon: 'warning',
+            title: 'Memo Belum Lengkap',
+            html: `<div style="text-align: left;">
+                <p style="margin-bottom: 15px; font-weight: 600;">Memo berikut belum mempunyai disposisi dan harus dilengkapi:</p>
+                <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    ${memoList}
+                </div>
+                <p style="color: #6b7280; font-size: 14px;">Silakan lengkapi disposisi untuk semua memo sebelum dapat menyimpan final atau melihat matriks.</p>
+            </div>`,
+            confirmButtonText: 'Mengerti',
+            confirmButtonColor: '#3b82f6',
+            width: '600px',
+            customClass: {
+                popup: 'swal2-popup-custom',
+                title: 'swal2-title-custom',
+                htmlContainer: 'swal2-html-container-custom'
+            }
+        });
+    }
+    
     const btnDraft = document.getElementById('saveInTrayDraft');
     if (btnDraft) btnDraft.addEventListener('click', () => submitInTray('draft'));
     const btnFinal = document.getElementById('saveInTrayFinal');
-    if (btnFinal) btnFinal.addEventListener('click', () => submitInTray('final'));
+    if (btnFinal) {
+        btnFinal.addEventListener('click', () => {
+            const intrayModel = '{{ $intrayModel ?? "urutan" }}';
+            
+            // Only validate for prioritas model
+            if (intrayModel === 'prioritas') {
+                const checkResult = checkAllMemosHaveDisposisi();
+                if (!checkResult.allComplete) {
+                    showIncompleteDisposisiAlert(checkResult.incompleteMemos);
+                    return;
+                }
+            }
+            
+            submitInTray('final');
+        });
+    }
+    
+    // Add click handler for Lihat Matriks button
+    const lihatMatriksBtn = document.getElementById('lihatMatriksBtn');
+    if (lihatMatriksBtn) {
+        lihatMatriksBtn.addEventListener('click', (e) => {
+            const intrayModel = '{{ $intrayModel ?? "urutan" }}';
+            
+            // Only validate for prioritas model
+            if (intrayModel === 'prioritas') {
+                const checkResult = checkAllMemosHaveDisposisi();
+                if (!checkResult.allComplete) {
+                    e.preventDefault();
+                    showIncompleteDisposisiAlert(checkResult.incompleteMemos);
+                    return false;
+                }
+            }
+        });
+    }
+    
+    // Update button states whenever disposisi changes
+    const container = document.getElementById('inTrayBoard');
+    if (container) {
+        // Use MutationObserver to watch for changes in memo cards
+        const observer = new MutationObserver(() => {
+            updateButtonStates();
+        });
+        
+        observer.observe(container, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'data-completion-status']
+        });
+        
+        // Also listen for input changes in disposisi fields
+        container.addEventListener('input', (e) => {
+            if (e.target.classList.contains('memo-disposisi') || 
+                e.target.id === 'memoModalDisposisi') {
+                setTimeout(() => {
+                    updateButtonStates();
+                }, 100);
+            }
+        });
+    }
 
     // Inisialisasi CKEditor 5 Classic basic untuk studi kasus (hanya jika elemen tersedia)
     const jawabanEl = document.getElementById('jawaban');
@@ -916,6 +1084,10 @@ function openMemoModal(html, card) {
             // Update completion status when modal is closed
             if (currentMemoCard) {
                 updateMemoCompletionStatus(currentMemoCard);
+                // Update button states after modal is closed
+                setTimeout(() => {
+                    updateButtonStates();
+                }, 100);
             }
         });
 
@@ -934,6 +1106,11 @@ function openMemoModal(html, card) {
                 
                 // Update completion status
                 updateMemoCompletionStatus(currentMemoCard);
+                
+                // Update button states after disposisi changes
+                setTimeout(() => {
+                    updateButtonStates();
+                }, 100);
             }
             
             if (evt.target && evt.target.id === 'memoModalPriority') {
@@ -966,6 +1143,11 @@ function openMemoModal(html, card) {
                 
                 // Update completion status
                 updateMemoCompletionStatus(currentMemoCard);
+                
+                // Update button states after priority changes
+                setTimeout(() => {
+                    updateButtonStates();
+                }, 100);
             }
             
         });
