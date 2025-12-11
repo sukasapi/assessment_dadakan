@@ -648,6 +648,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Auto-save function (silent, no popup) - make it globally accessible
+    window.autoSaveInTray = async function() {
+        try {
+            const jawaban = collectInTrayAnswers();
+            if (!jawaban.length) {
+                return;
+            }
+            await fetch(IN_TRAY_SAVE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ 
+                    jawaban, 
+                    status: 'draft', 
+                    sesi_penilaian_id: SESI_PENILAIAN_ID
+                })
+            });
+        } catch (err) {
+            // Silent fail for auto-save
+            console.error('Auto-save error:', err);
+        }
+    };
+
     async function submitInTray(status) {
         const saveDraftBtn = document.getElementById('saveInTrayDraft');
         const saveFinalBtn = document.getElementById('saveInTrayFinal');
@@ -1079,12 +1106,64 @@ function openMemoModal(html, card) {
         document.body.appendChild(modal);
 
         // Close handler
-        document.getElementById('memoModalClose').addEventListener('click', () => {
-            modal.classList.add('hidden');
-            // Update completion status when modal is closed
+        document.getElementById('memoModalClose').addEventListener('click', async () => {
+            // Save data automatically before closing
             if (currentMemoCard) {
+                // Ensure all data is synced to hidden inputs
+                const disposisiEl = document.getElementById('memoModalDisposisi');
+                const priorityEl = document.getElementById('memoModalPriority');
+                
+                if (disposisiEl) {
+                    const hiddenDisposisi = currentMemoCard.querySelector('.memo-disposisi');
+                    if (hiddenDisposisi) {
+                        hiddenDisposisi.value = disposisiEl.value || '';
+                    }
+                    const textValue = currentMemoCard.querySelector('.memo-disposisi-text-value');
+                    if (textValue) {
+                        const v = (disposisiEl.value || '').trim();
+                        textValue.textContent = v.length ? v : 'belum dimasukkan';
+                    }
+                }
+                
+                if (priorityEl) {
+                    const prioritySelect = currentMemoCard.querySelector('.memo-priority-select');
+                    if (prioritySelect) {
+                        prioritySelect.value = priorityEl.value || '';
+                    }
+                    const priorityTextValue = currentMemoCard.querySelector('.memo-priority-text-value');
+                    if (priorityTextValue && priorityEl.value) {
+                        let priorityLabel = 'belum dipilih';
+                        switch(priorityEl.value) {
+                            case 'mendesak_penting':
+                                priorityLabel = 'Mendesak - Penting';
+                                break;
+                            case 'mendesak_tidak_penting':
+                                priorityLabel = 'Mendesak - Tidak Penting';
+                                break;
+                            case 'tidak_mendesak_penting':
+                                priorityLabel = 'Tidak Mendesak - Penting';
+                                break;
+                            case 'tidak_mendesak_tidak_penting':
+                                priorityLabel = 'Tidak Mendesak - Tidak Penting';
+                                break;
+                        }
+                        priorityTextValue.textContent = priorityLabel;
+                    }
+                }
+                
+                // Update completion status
                 updateMemoCompletionStatus(currentMemoCard);
-                // Update button states after modal is closed
+                
+                // Auto-save to backend (silent, no popup)
+                if (window.autoSaveInTray) {
+                    await window.autoSaveInTray();
+                }
+            }
+            
+            modal.classList.add('hidden');
+            
+            // Update button states after modal is closed
+            if (currentMemoCard) {
                 setTimeout(() => {
                     updateButtonStates();
                 }, 100);
