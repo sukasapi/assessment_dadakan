@@ -182,6 +182,73 @@ class PenilaianController extends Controller
         ]);
     }
 
+    /**
+     * Update disposisi for a specific memo in in-tray assessment
+     */
+    public function updateDisposisiInTray(Request $request, $penilaianId)
+    {
+        $pesertaId = session('peserta_id');
+        if (!$pesertaId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'latihan_in_tray_id' => 'required|exists:latihan_in_tray,id',
+            'disposisi' => 'nullable|string',
+            'sesi_penilaian_id' => 'required|integer|exists:sesi_penilaian,id'
+        ]);
+
+        $penilaian = Penilaian::findOrFail($penilaianId);
+        if (!$penilaian->isActive()) {
+            return response()->json(['error' => 'Penilaian tidak aktif'], 400);
+        }
+
+        $sesiPenilaianId = $request->sesi_penilaian_id;
+        $latihanInTrayId = $request->latihan_in_tray_id;
+
+        // Find or create the answer record
+        $jawabanInTray = JawabanInTray::where('peserta_id', $pesertaId)
+            ->where('penilaian_id', $penilaianId)
+            ->where('sesi_penilaian_id', $sesiPenilaianId)
+            ->where('latihan_in_tray_id', $latihanInTrayId)
+            ->first();
+
+        if ($jawabanInTray) {
+            // Update existing answer
+            $jawabanInTray->disposisi = $request->disposisi ?? '';
+            $jawabanInTray->waktu_simpan = now();
+            $jawabanInTray->save();
+        } else {
+            // Create new answer if it doesn't exist
+            // Get the urutan_prioritas from existing answers or set to 1
+            $maxUrutan = JawabanInTray::where('peserta_id', $pesertaId)
+                ->where('penilaian_id', $penilaianId)
+                ->where('sesi_penilaian_id', $sesiPenilaianId)
+                ->max('urutan_prioritas');
+            
+            $jawabanInTray = JawabanInTray::create([
+                'peserta_id' => $pesertaId,
+                'penilaian_id' => $penilaianId,
+                'sesi_penilaian_id' => $sesiPenilaianId,
+                'latihan_in_tray_id' => $latihanInTrayId,
+                'urutan_prioritas' => ($maxUrutan ?? 0) + 1,
+                'disposisi' => $request->disposisi ?? '',
+                'status' => 'draft',
+                'waktu_simpan' => now(),
+                'model_assessment' => 'prioritas'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Disposisi berhasil disimpan',
+            'data' => [
+                'id' => $jawabanInTray->id,
+                'disposisi' => $jawabanInTray->disposisi
+            ]
+        ]);
+    }
+
     public function saveCatatanRoleplay(Request $request, $penilaianId)
     {
         $pesertaId = session('peserta_id');
