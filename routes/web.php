@@ -214,5 +214,6 @@ Route::get('/simple-test/{id}', function($id) {
 // Routes untuk menyimpan jawaban/catatan
 Route::post('/penilaian/studi-kasus/{penilaianId}/save', [PenilaianController::class, 'saveJawabanStudiKasus'])->name('penilaian.studi-kasus.save');
 Route::post('/penilaian/in-tray/{penilaianId}/save', [PenilaianController::class, 'saveJawabanInTray'])->name('penilaian.in-tray.save');
+Route::post('/penilaian/in-tray/{penilaianId}/update-disposisi', [PenilaianController::class, 'updateDisposisiInTray'])->name('penilaian.in-tray.update-disposisi');
 Route::post('/penilaian/roleplay/{penilaianId}/save', [PenilaianController::class, 'saveCatatanRoleplay'])->name('penilaian.roleplay.save');
 Route::post('/penilaian/fgd/{penilaianId}/save', [PenilaianController::class, 'saveCatatanFgd'])->name('penilaian.fgd.save');

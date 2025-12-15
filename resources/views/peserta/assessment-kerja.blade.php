@@ -161,21 +161,14 @@
                                         </div>
                                         
                                         <!-- Hidden inputs for data storage -->
-                                        <input type="hidden" class="memo-disposisi" value="{{ optional($inTrayAnswers->get($memo->id))->disposisi }}">
                                         <input type="hidden" class="memo-priority-select" value="{{ optional($inTrayAnswers->get($memo->id))->prioritasMemo->kategori_prioritas ?? '' }}">
                                         <input type="hidden" class="memo-question-answer" value="{{ optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '' }}">
                                         
                                         <!-- Display current values -->
                                         @php 
-                                            $__disp = optional($inTrayAnswers->get($memo->id))->disposisi;
                                             $__prioritas = optional($inTrayAnswers->get($memo->id))->prioritasMemo->kategori_prioritas ?? '';
                                             $__jawaban = optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '';
                                         @endphp
-                                        
-                                        <div class="memo-disposisi-text text-xxs text-gray-600 mt-1">
-                                            <span class="font-medium">Disposisi:</span>
-                                            <span class="memo-disposisi-text-value">{{ $__disp ? $__disp : 'belum dimasukkan' }}</span>
-                                        </div>
                                         
                                         @if($intrayModel === 'prioritas')
                                         <div class="memo-priority-text text-xxs text-gray-600 mt-1">
@@ -717,7 +710,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Function to check if all memos have disposisi
+    // Function to check if all memos have priority
+    function checkAllMemosHavePriority() {
+        const container = document.getElementById('inTrayBoard');
+        if (!container) return { allComplete: true, incompleteMemos: [] };
+        
+        const cards = Array.from(container.querySelectorAll('.memo-card'));
+        const incompleteMemos = [];
+        
+        cards.forEach((card) => {
+            const priorityValue = card.querySelector('.memo-priority-select')?.value?.trim() || '';
+            const memoId = card.getAttribute('data-id');
+            
+            if (!priorityValue) {
+                // Get memo number from badge (format: "Memo M-{id}")
+                // The badge has classes: inline-flex items-center px-2 py-0.5 rounded-full text-xxs font-medium bg-blue-100 text-blue-800 border border-blue-200
+                const memoBadge = card.querySelector('span.inline-flex.items-center.px-2');
+                let memoNumber = `M-${memoId}`;
+                if (memoBadge) {
+                    const badgeText = memoBadge.textContent.trim();
+                    // Extract "M-{id}" from "Memo M-{id}"
+                    const match = badgeText.match(/M-\d+/);
+                    if (match) {
+                        memoNumber = match[0];
+                    } else {
+                        // Fallback: use memoId directly
+                        memoNumber = `M-${memoId}`;
+                    }
+                }
+                
+                incompleteMemos.push({
+                    id: memoId,
+                    number: memoNumber
+                });
+            }
+        });
+        
+        return {
+            allComplete: incompleteMemos.length === 0,
+            incompleteMemos: incompleteMemos
+        };
+    }
+    
+    // Function to check if all memos have disposisi (kept for backward compatibility if needed)
     function checkAllMemosHaveDisposisi() {
         const container = document.getElementById('inTrayBoard');
         if (!container) return { allComplete: true, incompleteMemos: [] };
@@ -759,7 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     
-    // Function to update button states based on disposisi completion
+    // Function to update button states based on priority completion
     function updateButtonStates() {
         const intrayModel = '{{ $intrayModel ?? "urutan" }}';
         
@@ -768,7 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        const checkResult = checkAllMemosHaveDisposisi();
+        const checkResult = checkAllMemosHavePriority();
         const saveFinalBtn = document.getElementById('saveInTrayFinal');
         const lihatMatriksBtn = document.getElementById('lihatMatriksBtn');
         
@@ -793,7 +828,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Function to show alert for incomplete memos
+    // Function to show alert for incomplete priority memos
+    function showIncompletePriorityAlert(incompleteMemos) {
+        const memoNumbers = incompleteMemos.map(m => m.number).join(', ');
+        const memoList = incompleteMemos.map(m => `• ${m.number}`).join('<br>');
+        
+        Swal.fire({
+            icon: 'warning',
+            title: 'Memo Belum Lengkap',
+            html: `<div style="text-align: left;">
+                <p style="margin-bottom: 15px; font-weight: 600;">Memo berikut belum mempunyai prioritas dan harus dilengkapi:</p>
+                <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    ${memoList}
+                </div>
+                <p style="color: #6b7280; font-size: 14px;">Silakan lengkapi prioritas untuk semua memo sebelum dapat menyimpan final atau melihat matriks.</p>
+            </div>`,
+            confirmButtonText: 'Mengerti',
+            confirmButtonColor: '#3b82f6',
+            width: '600px',
+            customClass: {
+                popup: 'swal2-popup-custom',
+                title: 'swal2-title-custom',
+                htmlContainer: 'swal2-html-container-custom'
+            }
+        });
+    }
+    
+    // Function to show alert for incomplete disposisi memos (kept for backward compatibility if needed)
     function showIncompleteDisposisiAlert(incompleteMemos) {
         const memoNumbers = incompleteMemos.map(m => m.number).join(', ');
         const memoList = incompleteMemos.map(m => `• ${m.number}`).join('<br>');
@@ -828,9 +889,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Only validate for prioritas model
             if (intrayModel === 'prioritas') {
-                const checkResult = checkAllMemosHaveDisposisi();
+                const checkResult = checkAllMemosHavePriority();
                 if (!checkResult.allComplete) {
-                    showIncompleteDisposisiAlert(checkResult.incompleteMemos);
+                    showIncompletePriorityAlert(checkResult.incompleteMemos);
                     return;
                 }
             }
@@ -847,10 +908,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Only validate for prioritas model
             if (intrayModel === 'prioritas') {
-                const checkResult = checkAllMemosHaveDisposisi();
+                const checkResult = checkAllMemosHavePriority();
                 if (!checkResult.allComplete) {
                     e.preventDefault();
-                    showIncompleteDisposisiAlert(checkResult.incompleteMemos);
+                    showIncompletePriorityAlert(checkResult.incompleteMemos);
                     return false;
                 }
             }
@@ -872,10 +933,20 @@ document.addEventListener('DOMContentLoaded', () => {
             attributeFilter: ['class', 'data-completion-status']
         });
         
-        // Also listen for input changes in disposisi fields
+        // Also listen for input changes in priority fields
         container.addEventListener('input', (e) => {
-            if (e.target.classList.contains('memo-disposisi') || 
-                e.target.id === 'memoModalDisposisi') {
+            if (e.target.classList.contains('memo-priority-select') || 
+                e.target.id === 'memoModalPriority') {
+                setTimeout(() => {
+                    updateButtonStates();
+                }, 100);
+            }
+        });
+        
+        // Also listen for change events on select elements (priority dropdown)
+        container.addEventListener('change', (e) => {
+            if (e.target.classList.contains('memo-priority-select') || 
+                e.target.id === 'memoModalPriority') {
                 setTimeout(() => {
                     updateButtonStates();
                 }, 100);
@@ -1094,13 +1165,6 @@ function openMemoModal(html, card) {
                     </div>
 
 
-                    <!-- Disposisi Section -->
-                    <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div class="p-4 md:p-5">
-                            <label class="block text-sm font-medium text-gray-800 mb-2">Disposisi</label>
-                            <textarea id="memoModalDisposisi" rows="4" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="contoh: delegasi ke sekretaris, arsip, tindak lanjut, dll"></textarea>
-                        </div>
-                    </div>
                 </div>
             </div>`;
         document.body.appendChild(modal);
@@ -1110,20 +1174,7 @@ function openMemoModal(html, card) {
             // Save data automatically before closing
             if (currentMemoCard) {
                 // Ensure all data is synced to hidden inputs
-                const disposisiEl = document.getElementById('memoModalDisposisi');
                 const priorityEl = document.getElementById('memoModalPriority');
-                
-                if (disposisiEl) {
-                    const hiddenDisposisi = currentMemoCard.querySelector('.memo-disposisi');
-                    if (hiddenDisposisi) {
-                        hiddenDisposisi.value = disposisiEl.value || '';
-                    }
-                    const textValue = currentMemoCard.querySelector('.memo-disposisi-text-value');
-                    if (textValue) {
-                        const v = (disposisiEl.value || '').trim();
-                        textValue.textContent = v.length ? v : 'belum dimasukkan';
-                    }
-                }
                 
                 if (priorityEl) {
                     const prioritySelect = currentMemoCard.querySelector('.memo-priority-select');
@@ -1174,24 +1225,6 @@ function openMemoModal(html, card) {
         document.addEventListener('input', (evt) => {
             if (!currentMemoCard) return;
             
-            if (evt.target && evt.target.id === 'memoModalDisposisi') {
-                const hidden = currentMemoCard.querySelector('.memo-disposisi');
-                if (hidden) hidden.value = evt.target.value;
-                const textValue = currentMemoCard.querySelector('.memo-disposisi-text-value');
-                if (textValue) {
-                    const v = (evt.target.value || '').trim();
-                    textValue.textContent = v.length ? v : 'belum dimasukkan';
-                }
-                
-                // Update completion status
-                updateMemoCompletionStatus(currentMemoCard);
-                
-                // Update button states after disposisi changes
-                setTimeout(() => {
-                    updateButtonStates();
-                }, 100);
-            }
-            
             if (evt.target && evt.target.id === 'memoModalPriority') {
                 const prioritySelect = currentMemoCard.querySelector('.memo-priority-select');
                 if (prioritySelect) prioritySelect.value = evt.target.value;
@@ -1234,15 +1267,10 @@ function openMemoModal(html, card) {
 
     // Set content and initial values
     const contentEl = document.getElementById('memoModalContent');
-    const disposisiEl = document.getElementById('memoModalDisposisi');
     const priorityEl = document.getElementById('memoModalPriority');
     const prioritySection = document.getElementById('memoModalPrioritySection');
     
     if (contentEl) contentEl.innerHTML = html;
-    
-    // Set disposisi value from hidden input
-    const hiddenDisposisi = card.querySelector('.memo-disposisi');
-    if (disposisiEl) disposisiEl.value = hiddenDisposisi?.value || '';
     
     // Set priority value from hidden input
     const hiddenPriority = card.querySelector('.memo-priority-select');
@@ -1266,7 +1294,6 @@ function openMemoModal(html, card) {
 function updateMemoCompletionStatus(memoCard) {
     if (!memoCard) return;
     
-    const disposisiValue = memoCard.querySelector('.memo-disposisi')?.value?.trim() || '';
     const priorityValue = memoCard.querySelector('.memo-priority-select')?.value?.trim() || '';
     const intrayModel = '{{ $intrayModel ?? "urutan" }}';
     
@@ -1274,24 +1301,19 @@ function updateMemoCompletionStatus(memoCard) {
     let completionStatus = 'not_started';
     let isCompleted = false;
     
-    const hasDisposisi = disposisiValue.length > 0;
     const hasPrioritas = intrayModel === 'prioritas' ? priorityValue.length > 0 : true; // For order model, assume priority is always set
     
-    if (hasDisposisi && hasPrioritas) {
+    if (hasPrioritas) {
         completionStatus = 'completed';
         isCompleted = true;
-    } else if (hasDisposisi && !hasPrioritas) {
-        completionStatus = 'partial_disposisi';
-    } else if (!hasDisposisi && hasPrioritas) {
-        completionStatus = 'partial_prioritas';
+    } else {
+        completionStatus = 'not_started';
     }
     
     // Update card classes to match CSS rules (.memo-card.completed|partial|not-started)
     memoCard.classList.remove('completed', 'partial', 'not-started');
     if (isCompleted) {
         memoCard.classList.add('completed');
-    } else if (completionStatus.startsWith('partial')) {
-        memoCard.classList.add('partial');
     } else {
         memoCard.classList.add('not-started');
     }

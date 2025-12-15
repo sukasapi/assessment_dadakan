@@ -3,6 +3,8 @@
 @section('title', 'Matriks Prioritas In-Tray')
 
 @section('content')
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
 .memo-content-container {
     word-wrap: break-word;
@@ -260,7 +262,19 @@
             <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm">
                 <div class="p-4 md:p-5">
                     <label class="block text-sm font-medium text-gray-800 mb-2">Disposisi</label>
-                    <div id="memoModalDisposisi" class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap p-3 bg-gray-50 rounded-md border"></div>
+                    <textarea id="memoModalDisposisi" rows="4" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="contoh: delegasi ke sekretaris, arsip, tindak lanjut, dll"></textarea>
+                    <div class="mt-3 flex justify-end">
+                        <button id="saveDisposisiBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            <span id="saveDisposisiBtnText">Simpan Disposisi</span>
+                            <span id="saveDisposisiBtnLoading" class="hidden">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Menyimpan...
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -268,6 +282,11 @@
 </div>
 
 <script>
+// Store current memo ID for saving disposisi
+let currentMemoId = null;
+let currentPenilaianId = null;
+let currentSesiId = null;
+
 // Event listener for memo detail buttons
 document.addEventListener('click', function(e) {
     // Check if clicked element is the button or its child (SVG)
@@ -282,6 +301,11 @@ document.addEventListener('click', function(e) {
 });
 
 function showMemoDetail(id, judul, konten, disposisi) {
+    // Store current memo ID and other needed IDs
+    currentMemoId = id;
+    currentPenilaianId = {{ $inTrayAssessment->penilaian_id }};
+    currentSesiId = {{ $sesi->id }};
+    
     document.getElementById('modalTitle').textContent = judul;
     
     // Handle content - display formatted content instead of raw HTML
@@ -326,8 +350,8 @@ function showMemoDetail(id, judul, konten, disposisi) {
         contentDiv.innerHTML = '<p class="text-gray-500 italic">Tidak ada konten memo</p>';
     }
     
-    // Handle disposisi - show full content
-    const disposisiDiv = document.getElementById('memoModalDisposisi');
+    // Handle disposisi - set textarea value
+    const disposisiTextarea = document.getElementById('memoModalDisposisi');
     if (disposisi && disposisi.trim() !== '') {
         // Create a temporary div to process the content
         const tempDiv = document.createElement('div');
@@ -335,13 +359,9 @@ function showMemoDetail(id, judul, konten, disposisi) {
         
         // Convert to plain text but preserve line breaks
         const textContent = tempDiv.textContent || tempDiv.innerText || '';
-        disposisiDiv.textContent = textContent;
-        disposisiDiv.classList.remove('text-gray-500', 'italic');
-        disposisiDiv.classList.add('bg-green-50', 'border-green-200');
+        disposisiTextarea.value = textContent;
     } else {
-        disposisiDiv.textContent = 'Belum ada disposisi';
-        disposisiDiv.classList.add('text-gray-500', 'italic');
-        disposisiDiv.classList.remove('bg-green-50', 'border-green-200');
+        disposisiTextarea.value = '';
     }
     
     // Show modal
@@ -356,11 +376,12 @@ function closeMemoModal() {
     // Clear content to prevent showing old data
     document.getElementById('modalTitle').textContent = 'Detail Memo';
     document.getElementById('memoModalContent').innerHTML = '';
-    document.getElementById('memoModalDisposisi').textContent = '';
+    document.getElementById('memoModalDisposisi').value = '';
     
-    // Reset styling classes
-    const disposisiDiv = document.getElementById('memoModalDisposisi');
-    disposisiDiv.classList.remove('text-gray-500', 'italic', 'bg-green-50', 'border-green-200');
+    // Reset current memo ID
+    currentMemoId = null;
+    currentPenilaianId = null;
+    currentSesiId = null;
 }
 
 // Close modal when clicking close button
@@ -375,6 +396,110 @@ document.addEventListener('keydown', function(e) {
         if (!modal.classList.contains('hidden')) {
             closeMemoModal();
         }
+    }
+});
+
+// Save disposisi function
+async function saveDisposisi() {
+    if (!currentMemoId || !currentPenilaianId || !currentSesiId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Data memo tidak lengkap. Silakan tutup dan buka kembali modal.',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#3b82f6'
+        });
+        return;
+    }
+
+    const disposisiTextarea = document.getElementById('memoModalDisposisi');
+    const disposisiValue = disposisiTextarea ? disposisiTextarea.value.trim() : '';
+    
+    const saveBtn = document.getElementById('saveDisposisiBtn');
+    const saveBtnText = document.getElementById('saveDisposisiBtnText');
+    const saveBtnLoading = document.getElementById('saveDisposisiBtnLoading');
+    
+    // Show loading state
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    if (saveBtnText) saveBtnText.classList.add('hidden');
+    if (saveBtnLoading) saveBtnLoading.classList.remove('hidden');
+
+    try {
+        const response = await fetch(`/penilaian/in-tray/${currentPenilaianId}/update-disposisi`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                latihan_in_tray_id: parseInt(currentMemoId),
+                disposisi: disposisiValue,
+                sesi_penilaian_id: parseInt(currentSesiId)
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || data.message || 'Gagal menyimpan disposisi');
+        }
+
+        // Show success notification
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: data.message || 'Disposisi berhasil disimpan',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#10b981',
+            timer: 2000,
+            timerProgressBar: true,
+            showClass: {
+                popup: 'animate__animated animate__fadeInDown'
+            },
+            hideClass: {
+                popup: 'animate__animated animate__fadeOutUp'
+            }
+        });
+
+        // Update the button data attribute to reflect saved state
+        const viewButtons = document.querySelectorAll(`.view-memo-btn[data-id="${currentMemoId}"]`);
+        viewButtons.forEach(btn => {
+            btn.setAttribute('data-disposisi', disposisiValue);
+        });
+
+    } catch (error) {
+        console.error('Error saving disposisi:', error);
+        
+        // Show error notification
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal Menyimpan',
+            text: error.message || 'Terjadi kesalahan saat menyimpan disposisi. Silakan coba lagi.',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#ef4444',
+            width: '500px'
+        });
+    } finally {
+        // Hide loading state
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (saveBtnText) saveBtnText.classList.remove('hidden');
+        if (saveBtnLoading) saveBtnLoading.classList.add('hidden');
+    }
+}
+
+// Add event listener for save disposisi button
+document.addEventListener('DOMContentLoaded', function() {
+    const saveDisposisiBtn = document.getElementById('saveDisposisiBtn');
+    if (saveDisposisiBtn) {
+        saveDisposisiBtn.addEventListener('click', saveDisposisi);
     }
 });
 </script>
