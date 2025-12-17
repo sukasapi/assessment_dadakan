@@ -145,6 +145,34 @@
             </div>
             
             <div class="px-6 py-4">
+                <form action="{{ route('admin.sesi.peserta', $sesi->id) }}" method="GET" class="mb-4" id="search-form">
+                    <div class="flex flex-col sm:flex-row sm:items-end sm:space-x-3 space-y-3 sm:space-y-0">
+                        <div class="flex-1">
+                            <label for="search" class="block text-sm font-medium text-gray-700">
+                                Cari Peserta
+                            </label>
+                            <input type="text" name="search" id="search"
+                                   value="{{ request('search', $search ?? '') }}"
+                                   placeholder="Cari nama, instansi, jabatan, atau PIN"
+                                   class="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Pencarian otomatis setelah 3 karakter atau saat dikosongkan.</p>
+                        </div>
+                        @if(request('search'))
+                            <div>
+                                <a href="{{ route('admin.sesi.peserta', $sesi->id) }}"
+                                   class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg">
+                                    Reset
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                    @if($search)
+                        <p class="text-sm text-gray-500 mt-2">
+                            Menampilkan {{ $availablePeserta->count() }} hasil untuk "{{ $search }}"
+                        </p>
+                    @endif
+                </form>
+
                 @if($availablePeserta->count() > 0)
                     <form action="{{ route('admin.sesi.peserta.store', $sesi->id) }}" method="POST">
                         @csrf
@@ -202,6 +230,31 @@
             </div>
         </div>
     </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('search');
+    const form = document.getElementById('search-form');
+    if (!input || !form) return;
+
+    let debounceId;
+    const submitForm = () => form.submit();
+
+    input.addEventListener('input', function () {
+        const value = this.value.trim();
+        clearTimeout(debounceId);
+
+        if (value.length === 0) {
+            debounceId = setTimeout(submitForm, 200);
+            return;
+        }
+
+        if (value.length < 3) return;
+
+        debounceId = setTimeout(submitForm, 300);
+    });
+});
+</script>
 
     <!-- Informasi Sesi -->
     <div class="mt-8 bg-white shadow rounded-lg">

@@ -2542,9 +2542,12 @@ class AdminController extends Controller
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
                         // Update model_in_tray di tabel sesi_assessment
                         $modelInTrayValue = $assessment['model_in_tray'] ?? 'urutan';
-                        
-                        // Update model_in_tray di sesi_assessment
-                        $existingAssessment->update(['model_in_tray' => $modelInTrayValue]);
+
+                        // Gunakan instance yang pasti ada (existing atau baru dibuat)
+                        $targetAssessment = $existingAssessment ?? $sesiAssessment ?? null;
+                        if ($targetAssessment) {
+                            $targetAssessment->update(['model_in_tray' => $modelInTrayValue]);
+                        }
                     }
                     
                     // Proses memos hanya untuk jenis in_tray
@@ -2779,17 +2782,28 @@ class AdminController extends Controller
     /**
      * Tampilkan daftar peserta yang sudah terdaftar di sesi
      */
-    public function sesiPeserta($id)
+    public function sesiPeserta(Request $request, $id)
     {
         $sesi = SesiPenilaian::with(['participants.peserta'])->findOrFail($id);
-        
-        // Ambil semua peserta yang tersedia untuk didaftarkan
-        $availablePeserta = Peserta::where('aktif', true)
-            ->whereNotIn('id', $sesi->participants->pluck('peserta_id'))
-            ->orderBy('id', 'desc')
-            ->get();
 
-        return view('admin.sesi.peserta', compact('sesi', 'availablePeserta'));
+        $search = trim($request->input('search', ''));
+
+        // Ambil semua peserta yang tersedia untuk didaftarkan (mendukung pencarian)
+        $availablePesertaQuery = Peserta::where('aktif', true)
+            ->whereNotIn('id', $sesi->participants->pluck('peserta_id'))
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('nama_lengkap', 'like', '%' . $search . '%')
+                        ->orWhere('pin', 'like', '%' . $search . '%')
+                        ->orWhere('instansi', 'like', '%' . $search . '%')
+                        ->orWhere('jabatan_saat_ini', 'like', '%' . $search . '%');
+                });
+            })
+            ->orderBy('id', 'desc');
+
+        $availablePeserta = $availablePesertaQuery->get();
+
+        return view('admin.sesi.peserta', compact('sesi', 'availablePeserta', 'search'));
     }
 
     /**
