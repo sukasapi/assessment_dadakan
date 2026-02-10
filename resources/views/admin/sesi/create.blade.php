@@ -311,13 +311,21 @@
 
 @section('scripts')
 <script>
+/* eslint-disable */
 let assessmentIndex = 0;
-const useNewSystemForCreate = @json(isset($useNewSystem) && $useNewSystem ? true : false);
+const useNewSystemForCreate = "{{ isset($useNewSystem) && $useNewSystem ? 'true' : 'false' }}";
+const useNewSystemForCreateBool = useNewSystemForCreate === 'true';
 
 function addAssessment() {
     const container = document.getElementById('assessmentContainer');
     const template = document.getElementById('assessmentTemplate');
     const clone = template.content.cloneNode(true);
+    
+    const assessmentItem = clone.querySelector('.assessment-item');
+    if (assessmentItem) {
+        // Tandai assessment baru (belum punya file PDF existing)
+        assessmentItem.dataset.existing = 'false';
+    }
     
     // Update all INDEX placeholders
     const elements = clone.querySelectorAll('[name*="INDEX"]');
@@ -583,7 +591,7 @@ function updateAvailableOptions() {
 
 // Function to check if all assessments are selected and disable add button
 function checkAndUpdateAddButton() {
-    const useNewSystem = useNewSystemForCreate;
+    const useNewSystem = useNewSystemForCreateBool;
     const addButton = document.getElementById('addAssessmentBtn');
     
     if (!addButton) return;
@@ -704,7 +712,7 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
         // 5. Section ada
         // 6. useNewSystem = true
         if (!isSectionHidden && isStudiKasus && penilaianSelect && penilaianSelect.value && section && !select.disabled) {
-            if (useNewSystemForCreate) {
+            if (useNewSystemForCreateBool) {
                 select.setAttribute('required', 'required');
                 select.required = true;
             }
@@ -883,11 +891,15 @@ function checkExistingPdf(assessmentItem, penilaianId, existingFile) {
     const pdfSection = assessmentItem.querySelector('.pdf-upload-section');
     const currentPdfDisplay = pdfSection ? pdfSection.querySelector('.current-pdf-display') : assessmentItem.querySelector('.current-pdf-display');
     const currentPdfName = currentPdfDisplay ? currentPdfDisplay.querySelector('.current-pdf-name') : null;
-    if (existingFile && currentPdfDisplay && currentPdfName) {
+    const isExistingAssessment = assessmentItem && assessmentItem.dataset && assessmentItem.dataset.existing === 'true';
+    const fileToShow = isExistingAssessment ? existingFile : '';
+
+    if (fileToShow && currentPdfDisplay && currentPdfName) {
         currentPdfDisplay.style.display = 'block';
-        currentPdfName.textContent = existingFile.split('/').pop();
+        currentPdfName.textContent = fileToShow.split('/').pop();
     } else if (currentPdfDisplay) {
         currentPdfDisplay.style.display = 'none';
+        if (currentPdfName) currentPdfName.textContent = '';
     }
 }
 
@@ -966,18 +978,20 @@ function previewCurrentPdf(index) {
         return;
     }
     
+    const isExistingAssessment = assessmentItem.dataset && assessmentItem.dataset.existing === 'true';
     const selectElement = assessmentItem.querySelector('select[name*="[penilaian_id]"]');
     if (!selectElement) {
         return;
     }
     
     const selectedOption = selectElement.options[selectElement.selectedIndex];
-    if (!selectedOption || !selectedOption.dataset.file) {
+    const pdfFile = (isExistingAssessment && selectedOption) ? selectedOption.dataset.file : '';
+
+    if (!pdfFile) {
         alert('Tidak ada PDF yang tersedia untuk di-preview');
         return;
     }
     
-    const pdfFile = selectedOption.dataset.file;
     const penilaianId = selectedOption.value;
     
     // Show modal
