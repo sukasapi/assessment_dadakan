@@ -163,6 +163,7 @@
                                         <!-- Hidden inputs for data storage -->
                                         <input type="hidden" class="memo-priority-select" value="{{ optional($inTrayAnswers->get($memo->id))->prioritasMemo->kategori_prioritas ?? '' }}">
                                         <input type="hidden" class="memo-question-answer" value="{{ optional($inTrayAnswers->get($memo->id))->jawaban_pertanyaan ?? '' }}">
+                                        <textarea class="memo-disposisi hidden" rows="1" aria-hidden="true">{{ optional($inTrayAnswers->get($memo->id))->disposisi ?? '' }}</textarea>
                                         
                                         <!-- Display current values -->
                                         @php 

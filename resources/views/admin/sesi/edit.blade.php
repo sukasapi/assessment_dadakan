@@ -313,12 +313,21 @@
 
 @section('scripts')
 <script>
+/* eslint-disable */
 let assessmentIndex = 0;
+const sesiIdValue = "{{ $sesi->id }}";
+const useNewSystemGlobal = Number(sesiIdValue) >= 13;
 
 function addAssessment(data = null) {
     const container = document.getElementById('assessmentContainer');
     const template = document.getElementById('assessmentTemplate');
     const clone = template.content.cloneNode(true);
+    
+    const assessmentItem = clone.querySelector('.assessment-item');
+    if (assessmentItem) {
+        // Tandai apakah assessment berasal dari data existing
+        assessmentItem.dataset.existing = data ? 'true' : 'false';
+    }
     
     // Update all INDEX placeholders
     const elements = clone.querySelectorAll('[name*="INDEX"]');
@@ -394,8 +403,7 @@ function addAssessment(data = null) {
                 }
                 
                 // Tampilkan section kategori studi kasus jika jenis adalah studi_kasus DAN sesi_id >= 13
-                const sesiId = {{ $sesi->id }};
-                const useNewSystem = sesiId >= 13;
+                const useNewSystem = useNewSystemGlobal;
                 // Note: kategori_studi_kasus_id sudah dihapus, tidak perlu set kategori section lagi
             }
 
@@ -589,8 +597,7 @@ function updateOrderNumbers() {
 // Load existing assessments when page loads
 document.addEventListener('DOMContentLoaded', function() {
     // Cek apakah sesi_id >= 13 untuk menggunakan sistem baru (kategori dari sesi)
-    const sesiId = {{ $sesi->id }};
-    const useNewSystem = sesiId >= 13;
+    const useNewSystem = useNewSystemGlobal;
     
     // Ambil existingAssessments dari tag script JSON agar linter tidak error
     let existingAssessments = [];
@@ -844,8 +851,7 @@ function updateAvailableOptions() {
 
 // Function to check if all assessments are selected and disable add button
 function checkAndUpdateAddButton() {
-    const sesiId = {{ $sesi->id }};
-    const useNewSystem = sesiId > 12;
+    const useNewSystem = useNewSystemGlobal;
     const addButton = document.getElementById('addAssessmentBtn');
     
     if (!addButton) return;
@@ -1155,11 +1161,15 @@ function checkExistingPdf(assessmentItem, penilaianId, existingFile) {
     const pdfSection = assessmentItem.querySelector('.pdf-upload-section');
     const currentPdfDisplay = pdfSection ? pdfSection.querySelector('.current-pdf-display') : assessmentItem.querySelector('.current-pdf-display');
     const currentPdfName = currentPdfDisplay ? currentPdfDisplay.querySelector('.current-pdf-name') : null;
-    if (existingFile && currentPdfDisplay && currentPdfName) {
+    const isExistingAssessment = assessmentItem && assessmentItem.dataset && assessmentItem.dataset.existing === 'true';
+    const fileToShow = isExistingAssessment ? existingFile : '';
+
+    if (fileToShow && currentPdfDisplay && currentPdfName) {
         currentPdfDisplay.style.display = 'block';
-        currentPdfName.textContent = existingFile.split('/').pop();
+        currentPdfName.textContent = fileToShow.split('/').pop();
     } else if (currentPdfDisplay) {
         currentPdfDisplay.style.display = 'none';
+        if (currentPdfName) currentPdfName.textContent = '';
     }
 }
 
@@ -1238,18 +1248,20 @@ function previewCurrentPdf(index) {
         return;
     }
     
+    const isExistingAssessment = assessmentItem.dataset && assessmentItem.dataset.existing === 'true';
     const selectElement = assessmentItem.querySelector('select[name*="[penilaian_id]"]');
     if (!selectElement) {
         return;
     }
     
     const selectedOption = selectElement.options[selectElement.selectedIndex];
-    if (!selectedOption || !selectedOption.dataset.file) {
+    const pdfFile = (isExistingAssessment && selectedOption) ? selectedOption.dataset.file : '';
+
+    if (!pdfFile) {
         alert('Tidak ada PDF yang tersedia untuk di-preview');
         return;
     }
     
-    const pdfFile = selectedOption.dataset.file;
     const penilaianId = selectedOption.value;
     
     // Show modal

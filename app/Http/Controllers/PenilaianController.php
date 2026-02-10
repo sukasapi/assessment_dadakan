@@ -8,6 +8,7 @@ use App\Models\CatatanRoleplay;
 use App\Models\CatatanFgd;
 use App\Models\KemajuanPenilaian;
 use App\Models\Penilaian;
+use App\Models\SesiAssessment;
 use Illuminate\Http\Request;
 
 class PenilaianController extends Controller
@@ -105,6 +106,17 @@ class PenilaianController extends Controller
 
         // Ambil sesi_penilaian_id dari request (sesi yang sedang diakses user)
         $sesiPenilaianId = $request->sesi_penilaian_id;
+
+        // Ambil jawaban existing sebelum dihapus (untuk preserve disposisi yang sudah diisi di Matriks)
+        $existingJawaban = JawabanInTray::where('peserta_id', $pesertaId)
+            ->where('penilaian_id', $penilaianId)
+            ->where('sesi_penilaian_id', $sesiPenilaianId)
+            ->get()
+            ->keyBy('latihan_in_tray_id');
+
+        $sesiAssessment = SesiAssessment::where('sesi_penilaian_id', $sesiPenilaianId)
+            ->where('penilaian_id', $penilaianId)
+            ->first();
         
         // Jika status adalah 'final', update semua jawaban existing menjadi 'final' terlebih dahulu
         if ($request->status === 'final') {
@@ -123,15 +135,21 @@ class PenilaianController extends Controller
             ->where('sesi_penilaian_id', $sesiPenilaianId)
             ->delete();
 
-        // Simpan jawaban baru
+        // Simpan jawaban baru (disposisi dari request; jika kosong, gunakan yang existing agar tidak hilang)
         foreach ($request->jawaban as $jawaban) {
+            $disposisiRequest = trim($jawaban['disposisi'] ?? '');
+            $existing = $existingJawaban->get($jawaban['latihan_in_tray_id']);
+            $disposisiFinal = $disposisiRequest !== ''
+                ? ($jawaban['disposisi'] ?? '')
+                : ($existing ? $existing->disposisi : '');
+
             $jawabanInTray = JawabanInTray::create([
                 'peserta_id' => $pesertaId,
                 'penilaian_id' => $penilaianId,
                 'sesi_penilaian_id' => $sesiPenilaianId,
                 'latihan_in_tray_id' => $jawaban['latihan_in_tray_id'],
                 'urutan_prioritas' => $jawaban['urutan_prioritas'],
-                'disposisi' => $jawaban['disposisi'] ?? '',
+                'disposisi' => $disposisiFinal,
                 'status' => $request->status,
                 'waktu_simpan' => now(),
                 'model_assessment' => $sesiAssessment->model_in_tray ?? 'urutan',
