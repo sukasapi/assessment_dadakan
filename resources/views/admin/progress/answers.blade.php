@@ -216,7 +216,7 @@
                                                 $prioritas = $jawab->prioritasMemo;
                                                 $prioritasLabel = $prioritas ? $prioritas->priority_label : 'Belum dipilih';
                                                 $disposisi = $jawab->disposisi ?: 'Belum ada disposisi';
-                                                $result[] = '• memo-' . $memoId . ' | ' . $prioritasLabel . ' | ' . $disposisi;
+                                                $result[] = '• memo-' . $memoId . ' | ' . e($prioritasLabel) . ' | ' . e($disposisi);
                                             }
                                             $jawaban = implode('<br>', $result);
                                         } else {
@@ -315,7 +315,7 @@
                                     <td class="px-4 py-2">
                                         @if($hasAnswer)
                                             <div class="max-w-xs space-y-1">
-                                                <div class="text-gray-900 text-sm">{!! $jawaban !!}</div>
+                                                <div class="text-gray-900 text-sm">{!! nl2br(e($jawaban)) !!}</div>
                                                 @if($penilaian->jenis === 'studi_kasus' && isset($jawabanStatus))
                                                     @if($jawabanStatus === 'final')
                                                         @if(isset($sudahDinilai) && $sudahDinilai)

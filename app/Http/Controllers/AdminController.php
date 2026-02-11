@@ -1326,7 +1326,7 @@ class AdminController extends Controller
                         $content .= $statusBadge;
                         
                         $content .= '<div class="bg-gray-50 p-4 rounded-md">';
-                        $content .= '<div class="whitespace-pre-wrap text-sm">' . $jawaban->jawaban . '</div>';
+                        $content .= '<div class="whitespace-pre-wrap text-sm">' . e($jawaban->jawaban) . '</div>';
                         $content .= '</div>';
                         
                         // Load penilaian yang sudah ada (jika ada)
@@ -2135,16 +2135,17 @@ class AdminController extends Controller
                     continue; // Skip assessment yang tidak memiliki penilaian_id
                 }
                 
+                $instruksiKhusus = $assessment['instruksi_khusus'] ?? null;
                 $sesiAssessment = SesiAssessment::create([
                     'sesi_penilaian_id' => $sesi->id,
                     'penilaian_id' => $assessment['penilaian_id'],
                     'urutan' => $assessment['urutan'],
                     'durasi_default' => $assessment['durasi_default'] ?? null,
-                    'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                    'instruksi_khusus' => $instruksiKhusus !== null && $instruksiKhusus !== '' ? (string) $instruksiKhusus : null,
                     'aktif' => true
                 ]);
 
-                // Simpan memos untuk in_tray bila ada (ke tabel latihan_in_tray)
+                // Simpan memos untuk in_tray bila ada (ke tabel latihan_in_tray) - aman untuk konten editor
                 try {
                     $penilaian = Penilaian::find($assessment['penilaian_id']);
                     if ($penilaian && $penilaian->jenis === 'in_tray') {
@@ -2160,30 +2161,30 @@ class AdminController extends Controller
                         
                         $memos = $assessment['memos'] ?? [];
                         
-                        // Filter memo yang valid - hapus HTML tags dan whitespace, cek apakah ada konten yang bermakna
+                        // Filter memo yang valid - mendukung string atau array (konten_memo)
                         $validMemos = array_filter($memos, function($m) {
-                            $cleanContent = trim(strip_tags((string)$m));
-                            $cleanContent = preg_replace('/\s+/', ' ', $cleanContent); // Normalize whitespace
+                            $raw = is_array($m) ? ($m['konten_memo'] ?? '') : $m;
+                            $cleanContent = trim(strip_tags((string) $raw));
+                            $cleanContent = preg_replace('/\s+/', ' ', $cleanContent);
                             return !empty($cleanContent) && $cleanContent !== '&nbsp;' && $cleanContent !== '&amp;nbsp;' && $cleanContent !== '-';
                         });
                         
                         if (count($validMemos) > 0) {
-                            // Hapus memo lama untuk sesi penilaian ini
                             LatihanInTray::where('sesi_penilaian_id', $sesi->id)
                                 ->where('penilaian_id', $assessment['penilaian_id'])
                                 ->delete();
                             $order = 1;
                             foreach ($memos as $memo) {
-                                // Gunakan validasi yang sama seperti di filter
-                                $cleanContent = trim(strip_tags((string)$memo));
+                                $kontenMemo = is_array($memo) ? (string) ($memo['konten_memo'] ?? '') : (string) $memo;
+                                $cleanContent = trim(strip_tags($kontenMemo));
                                 $cleanContent = preg_replace('/\s+/', ' ', $cleanContent);
-                                
-                                if (empty($cleanContent) || $cleanContent === '&nbsp;' || $cleanContent === '&amp;nbsp;' || $cleanContent === '-') continue;
-                                
+                                if (empty($cleanContent) || $cleanContent === '&nbsp;' || $cleanContent === '&amp;nbsp;' || $cleanContent === '-') {
+                                    continue;
+                                }
                                 LatihanInTray::create([
                                     'penilaian_id' => $assessment['penilaian_id'],
                                     'sesi_penilaian_id' => $sesi->id,
-                                    'konten_memo' => $memo,
+                                    'konten_memo' => $kontenMemo,
                                     'urutan' => $order++,
                                     'aktif' => true,
                                 ]);
@@ -2486,52 +2487,52 @@ class AdminController extends Controller
                 
                 if ($existingAssessment) {
                     if ($existingAssessment->trashed()) {
-                        // Restore dan update assessment yang soft deleted
+                        // Restore dan update assessment yang soft deleted (jangan interpolasi konten user ke string log)
                         Log::info('Database Query - RESTORE sesi_assessment', [
-                            'query' => "UPDATE sesi_assessment SET deleted_at = NULL, urutan = {$assessment['urutan']}, durasi_default = " . ($assessment['durasi_default'] ?? 'NULL') . ", instruksi_khusus = '{$assessment['instruksi_khusus']}', updated_at = NOW() WHERE id = {$existingAssessment->id}",
                             'sesi_assessment_id' => $existingAssessment->id,
                             'penilaian_id' => $assessment['penilaian_id'],
-                            'urutan' => $assessment['urutan']
+                            'urutan' => $assessment['urutan'],
                         ]);
                         
                         $existingAssessment->restore();
+                        $instruksiKhusus = $assessment['instruksi_khusus'] ?? null;
                         $existingAssessment->update([
                             'urutan' => $assessment['urutan'],
                             'durasi_default' => $assessment['durasi_default'] ?? null,
-                            'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                            'instruksi_khusus' => $instruksiKhusus !== null && $instruksiKhusus !== '' ? (string) $instruksiKhusus : null,
                         ]);
                     } else {
-                        // Update assessment yang sudah ada
+                        // Update assessment yang sudah ada (jangan interpolasi konten user ke string log)
                         Log::info('Database Query - UPDATE sesi_assessment', [
-                            'query' => "UPDATE sesi_assessment SET urutan = {$assessment['urutan']}, durasi_default = " . ($assessment['durasi_default'] ?? 'NULL') . ", instruksi_khusus = '{$assessment['instruksi_khusus']}', updated_at = NOW() WHERE id = {$existingAssessment->id}",
                             'sesi_assessment_id' => $existingAssessment->id,
                             'penilaian_id' => $assessment['penilaian_id'],
-                            'urutan' => $assessment['urutan']
+                            'urutan' => $assessment['urutan'],
                         ]);
                         
+                        $instruksiKhusus = $assessment['instruksi_khusus'] ?? null;
                         $existingAssessment->update([
                             'urutan' => $assessment['urutan'],
                             'durasi_default' => $assessment['durasi_default'] ?? null,
-                            'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                            'instruksi_khusus' => $instruksiKhusus !== null && $instruksiKhusus !== '' ? (string) $instruksiKhusus : null,
                         ]);
                     }
                     
                     $sesiAssessment = $existingAssessment;
                 } else {
-                    // Create assessment baru
+                    // Create assessment baru (jangan interpolasi konten user ke string log)
                     Log::info('Database Query - INSERT sesi_assessment', [
-                        'query' => "INSERT INTO sesi_assessment (sesi_penilaian_id, penilaian_id, urutan, durasi_default, instruksi_khusus, aktif) VALUES ({$sesi->id}, {$assessment['penilaian_id']}, {$assessment['urutan']}, " . ($assessment['durasi_default'] ?? 'NULL') . ", '{$assessment['instruksi_khusus']}', 1)",
                         'sesi_penilaian_id' => $sesi->id,
                         'penilaian_id' => $assessment['penilaian_id'],
-                        'urutan' => $assessment['urutan']
+                        'urutan' => $assessment['urutan'],
                     ]);
                     
+                    $instruksiKhusus = $assessment['instruksi_khusus'] ?? null;
                     $sesiAssessment = SesiAssessment::create([
                         'sesi_penilaian_id' => $sesi->id,
                         'penilaian_id' => $assessment['penilaian_id'],
                         'urutan' => $assessment['urutan'],
                         'durasi_default' => $assessment['durasi_default'] ?? null,
-                        'instruksi_khusus' => $assessment['instruksi_khusus'] ?? null,
+                        'instruksi_khusus' => $instruksiKhusus !== null && $instruksiKhusus !== '' ? (string) $instruksiKhusus : null,
                         'aktif' => true
                     ]);
                 }
@@ -2563,34 +2564,39 @@ class AdminController extends Controller
                         
                         // Filter memo yang tidak kosong - hapus HTML tags dan whitespace, cek apakah ada konten yang bermakna
                         $validMemos = array_filter($memos, function($m) {
-                            $cleanContent = trim(strip_tags((string)$m));
-                            $cleanContent = preg_replace('/\s+/', ' ', $cleanContent); // Normalize whitespace
+                            $raw = is_array($m) ? ($m['konten_memo'] ?? '') : $m;
+                            $cleanContent = trim(strip_tags((string) $raw));
+                            $cleanContent = preg_replace('/\s+/', ' ', $cleanContent);
                             return !empty($cleanContent) && $cleanContent !== '&nbsp;' && $cleanContent !== '&amp;nbsp;' && $cleanContent !== '-';
                         });
                         
                         if (count($validMemos) > 0) {
                             $order = 1;
                             foreach ($memos as $memo) {
+                                // Pastikan konten memo selalu string (bisa dari text editor dengan HTML/kombinasi surat-memo-pesan)
+                                $kontenMemo = is_array($memo) ? (string) ($memo['konten_memo'] ?? '') : (string) $memo;
                                 // Gunakan validasi yang sama seperti di filter
-                                $cleanContent = trim(strip_tags((string)$memo));
+                                $cleanContent = trim(strip_tags($kontenMemo));
                                 $cleanContent = preg_replace('/\s+/', ' ', $cleanContent);
-                                
-                                if (empty($cleanContent) || $cleanContent === '&nbsp;' || $cleanContent === '&amp;nbsp;' || $cleanContent === '-') continue;
-                                
+
+                                if (empty($cleanContent) || $cleanContent === '&nbsp;' || $cleanContent === '&amp;nbsp;' || $cleanContent === '-') {
+                                    continue;
+                                }
+
                                 // Cek apakah memo sudah ada untuk urutan ini
                                 $existingMemo = $existingMemos->where('urutan', $order)->first();
-                                
+
                                 if ($existingMemo) {
                                     // Update memo yang sudah ada
                                     $existingMemo->update([
-                                        'konten_memo' => $memo,
+                                        'konten_memo' => $kontenMemo,
                                     ]);
                                 } else {
                                     // Create memo baru
                                     LatihanInTray::create([
                                         'penilaian_id' => $assessment['penilaian_id'],
                                         'sesi_penilaian_id' => $sesi->id,
-                                        'konten_memo' => $memo,
+                                        'konten_memo' => $kontenMemo,
                                         'urutan' => $order,
                                         'aktif' => true,
                                     ]);
@@ -2649,11 +2655,29 @@ class AdminController extends Controller
             return redirect()->route('admin.sesi.index')
                 ->with('success', 'Sesi berhasil diupdate!');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollback();
-            Log::error('Error updating session: ' . $e->getMessage());
+            $message = $e->getMessage();
+            $file = $e->getFile();
+            $line = $e->getLine();
+            $trace = $e->getTraceAsString();
+            $class = get_class($e);
+
+            Log::error('Error updating session (sesiUpdate)', [
+                'message' => $message,
+                'exception' => $class,
+                'file' => $file,
+                'line' => $line,
+                'trace' => $trace,
+                'sesi_id' => $id,
+            ]);
+
+            $location = basename($file) . ' baris ' . $line;
             return redirect()->back()
                 ->with('error', 'Terjadi kesalahan saat mengupdate sesi.')
+                ->with('error_detail', $message)
+                ->with('error_location', $location)
+                ->with('error_exception', $class)
                 ->withInput();
         }
     }
