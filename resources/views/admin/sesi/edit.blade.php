@@ -22,7 +22,16 @@
     <!-- Success/Error Messages -->
     @if(session('error'))
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {{ session('error') }}
+            <p class="font-semibold">{{ session('error') }}</p>
+            @if(session('error_detail'))
+                <p class="mt-2 text-sm"><strong>Detail error:</strong> {{ session('error_detail') }}</p>
+            @endif
+            @if(session('error_location'))
+                <p class="mt-1 text-sm text-red-600"><strong>Lokasi:</strong> {{ session('error_location') }}</p>
+            @endif
+            @if(session('error_exception'))
+                <p class="mt-1 text-xs text-red-500"><strong>Exception:</strong> {{ session('error_exception') }}</p>
+            @endif
         </div>
         <div id="flashError" data-message="{{ session('error') }}" style="display:none"></div>
     @endif

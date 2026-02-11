@@ -471,6 +471,9 @@
 }
 </style>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<script type="application/json" id="init-data-jawaban">@json($existingJawaban ?? '')</script>
+<script type="application/json" id="init-data-roleplay">@json($existingRoleplay ?? '')</script>
+<script type="application/json" id="init-data-fgd">@json($existingFgd ?? '')</script>
 <script>
 // Util Popup global (auto-close 3 detik, opsi redirect dashboard)
 const DASHBOARD_URL = "{{ route('peserta.dashboard') }}";
@@ -958,7 +961,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inisialisasi CKEditor 5 Classic basic untuk studi kasus (hanya jika elemen tersedia)
     const jawabanEl = document.getElementById('jawaban');
     if (jawabanEl) {
-        let jawabanInit = `{!! addslashes($existingJawaban ?? '') !!}`;
+        var jawabanInit = '';
+        var _elJ = document.getElementById('init-data-jawaban');
+        if (_elJ) { try { jawabanInit = JSON.parse(_elJ.textContent); } catch(e) {} }
         ClassicEditor.create(jawabanEl, { 
             toolbar: {
                 items: [
@@ -986,7 +991,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inisialisasi CKEditor untuk Roleplay dan FGD agar konsisten
     const roleplayEl = document.getElementById('roleplayText');
     if (roleplayEl) {
-        const initVal = `{!! addslashes($existingRoleplay ?? '') !!}`;
+        var initVal = '';
+        var _elR = document.getElementById('init-data-roleplay');
+        if (_elR) { try { initVal = JSON.parse(_elR.textContent); } catch(e) {} }
         ClassicEditor.create(roleplayEl, { 
             toolbar: {
                 items: [
@@ -1012,7 +1019,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const fgdEl = document.getElementById('fgdText');
     if (fgdEl) {
-        const initVal = `{!! addslashes($existingFgd ?? '') !!}`;
+        var initVal = '';
+        var _elF = document.getElementById('init-data-fgd');
+        if (_elF) { try { initVal = JSON.parse(_elF.textContent); } catch(e) {} }
         ClassicEditor.create(fgdEl, { 
             toolbar: {
                 items: [
