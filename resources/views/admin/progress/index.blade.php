@@ -315,6 +315,22 @@ document.addEventListener('DOMContentLoaded', function(){
             });
     }
     
+    function renderStatusSelect(penilaianId, statusValue, pesertaId, sesiId) {
+        if (!penilaianId) return '<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 border">tidak tersedia</span>';
+        const status = statusValue || 'belum_mulai';
+        const opts = [
+            ['belum_mulai', 'Belum Mulai'],
+            ['sedang_berlangsung', 'Sedang Berlangsung'],
+            ['selesai', 'Selesai'],
+            ['dibatalkan', 'Dibatalkan']
+        ];
+        let options = opts.map(([val, label]) => 
+            '<option value="' + val + '"' + (status === val ? ' selected' : '') + '>' + label + '</option>'
+        ).join('');
+        return '<select class="status-select px-2 py-0.5 rounded text-xs border border-gray-300 focus:ring-1 focus:ring-blue-500 w-full max-w-[140px]" ' +
+            'data-peserta-id="' + pesertaId + '" data-sesi-id="' + sesiId + '" data-penilaian-id="' + penilaianId + '">' + options + '</select>';
+    }
+
     function updateTable(data) {
         const tbody = document.getElementById('progressTableBody');
         if (data.length === 0) {
@@ -327,6 +343,10 @@ document.addEventListener('DOMContentLoaded', function(){
         let html = '';
         data.forEach((item, index) => {
             const rowNumber = (currentPage - 1) * perPage + index + 1;
+            const stCell = renderStatusSelect(item.studi_kasus_penilaian_id, item.studi_kasus_status_value, item.peserta_id, item.sesi_id);
+            const itCell = renderStatusSelect(item.in_tray_penilaian_id, item.in_tray_status_value, item.peserta_id, item.sesi_id) + (item.in_tray_model_type ? ' <span class="text-xs text-gray-500">' + (item.in_tray_model_type === 'prioritas' ? '(Prioritas)' : '(Urutan)') + '</span>' : '');
+            const rpCell = renderStatusSelect(item.roleplay_penilaian_id, item.roleplay_status_value, item.peserta_id, item.sesi_id);
+            const fgCell = renderStatusSelect(item.fgd_penilaian_id, item.fgd_status_value, item.peserta_id, item.sesi_id);
             html += `
                 <tr class="progress-row">
                     <td class="px-1 sm:px-3 py-1 sm:py-2">${rowNumber}</td>
@@ -342,10 +362,10 @@ document.addEventListener('DOMContentLoaded', function(){
                     </td>
                     <td class="px-1 sm:px-3 py-1 sm:py-2 hidden md:table-cell">${item.peserta_instansi || '-'}</td>
                     <td class="px-1 sm:px-3 py-1 sm:py-2 hidden lg:table-cell">${item.peserta_jabatan || '-'}</td>
-                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden sm:table-cell">${item.studi_kasus_status}</td>
-                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden md:table-cell">${item.in_tray_status}</td>
-                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden md:table-cell">${item.roleplay_status}</td>
-                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden lg:table-cell">${item.fgd_status}</td>
+                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden sm:table-cell">${stCell}</td>
+                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden md:table-cell"><div class="flex flex-col gap-0.5">${itCell}</div></td>
+                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden md:table-cell">${rpCell}</td>
+                    <td class="px-1 sm:px-3 py-1 sm:py-2 hidden lg:table-cell">${fgCell}</td>
                     <td class="px-1 sm:px-3 py-1 sm:py-2">
                         <div class="flex flex-col gap-0.5 sm:gap-1">
                             <button data-action="view-answers" data-peserta-id="${item.peserta_id}" data-sesi-id="${item.sesi_id}" 
@@ -409,6 +429,60 @@ document.addEventListener('DOMContentLoaded', function(){
         loadData();
     };
     
+    // Event listener for status dropdown change
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('.status-select')) {
+            const select = e.target;
+            const pesertaId = select.getAttribute('data-peserta-id');
+            const sesiId = select.getAttribute('data-sesi-id');
+            const penilaianId = select.getAttribute('data-penilaian-id');
+            const status = select.value;
+            const url = '{{ route("admin.progress.update-status-by-keys") }}';
+            fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    peserta_id: parseInt(pesertaId),
+                    penilaian_id: parseInt(penilaianId),
+                    sesi_penilaian_id: parseInt(sesiId),
+                    status: status
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message || 'Status berhasil diupdate', 'success');
+                    loadData();
+                } else {
+                    showNotification(data.message || 'Gagal mengupdate status', 'error');
+                }
+            })
+            .catch(err => {
+                showNotification('Terjadi kesalahan saat mengupdate status', 'error');
+            });
+        }
+    });
+
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl transform transition-all duration-300 ease-in-out translate-x-full opacity-0 ' +
+            (type === 'success' ? 'bg-green-500 text-white border-l-4 border-green-600' : 'bg-red-500 text-white border-l-4 border-red-600');
+        const icon = type === 'success'
+            ? '<svg class="w-5 h-5 mr-3 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>'
+            : '<svg class="w-5 h-5 mr-3 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+        notification.innerHTML = icon + message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.classList.add('translate-x-0', 'opacity-100'), 100);
+        setTimeout(() => {
+            notification.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => notification.remove(), 300);
+        }, 4000);
+    }
+
     // Event listeners for action buttons
     document.addEventListener('click', function(e) {
         if (e.target.matches('[data-action="view-answers"]')) {

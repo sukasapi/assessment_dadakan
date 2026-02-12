@@ -82,6 +82,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/progress/export-answers', [AdminController::class, 'exportAnswers'])->name('progress.export-answers');
     Route::get('/progress/answer-detail', [AdminController::class, 'getAnswerDetail'])->name('progress.answer-detail');
     Route::post('/progress/save-penilaian-studi-kasus', [AdminController::class, 'savePenilaianStudiKasus'])->name('progress.save-penilaian-studi-kasus');
+    Route::put('/progress/status-by-keys', [AdminController::class, 'updateProgressStatusByKeys'])->name('progress.update-status-by-keys');
     
     // Progress Individual (must be after specific routes)
     Route::get('/progress/{pesertaId}', [AdminController::class, 'progressPeserta'])->name('progress.peserta');

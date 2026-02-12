@@ -748,23 +748,33 @@ class AdminController extends Controller
                     }
                     
                     
-                    // Get status badges
-                    $statusBadge = function($penilaianId) use($peserta, $session) {
-                        if (!$penilaianId) return '<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 border">tidak tersedia</span>';
-                        
+                    // Get status info (badge + penilaian_id + status_value) per jenis
+                    $getStatusInfo = function($penilaianId) use($peserta, $session) {
+                        if (!$penilaianId) {
+                            return [
+                                'penilaian_id' => null,
+                                'status_value' => null,
+                                'badge' => '<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 border">tidak tersedia</span>'
+                            ];
+                        }
                         $prog = \App\Models\KemajuanPenilaian::where('peserta_id', $peserta->id)
                             ->where('penilaian_id', $penilaianId)
                             ->where('sesi_penilaian_id', $session->id)
                             ->first();
-                        
-                        $status = $prog->status ?? 'belum';
+                        $status = $prog->status ?? 'belum_mulai';
                         $color = match($status) {
                             'sedang_berlangsung' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
                             'selesai' => 'bg-green-100 text-green-800 border-green-200',
+                            'dibatalkan' => 'bg-red-100 text-red-800 border-red-200',
                             default => 'bg-gray-100 text-gray-700 border-gray-200'
                         };
-                        $text = $status === 'sedang_berlangsung' ? 'draft' : ($status === 'selesai' ? 'selesai' : 'belum');
-                        return "<span class=\"px-2 py-0.5 rounded-full text-xs {$color} border\">{$text}</span>";
+                        $text = $status === 'sedang_berlangsung' ? 'draft' : ($status === 'selesai' ? 'selesai' : ($status === 'dibatalkan' ? 'dibatalkan' : 'belum'));
+                        $badge = "<span class=\"px-2 py-0.5 rounded-full text-xs {$color} border\">{$text}</span>";
+                        return [
+                            'penilaian_id' => $penilaianId,
+                            'status_value' => $status,
+                            'badge' => $badge
+                        ];
                     };
                     
                     // Get in-tray model info
@@ -786,6 +796,11 @@ class AdminController extends Controller
                         }
                     }
 
+                    $studiInfo = $getStatusInfo($mapJenis['studi_kasus']);
+                    $inTrayInfo = $getStatusInfo($mapJenis['in_tray']);
+                    $roleplayInfo = $getStatusInfo($mapJenis['roleplay'] ?? $mapJenis['role_play']);
+                    $fgdInfo = $getStatusInfo($mapJenis['fgd']);
+
                     $allData[] = [
                         'sesi_id' => $session->id,
                         'sesi_nama' => $session->nama,
@@ -794,10 +809,18 @@ class AdminController extends Controller
                         'peserta_email' => $peserta->email,
                         'peserta_instansi' => $peserta->instansi,
                         'peserta_jabatan' => $peserta->jabatan,
-                        'studi_kasus_status' => $statusBadge($mapJenis['studi_kasus']),
-                        'in_tray_status' => $statusBadge($mapJenis['in_tray']) . $inTrayModel,
-                        'roleplay_status' => $statusBadge($mapJenis['roleplay'] ?? $mapJenis['role_play']),
-                        'fgd_status' => $statusBadge($mapJenis['fgd']),
+                        'studi_kasus_status' => $studiInfo['badge'],
+                        'studi_kasus_penilaian_id' => $studiInfo['penilaian_id'],
+                        'studi_kasus_status_value' => $studiInfo['status_value'],
+                        'in_tray_status' => $inTrayInfo['badge'] . $inTrayModel,
+                        'in_tray_penilaian_id' => $inTrayInfo['penilaian_id'],
+                        'in_tray_status_value' => $inTrayInfo['status_value'],
+                        'roleplay_status' => $roleplayInfo['badge'],
+                        'roleplay_penilaian_id' => $roleplayInfo['penilaian_id'],
+                        'roleplay_status_value' => $roleplayInfo['status_value'],
+                        'fgd_status' => $fgdInfo['badge'],
+                        'fgd_penilaian_id' => $fgdInfo['penilaian_id'],
+                        'fgd_status_value' => $fgdInfo['status_value'],
                         'in_tray_model_type' => $inTrayModelType,
                         'show_matrix' => $showMatrix
                     ];
@@ -856,6 +879,40 @@ class AdminController extends Controller
             return response()->json(['success' => true, 'message' => 'Status berhasil diupdate']);
         } catch (\Exception $e) {
             Log::error('Error updating progress status: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat update status']);
+        }
+    }
+
+    /**
+     * Update status progress by composite key (peserta_id, penilaian_id, sesi_penilaian_id)
+     * Membuat record KemajuanPenilaian jika belum ada
+     */
+    public function updateProgressStatusByKeys(Request $request)
+    {
+        $request->validate([
+            'peserta_id' => 'required|integer|exists:peserta,id',
+            'penilaian_id' => 'required|integer|exists:penilaian,id',
+            'sesi_penilaian_id' => 'required|integer|exists:sesi_penilaian,id',
+            'status' => 'required|in:belum_mulai,sedang_berlangsung,selesai,dibatalkan'
+        ]);
+
+        try {
+            KemajuanPenilaian::updateOrCreate(
+                [
+                    'peserta_id' => $request->peserta_id,
+                    'penilaian_id' => $request->penilaian_id,
+                    'sesi_penilaian_id' => $request->sesi_penilaian_id
+                ],
+                [
+                    'status' => $request->status,
+                    'aktivitas_terakhir' => now(),
+                    'waktu_selesai' => $request->status === 'selesai' ? now() : null
+                ]
+            );
+
+            return response()->json(['success' => true, 'message' => 'Status berhasil diupdate']);
+        } catch (\Exception $e) {
+            Log::error('Error updating progress status by keys: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat update status']);
         }
     }
