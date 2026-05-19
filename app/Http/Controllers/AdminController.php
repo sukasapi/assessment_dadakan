@@ -331,6 +331,18 @@ class AdminController extends Controller
     }
 
     /**
+     * Kelompokkan kemajuan penilaian per jenis assessment (studi_kasus, in_tray, dll.).
+     */
+    private function buildGroupedProgressList(Peserta $peserta)
+    {
+        return $peserta->kemajuanPenilaian()
+            ->with('penilaian')
+            ->get()
+            ->filter(fn ($progress) => $progress->penilaian !== null)
+            ->groupBy(fn ($progress) => $progress->penilaian->jenis);
+    }
+
+    /**
      * Tampilkan form tambah peserta
      */
     public function pesertaCreate()
@@ -395,8 +407,8 @@ class AdminController extends Controller
     public function pesertaShow($id)
     {
         $peserta = Peserta::with(['user', 'kemajuanPenilaian.penilaian'])->findOrFail($id);
-        $progressList = $peserta->kemajuanPenilaian()->with('penilaian')->get();
-        
+        $progressList = $this->buildGroupedProgressList($peserta);
+
         return view('admin.peserta.show', compact('peserta', 'progressList'));
     }
 
@@ -1014,8 +1026,8 @@ class AdminController extends Controller
     public function progressPeserta($pesertaId)
     {
         $peserta = Peserta::with(['kemajuanPenilaian.penilaian'])->findOrFail($pesertaId);
-        $progressList = $peserta->kemajuanPenilaian()->with('penilaian')->get();
-        
+        $progressList = $this->buildGroupedProgressList($peserta);
+
         return view('admin.progress.peserta', compact('peserta', 'progressList'));
     }
 

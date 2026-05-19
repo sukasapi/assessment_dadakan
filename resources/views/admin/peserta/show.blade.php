@@ -118,7 +118,7 @@
         </div>
 
         <!-- Progress Summary -->
-        @if($peserta->kemajuanPenilaian->count() > 0)
+        @if($progressList->isNotEmpty())
         <div class="mt-8">
             <div class="admin-card">
                 <div class="px-6 py-4 border-b border-gray-200">
@@ -132,7 +132,7 @@
                             <div class="space-y-2">
                                 @foreach($items as $progress)
                                 <div class="flex justify-between items-center">
-                                    <span class="text-sm text-tertiary">{{ $progress->penilaian->nama }}</span>
+                                    <span class="text-sm text-tertiary">{{ $progress->penilaian?->nama ?? 'Assessment' }}</span>
                                     @php
                                         $statusColors = [
                                             'belum_mulai' => 'bg-gray-100 text-gray-800',

@@ -431,9 +431,7 @@ document.addEventListener('DOMContentLoaded', function(){
     };
     
     // Event listener for status dropdown change
-    document.addEventListener('change', function(e) {
-        if (e.target.matches('.status-select')) {
-            const select = e.target;
+    adminDelegateChange('.status-select', function (select) {
             const pesertaId = select.getAttribute('data-peserta-id');
             const sesiId = select.getAttribute('data-sesi-id');
             const penilaianId = select.getAttribute('data-penilaian-id');
@@ -465,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function(){
             .catch(err => {
                 showNotification('Terjadi kesalahan saat mengupdate status', 'error');
             });
-        }
     });
 
     function showNotification(message, type) {
@@ -484,28 +481,26 @@ document.addEventListener('DOMContentLoaded', function(){
         }, 4000);
     }
 
-    // Event listeners for action buttons
-    document.addEventListener('click', function(e) {
-        if (e.target.matches('[data-action="view-answers"]')) {
-            e.preventDefault();
-            const pesertaId = e.target.getAttribute('data-peserta-id');
-            const sesiId = e.target.getAttribute('data-sesi-id');
-            window.location.href = '{{ route("admin.progress.answers") }}?peserta_id=' + pesertaId + '&sesi_id=' + sesiId;
-        }
-        
-        if (e.target.matches('[data-action="view-matrix"]')) {
-            e.preventDefault();
-            const pesertaId = e.target.getAttribute('data-peserta-id');
-            const sesiId = e.target.getAttribute('data-sesi-id');
-            window.location.href = '{{ route("admin.intray-matrix.show", ["sesiId" => ":sesiId", "pesertaId" => ":pesertaId"]) }}'.replace(':sesiId', sesiId).replace(':pesertaId', pesertaId);
-        }
-        
-        if (e.target.matches('[data-action="download-data"]')) {
-            e.preventDefault();
-            const pesertaId = e.target.getAttribute('data-peserta-id');
-            const sesiId = e.target.getAttribute('data-sesi-id');
-            window.location.href = '{{ route("admin.progress.export-answers") }}?peserta_id=' + pesertaId + '&sesi_id=' + sesiId;
-        }
+    // Tombol aksi di baris tabel (delegasi — klik teks di dalam tombol tetap jalan)
+    adminDelegateClick('[data-action="view-answers"]', function (btn, e) {
+        e.preventDefault();
+        const pesertaId = btn.getAttribute('data-peserta-id');
+        const sesiId = btn.getAttribute('data-sesi-id');
+        window.location.href = '{{ route("admin.progress.answers") }}?peserta_id=' + pesertaId + '&sesi_id=' + sesiId;
+    });
+
+    adminDelegateClick('[data-action="view-matrix"]', function (btn, e) {
+        e.preventDefault();
+        const pesertaId = btn.getAttribute('data-peserta-id');
+        const sesiId = btn.getAttribute('data-sesi-id');
+        window.location.href = '{{ route("admin.intray-matrix.show", ["sesiId" => ":sesiId", "pesertaId" => ":pesertaId"]) }}'.replace(':sesiId', sesiId).replace(':pesertaId', pesertaId);
+    });
+
+    adminDelegateClick('[data-action="download-data"]', function (btn, e) {
+        e.preventDefault();
+        const pesertaId = btn.getAttribute('data-peserta-id');
+        const sesiId = btn.getAttribute('data-sesi-id');
+        window.location.href = '{{ route("admin.progress.export-answers") }}?peserta_id=' + pesertaId + '&sesi_id=' + sesiId;
     });
 });
 </script>

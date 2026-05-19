@@ -160,7 +160,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.btn-duplicate-sesi').forEach(function(btn) {
@@ -212,11 +211,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             updateStatusAppearance(this, newStatus);
 
-            fetch(`/admin/sesi/${sesiId}/status`, {
+            const statusUrl = '{{ route('admin.sesi.update-status', ['id' => '__SESII__']) }}'.replace('__SESII__', sesiId);
+            fetch(statusUrl, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'X-CSRF-TOKEN': adminCsrfToken()
                 },
                 body: JSON.stringify({ status: newStatus })
             })

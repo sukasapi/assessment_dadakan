@@ -528,53 +528,53 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@push('scripts')
 <script>
-// Hapus peserta dengan SweetAlert
-document.querySelectorAll('.btn-hapus-peserta').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const form = this.closest('.delete-peserta-form');
-        const nama = form.getAttribute('data-nama');
-        const terdaftar = form.getAttribute('data-terdaftar') === '1';
-        const sesiNamesRaw = form.getAttribute('data-sesi-names') || '';
+adminOnReady(function () {
+    // Hapus peserta
+    document.querySelectorAll('.btn-hapus-peserta').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const form = this.closest('.delete-peserta-form');
+            if (!form) return;
+            const nama = form.getAttribute('data-nama');
+            const terdaftar = form.getAttribute('data-terdaftar') === '1';
+            const sesiNamesRaw = form.getAttribute('data-sesi-names') || '';
 
-        if (terdaftar) {
-            const sesiList = sesiNamesRaw
-                ? sesiNamesRaw.split('|').map(s => `<li>${s}</li>`).join('')
-                : '';
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Tidak Dapat Menghapus',
-                html: `<p class="text-sm text-tertiary mb-2">Peserta <strong>${nama}</strong> terdaftar pada sesi assessment dan tidak dapat dihapus.</p>
-                       ${sesiList ? `<ul class="text-sm text-left list-disc list-inside text-primary">${sesiList}</ul>` : ''}`,
-                confirmButtonText: 'Mengerti',
-                confirmButtonColor: '#dc2626',
-            });
-            return;
-        }
-
-        Swal.fire({
-            title: 'Hapus Peserta?',
-            html: `<p class="text-sm text-tertiary">Apakah Anda yakin ingin menghapus peserta <strong>${nama}</strong>?</p>`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Hapus',
-            cancelButtonText: 'Batal',
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            reverseButtons: true,
-        }).then((result) => {
-            if (result.isConfirmed) {
-                form.submit();
+            if (terdaftar) {
+                const sesiList = sesiNamesRaw
+                    ? sesiNamesRaw.split('|').map(s => `<li>${s}</li>`).join('')
+                    : '';
+                adminConfirm({
+                    icon: 'error',
+                    title: 'Tidak Dapat Menghapus',
+                    html: `<p class="text-sm text-tertiary mb-2">Peserta <strong>${nama}</strong> terdaftar pada sesi assessment dan tidak dapat dihapus.</p>
+                           ${sesiList ? `<ul class="text-sm text-left list-disc list-inside text-primary">${sesiList}</ul>` : ''}`,
+                    confirmButtonText: 'Mengerti',
+                    confirmButtonColor: '#dc2626',
+                });
+                return;
             }
+
+            adminConfirm({
+                title: 'Hapus Peserta?',
+                html: `<p class="text-sm text-tertiary">Apakah Anda yakin ingin menghapus peserta <strong>${nama}</strong>?</p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Hapus',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                reverseButtons: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
         });
     });
-});
 
-// Flash: hapus diblokir dari server
-@if(session('delete_blocked'))
-    Swal.fire({
+    @if(session('delete_blocked'))
+    adminConfirm({
         icon: 'error',
         title: 'Tidak Dapat Menghapus',
         html: `<p class="text-sm text-tertiary mb-2">{{ session('error') }}</p>
@@ -588,21 +588,39 @@ document.querySelectorAll('.btn-hapus-peserta').forEach(function(btn) {
         confirmButtonText: 'Mengerti',
         confirmButtonColor: '#dc2626',
     });
-@endif
+    @endif
 
-// Export CSV dengan filter aktif
-document.getElementById('btnExportPeserta').addEventListener('click', function() {
-    const form = document.getElementById('filterForm');
-    const params = new URLSearchParams(new FormData(form));
-    const delimiter = document.getElementById('export_delimiter').value;
-    params.set('delimiter', delimiter);
-    window.location.href = '{{ route('admin.peserta.export') }}?' + params.toString();
-});
+    const btnExport = document.getElementById('btnExportPeserta');
+    if (btnExport) {
+        btnExport.addEventListener('click', function () {
+            const form = document.getElementById('filterForm');
+            const params = form ? new URLSearchParams(new FormData(form)) : new URLSearchParams();
+            const delimiterEl = document.getElementById('export_delimiter');
+            if (delimiterEl) {
+                params.set('delimiter', delimiterEl.value);
+            }
+            window.location.href = '{{ route('admin.peserta.export') }}?' + params.toString();
+        });
+    }
 
-// Close modal when clicking outside
-document.getElementById('importModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        this.classList.add('hidden');
+    const importModal = document.getElementById('importModal');
+    if (importModal) {
+        importModal.addEventListener('click', function (e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+            }
+        });
+    }
+
+    const importForm = document.getElementById('importForm');
+    if (importForm) {
+        importForm.addEventListener('submit', function () {
+            const importButton = document.getElementById('importButton');
+            if (!importButton) return;
+            importButton.disabled = true;
+            importButton.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Importing...';
+            importButton.classList.add('opacity-75');
+        });
     }
 });
 
@@ -687,17 +705,6 @@ function showCsvPreview(file) {
     reader.readAsText(file);
 }
 
-// Form submission
-document.getElementById('importForm').addEventListener('submit', function(e) {
-    const importButton = document.getElementById('importButton');
-    const originalText = importButton.textContent;
-    
-    // Show loading state
-    importButton.disabled = true;
-    importButton.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Importing...';
-    importButton.classList.add('opacity-75');
-    
-    // Form will submit normally
-});
 </script>
+@endpush
 @endsection
