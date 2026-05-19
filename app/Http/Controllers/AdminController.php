@@ -2856,6 +2856,79 @@ class AdminController extends Controller
         }
     }
 
+    /**
+     * Duplikasi sesi beserta konfigurasi assessment dan memo in-tray
+     */
+    public function sesiDuplicate(Request $request, $id)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:255|unique:sesi_penilaian,nama',
+        ], [
+            'nama.required' => 'Judul sesi wajib diisi.',
+            'nama.unique' => 'Judul sesi sudah digunakan. Silakan pilih nama lain.',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $source = SesiPenilaian::with(['assessments.penilaian'])->findOrFail($id);
+
+            $newNama = trim($request->nama);
+
+            $newSesi = SesiPenilaian::create([
+                'nama' => $newNama,
+                'status' => 'draft',
+                'durasi_menit' => $source->durasi_menit,
+                'catatan' => $source->catatan,
+                'aktif' => true,
+            ]);
+
+            foreach ($source->assessments as $assessment) {
+                SesiAssessment::create([
+                    'sesi_penilaian_id' => $newSesi->id,
+                    'penilaian_id' => $assessment->penilaian_id,
+                    'kategori_studi_kasus_id' => $assessment->kategori_studi_kasus_id,
+                    'urutan' => $assessment->urutan,
+                    'aktif' => $assessment->aktif,
+                    'durasi_default' => $assessment->durasi_default,
+                    'instruksi_khusus' => $assessment->instruksi_khusus,
+                    'model_in_tray' => $assessment->model_in_tray,
+                    'memos' => $assessment->memos,
+                ]);
+
+                if ($assessment->penilaian && $assessment->penilaian->jenis === 'in_tray') {
+                    $memos = LatihanInTray::where('sesi_penilaian_id', $source->id)
+                        ->where('penilaian_id', $assessment->penilaian_id)
+                        ->whereNull('deleted_at')
+                        ->orderBy('urutan')
+                        ->get();
+
+                    foreach ($memos as $memo) {
+                        LatihanInTray::create([
+                            'penilaian_id' => $assessment->penilaian_id,
+                            'sesi_penilaian_id' => $newSesi->id,
+                            'konten_memo' => $memo->konten_memo,
+                            'pertanyaan' => $memo->pertanyaan,
+                            'urutan' => $memo->urutan,
+                            'aktif' => $memo->aktif,
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.sesi.index')
+                ->with('success', "Sesi '{$newNama}' berhasil diduplikasi.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error duplicating session: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Terjadi kesalahan saat menduplikasi sesi: ' . $e->getMessage());
+        }
+    }
+
     // ========================================
     // MANAJEMEN PESERTA DI SESI
     // ========================================

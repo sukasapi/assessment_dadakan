@@ -53,6 +53,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/sesi/{id}', [AdminController::class, 'sesiUpdate'])->name('sesi.update');
     Route::patch('/sesi/{id}/status', [AdminController::class, 'sesiUpdateStatus'])->name('sesi.update-status');
     Route::delete('/sesi/{id}', [AdminController::class, 'sesiDestroy'])->name('sesi.destroy');
+    Route::post('/sesi/{id}/duplicate', [AdminController::class, 'sesiDuplicate'])->name('sesi.duplicate');
     
     // Sesi Peserta Management
     Route::get('/sesi/{id}/peserta', [AdminController::class, 'sesiPeserta'])->name('sesi.peserta');
