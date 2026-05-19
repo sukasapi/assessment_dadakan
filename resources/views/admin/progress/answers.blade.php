@@ -620,14 +620,15 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     }
     
-    // Action buttons functionality
+    // Action buttons functionality (delegasi — klik teks/svg di dalam tombol tetap jalan)
     document.addEventListener('click', function(e) {
-        if (e.target.getAttribute('data-action') === 'view-detail') {
+        const viewDetailBtn = e.target.closest('[data-action="view-detail"]');
+        if (viewDetailBtn) {
             e.preventDefault();
-            const jenis = e.target.getAttribute('data-jenis');
-            const pesertaId = e.target.getAttribute('data-peserta-id');
-            const penilaianId = e.target.getAttribute('data-penilaian-id');
-            const sesiId = e.target.getAttribute('data-sesi-id');
+            const jenis = viewDetailBtn.getAttribute('data-jenis');
+            const pesertaId = viewDetailBtn.getAttribute('data-peserta-id');
+            const penilaianId = viewDetailBtn.getAttribute('data-penilaian-id');
+            const sesiId = viewDetailBtn.getAttribute('data-sesi-id');
             
             // Show modal with answer details
             const modal = document.getElementById('answerModal');
@@ -714,19 +715,21 @@ document.addEventListener('DOMContentLoaded', function(){
                 });
         }
         
-        if (e.target.getAttribute('data-action') === 'download-answer') {
+        const downloadBtn = e.target.closest('[data-action="download-answer"]');
+        if (downloadBtn) {
             e.preventDefault();
-            const pesertaId = e.target.getAttribute('data-peserta-id');
-            const penilaianId = e.target.getAttribute('data-penilaian-id');
-            const sesiId = e.target.getAttribute('data-sesi-id');
+            const pesertaId = downloadBtn.getAttribute('data-peserta-id');
+            const penilaianId = downloadBtn.getAttribute('data-penilaian-id');
+            const sesiId = downloadBtn.getAttribute('data-sesi-id');
             
             window.location.href = '{{ route("admin.progress.export-answers") }}?peserta_id=' + pesertaId + '&penilaian_id=' + penilaianId + '&sesi_id=' + sesiId;
         }
         
-        if (e.target.getAttribute('data-action') === 'view-pdf') {
+        const viewPdfBtn = e.target.closest('[data-action="view-pdf"]');
+        if (viewPdfBtn) {
             e.preventDefault();
-            const penilaianId = e.target.getAttribute('data-penilaian-id');
-            const pdfFile = e.target.getAttribute('data-pdf-file');
+            const penilaianId = viewPdfBtn.getAttribute('data-penilaian-id');
+            const pdfFile = viewPdfBtn.getAttribute('data-pdf-file');
             
             // Show PDF viewer modal
             const modal = document.getElementById('pdfViewerModal');
@@ -824,7 +827,8 @@ document.addEventListener('DOMContentLoaded', function(){
     
     // Handle form penilaian studi kasus
     document.addEventListener('click', function(e) {
-        if (e.target.getAttribute('data-action') === 'save-draft' || e.target.getAttribute('data-action') === 'save-final') {
+        const saveBtn = e.target.closest('[data-action="save-draft"], [data-action="save-final"]');
+        if (saveBtn) {
             e.preventDefault();
             const form = document.getElementById('formPenilaianStudiKasus');
             if (!form) {
@@ -833,14 +837,14 @@ document.addEventListener('DOMContentLoaded', function(){
             
             // Cek apakah form disabled (status draft)
             const isFinal = form.getAttribute('data-is-final') === '1';
-            const buttonIsFinal = e.target.getAttribute('data-is-final') === '1';
+            const buttonIsFinal = saveBtn.getAttribute('data-is-final') === '1';
             
             if (!isFinal || !buttonIsFinal) {
                 alert('Jawaban peserta masih dalam status draft. Penilaian hanya dapat dilakukan setelah peserta menyimpan jawaban sebagai final.');
                 return;
             }
             
-            const status = e.target.getAttribute('data-action') === 'save-final' ? 'final' : 'draft';
+            const status = saveBtn.getAttribute('data-action') === 'save-final' ? 'final' : 'draft';
             submitPenilaianStudiKasus(form, status);
         }
     });

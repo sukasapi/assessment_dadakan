@@ -25,9 +25,14 @@
         };
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    @php $adminThemeCssV = file_exists(public_path('css/admin-theme.css')) ? filemtime(public_path('css/admin-theme.css')) : time(); @endphp
+    @php
+        $adminThemeCssV = file_exists(public_path('css/admin-theme.css')) ? filemtime(public_path('css/admin-theme.css')) : time();
+        $adminCommonJsV = file_exists(public_path('js/admin-common.js')) ? filemtime(public_path('js/admin-common.js')) : time();
+    @endphp
     <link href="{{ asset('css/admin-theme.css') }}?v={{ $adminThemeCssV }}" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('js/admin-common.js') }}?v={{ $adminCommonJsV }}"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.css" rel="stylesheet">
