@@ -64,4 +64,25 @@
             }
         });
     };
+
+    /** Buka/tutup modal admin (di luar elemen hidden parent). */
+    window.adminOpenModal = function (id) {
+        const el = typeof id === 'string' ? document.getElementById(id) : id;
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.classList.add('is-open');
+        el.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('admin-modal-open');
+    };
+
+    window.adminCloseModal = function (id) {
+        const el = typeof id === 'string' ? document.getElementById(id) : id;
+        if (!el) return;
+        el.classList.add('hidden');
+        el.classList.remove('is-open');
+        el.setAttribute('aria-hidden', 'true');
+        if (!document.querySelector('.admin-modal.is-open')) {
+            document.body.classList.remove('admin-modal-open');
+        }
+    };
 })();
