@@ -66,6 +66,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     // Peserta Management
     Route::get('/peserta', [AdminController::class, 'pesertaIndex'])->name('peserta.index');
+    Route::get('/peserta/export', [AdminController::class, 'exportPeserta'])->name('peserta.export');
+    Route::get('/peserta/template', [AdminController::class, 'downloadTemplateCsv'])->name('peserta.template');
+    Route::post('/peserta/import', [AdminController::class, 'importPeserta'])->name('peserta.import');
     Route::get('/peserta/create', [AdminController::class, 'pesertaCreate'])->name('peserta.create');
     Route::post('/peserta', [AdminController::class, 'pesertaStore'])->name('peserta.store');
     Route::get('/peserta/{id}', [AdminController::class, 'pesertaShow'])->name('peserta.show');
@@ -111,10 +114,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Manajemen Urutan Assessment
 
 
-     // Import Peserta CSV
-     Route::post('/peserta/import', [AdminController::class, 'importPeserta'])->name('peserta.import');
-     Route::get('/peserta/template', [AdminController::class, 'downloadTemplateCsv'])->name('peserta.template');
-     
      // Debug Storage (untuk troubleshooting)
      Route::get('/debug/storage', [AdminController::class, 'debugStorage'])->name('debug.storage');
      

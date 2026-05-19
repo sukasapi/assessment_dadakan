@@ -192,13 +192,142 @@ class AdminController extends Controller
     /**
      * Tampilkan daftar peserta
      */
-    public function pesertaIndex()
+    public function pesertaIndex(Request $request)
     {
-        $pesertaList = Peserta::with('user')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = Peserta::with(['user', 'kemajuanPenilaian', 'assessmentParticipants.sesi']);
+        $this->applyPesertaFilters($query, $request);
 
-        return view('admin.peserta.index', compact('pesertaList'));
+        $perPage = (int) $request->get('per_page', 15);
+        $perPage = in_array($perPage, [10, 15, 20, 50], true) ? $perPage : 15;
+
+        $pesertaList = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $instansiList = Peserta::whereNotNull('instansi')
+            ->where('instansi', '!=', '')
+            ->distinct()
+            ->orderBy('instansi')
+            ->pluck('instansi');
+
+        $filters = $request->only(['search', 'instansi', 'jenis_kelamin', 'aktif', 'tanggal_dari', 'tanggal_sampai']);
+
+        return view('admin.peserta.index', compact('pesertaList', 'instansiList', 'filters'));
+    }
+
+    /**
+     * Export data peserta ke CSV (mengikuti filter aktif)
+     */
+    public function exportPeserta(Request $request)
+    {
+        $query = Peserta::query();
+        $this->applyPesertaFilters($query, $request);
+        $pesertaList = $query->orderBy('created_at', 'desc')->get();
+
+        $delimiterParam = $request->get('delimiter', ',');
+        $delimiter = ($delimiterParam === ';' || $delimiterParam === 'semicolon') ? ';' : ',';
+
+        $filename = 'data_peserta_' . date('Y-m-d_H-i-s') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename={$filename}",
+        ];
+
+        $callback = function () use ($pesertaList, $delimiter) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($file, [
+                'Nama Lengkap',
+                'Tempat Lahir',
+                'Tanggal Lahir (YYYY-MM-DD)',
+                'Jenis Kelamin (L/P)',
+                'Alamat Rumah',
+                'Nomor Telepon',
+                'Email',
+                'Instansi',
+                'Jabatan Saat Ini',
+                'Grade',
+                'PIN',
+                'Tanggal Daftar',
+                'Status Aktif',
+            ], $delimiter);
+
+            foreach ($pesertaList as $peserta) {
+                fputcsv($file, [
+                    $peserta->nama_lengkap,
+                    $peserta->tempat_lahir ?? '',
+                    $peserta->tanggal_lahir ? $peserta->tanggal_lahir->format('Y-m-d') : '',
+                    $peserta->jenis_kelamin ?? '',
+                    $peserta->alamat_rumah ?? '',
+                    $peserta->nomor_telepon ?? '',
+                    $peserta->email ?? '',
+                    $peserta->instansi ?? '',
+                    $peserta->jabatan_saat_ini ?? '',
+                    $peserta->grade ?? '',
+                    $peserta->pin ?? '',
+                    $peserta->created_at ? $peserta->created_at->format('Y-m-d H:i') : '',
+                    $peserta->aktif ? 'Aktif' : 'Nonaktif',
+                ], $delimiter);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Download template import peserta
+     */
+    public function downloadTemplateCsv()
+    {
+        $path = public_path('template_import_peserta.csv');
+
+        if (!file_exists($path)) {
+            return back()->with('error', 'File template tidak ditemukan.');
+        }
+
+        return response()->download($path, 'template_import_peserta.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    /**
+     * Terapkan filter daftar peserta
+     */
+    private function applyPesertaFilters($query, Request $request): void
+    {
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_lengkap', 'like', '%' . $search . '%')
+                    ->orWhere('email', 'like', '%' . $search . '%')
+                    ->orWhere('pin', 'like', '%' . $search . '%')
+                    ->orWhere('instansi', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($request->filled('instansi')) {
+            $query->where('instansi', $request->instansi);
+        }
+
+        if ($request->filled('jenis_kelamin') && in_array($request->jenis_kelamin, ['L', 'P'])) {
+            $query->where('jenis_kelamin', $request->jenis_kelamin);
+        }
+
+        if ($request->filled('aktif') && in_array($request->aktif, ['0', '1'], true)) {
+            $query->where('aktif', (bool) $request->aktif);
+        }
+
+        if ($request->filled('tanggal_dari')) {
+            $query->whereDate('created_at', '>=', $request->tanggal_dari);
+        }
+
+        if ($request->filled('tanggal_sampai')) {
+            $query->whereDate('created_at', '<=', $request->tanggal_sampai);
+        }
     }
 
     /**
@@ -285,27 +414,42 @@ class AdminController extends Controller
      */
     public function pesertaUpdate(Request $request, $id)
     {
+        $peserta = Peserta::findOrFail($id);
+
         $request->validate([
             'nama_lengkap' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:L,P',
-            'alamat' => 'nullable|string',
-            'telepon' => 'nullable|string|max:20',
+            'email' => 'required|email|max:255|unique:users,email,' . $peserta->user_id,
+            'tempat_lahir' => 'nullable|string|max:255',
+            'tanggal_lahir' => 'nullable|date',
+            'jenis_kelamin' => 'nullable|in:L,P',
+            'alamat_rumah' => 'nullable|string',
+            'nomor_telepon' => 'nullable|string|max:20',
             'instansi' => 'nullable|string|max:255',
-            'jabatan' => 'nullable|string|max:255',
+            'jabatan_saat_ini' => 'nullable|string|max:255',
             'grade' => 'nullable|string|max:50',
-            'pin' => 'required|string|min:6|max:10|regex:/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,10}$/',
-            'aktif' => 'boolean'
+            'pin' => 'required|string|min:6|max:10|regex:/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,10}$/|unique:peserta,pin,' . $id,
         ]);
 
         try {
-            $peserta = Peserta::findOrFail($id);
-            $peserta->update($request->except(['email']));
-            
-            // Update user email jika berubah
-            if ($peserta->user && $peserta->user->email !== $request->email) {
-                $peserta->user->update(['email' => $request->email]);
+            $peserta->update([
+                'nama_lengkap' => $request->nama_lengkap,
+                'email' => $request->email,
+                'tempat_lahir' => $request->tempat_lahir,
+                'tanggal_lahir' => $request->tanggal_lahir,
+                'jenis_kelamin' => $request->jenis_kelamin,
+                'alamat_rumah' => $request->alamat_rumah,
+                'nomor_telepon' => $request->nomor_telepon,
+                'instansi' => $request->instansi,
+                'jabatan_saat_ini' => $request->jabatan_saat_ini,
+                'grade' => $request->grade,
+                'pin' => $request->pin,
+            ]);
+
+            if ($peserta->user) {
+                $peserta->user->update([
+                    'name' => $request->nama_lengkap,
+                    'email' => $request->email,
+                ]);
             }
 
             return redirect()->route('admin.peserta.index')->with('success', 'Data peserta berhasil diupdate.');
@@ -322,10 +466,19 @@ class AdminController extends Controller
     {
         try {
             $peserta = Peserta::findOrFail($id);
-            if ($peserta->user) {
-                $peserta->user->delete();
+
+            if ($peserta->isTerdaftarDiSesiAssessment()) {
+                $sesiNames = $peserta->getNamaSesiAssessmentTerdaftar()->implode(', ');
+
+                return redirect()->route('admin.peserta.index')
+                    ->with('error', "Peserta tidak dapat dihapus karena terdaftar pada sesi assessment: {$sesiNames}.")
+                    ->with('delete_blocked', true)
+                    ->with('blocked_sesi_names', $peserta->getNamaSesiAssessmentTerdaftar()->all());
             }
+
+            $peserta->update(['aktif' => false]);
             $peserta->delete();
+
             return redirect()->route('admin.peserta.index')->with('success', 'Peserta berhasil dihapus.');
         } catch (\Exception $e) {
             Log::error('Error deleting peserta: ' . $e->getMessage());
@@ -339,8 +492,11 @@ class AdminController extends Controller
     public function importPeserta(Request $request)
     {
         $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt|max:2048'
+            'csv_file' => 'required|file|mimes:csv,txt|max:2048',
+            'delimiter' => 'required|in:,,;',
         ]);
+
+        $delimiter = $request->input('delimiter') === ';' ? ';' : ',';
 
         try {
             $file = $request->file('csv_file');
@@ -403,7 +559,7 @@ class AdminController extends Controller
             $errors = [];
 
             if (($handle = fopen($fullPath, "r")) !== FALSE) {
-                $header = fgetcsv($handle);
+                $header = fgetcsv($handle, 0, $delimiter);
                 
                 // Simpan header asli untuk debugging
                 $originalHeader = $header;
@@ -426,7 +582,7 @@ class AdminController extends Controller
                 session(['csv_header' => $header]);
                 session(['csv_header_original' => $originalHeader]);
                 
-                while (($data = fgetcsv($handle)) !== FALSE) {
+                while (($data = fgetcsv($handle, 0, $delimiter)) !== FALSE) {
                     // Debug: Log raw data untuk troubleshooting
                     Log::info('Raw CSV row data:', [
                         'row_number' => $created + $skipped + 1,

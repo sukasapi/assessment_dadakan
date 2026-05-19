@@ -3,56 +3,30 @@
 @section('title', 'Detail Sesi')
 
 @section('content')
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="mb-6">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <a href="{{ route('admin.sesi.index') }}" class="text-gray-400 hover:text-gray-600 mr-4">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </a>
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900">{{ $sesi->nama }}</h1>
-                    <p class="text-gray-600 mt-2">Detail sesi penilaian assessment</p>
-                </div>
-            </div>
-            <div class="flex space-x-3">
-                <a href="{{ route('admin.sesi.edit', $sesi->id) }}" 
-                   class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                    Edit
-                </a>
-                <form action="{{ route('admin.sesi.destroy', $sesi->id) }}" 
-                      method="POST" 
-                      class="inline"
-                      onsubmit="return confirmDelete('Apakah Anda yakin ingin menghapus sesi ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        Hapus
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
+@php
+    $sesiShowActions = '<a href="' . route('admin.sesi.edit', $sesi->id) . '" class="admin-btn-secondary">Edit</a>'
+        . '<form action="' . route('admin.sesi.destroy', $sesi->id) . '" method="POST" class="inline" onsubmit="return confirmDelete(\'Apakah Anda yakin ingin menghapus sesi ini?\')">'
+        . '<input type="hidden" name="_token" value="' . csrf_token() . '">'
+        . '<input type="hidden" name="_method" value="DELETE">'
+        . '<button type="submit" class="admin-btn-secondary text-red-700 border-red-300">Hapus</button></form>';
+@endphp
+@include('admin.partials.page-header', [
+    'title' => $sesi->nama,
+    'subtitle' => 'Detail sesi penilaian assessment',
+    'actions' => $sesiShowActions,
+])
+
+@include('admin.partials.alerts')
 
     <!-- Session Information -->
-    <div class="bg-white shadow rounded-lg mb-6">
+    <div class="admin-card mb-6">
         <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Informasi Sesi</h3>
+            <h3 class="text-lg font-medium text-primary">Informasi Sesi</h3>
         </div>
         <div class="px-6 py-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <dt class="text-sm font-medium text-gray-500">Status</dt>
+                    <dt class="text-sm font-medium text-tertiary">Status</dt>
                     <dd class="mt-1">
                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                             @if($sesi->status === 'draft') bg-gray-100 text-gray-800
@@ -67,26 +41,26 @@
                 </div>
                 
                 <div>
-                    <dt class="text-sm font-medium text-gray-500">Durasi</dt>
-                    <dd class="mt-1 text-sm text-gray-900">
+                    <dt class="text-sm font-medium text-tertiary">Durasi</dt>
+                    <dd class="mt-1 text-sm text-primary">
                         @if($sesi->durasi_menit)
                             {{ $sesi->durasi_menit }} menit
                         @else
-                            <span class="text-gray-400">Tidak ditetapkan</span>
+                            <span class="text-tertiary">Tidak ditetapkan</span>
                         @endif
                     </dd>
                 </div>
                 
                 <div>
-                    <dt class="text-sm font-medium text-gray-500">Dibuat</dt>
-                    <dd class="mt-1 text-sm text-gray-900">
+                    <dt class="text-sm font-medium text-tertiary">Dibuat</dt>
+                    <dd class="mt-1 text-sm text-primary">
                         {{ $sesi->created_at->format('d/m/Y H:i') }}
                     </dd>
                 </div>
                 
                 <div>
-                    <dt class="text-sm font-medium text-gray-500">Terakhir Diupdate</dt>
-                    <dd class="mt-1 text-sm text-gray-900">
+                    <dt class="text-sm font-medium text-tertiary">Terakhir Diupdate</dt>
+                    <dd class="mt-1 text-sm text-primary">
                         {{ $sesi->updated_at->format('d/m/Y H:i') }}
                     </dd>
                 </div>
@@ -94,8 +68,8 @@
             
             @if($sesi->catatan)
                 <div class="mt-6">
-                    <dt class="text-sm font-medium text-gray-500">Catatan</dt>
-                    <dd class="mt-1 text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
+                    <dt class="text-sm font-medium text-tertiary">Catatan</dt>
+                    <dd class="mt-1 text-sm text-primary bg-gray-50 p-3 rounded-md">
                         {!! $sesi->catatan !!}
                     </dd>
                 </div>
@@ -104,10 +78,10 @@
     </div>
 
     <!-- Assessments -->
-    <div class="bg-white shadow rounded-lg mb-6">
+    <div class="admin-card mb-6">
         <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Assessment dalam Sesi</h3>
-            <p class="text-sm text-gray-600 mt-1">Daftar assessment yang akan dijalankan dalam urutan tertentu</p>
+            <h3 class="text-lg font-medium text-primary">Assessment dalam Sesi</h3>
+            <p class="text-sm text-tertiary mt-1">Daftar assessment yang akan dijalankan dalam urutan tertentu</p>
         </div>
         <div class="px-6 py-4">
             @if($sesi->assessments->count() > 0)
@@ -120,8 +94,8 @@
                                         {{ $assessment->urutan }}
                                     </span>
                                     <div>
-                                        <h4 class="text-sm font-medium text-gray-900">{{ $assessment->penilaian->nama }}</h4>
-                                        <p class="text-xs text-gray-500">{{ ucfirst(str_replace('_', ' ', $assessment->penilaian->jenis)) }}</p>
+                                        <h4 class="text-sm font-medium text-primary">{{ $assessment->penilaian->nama }}</h4>
+                                        <p class="text-xs text-tertiary">{{ ucfirst(str_replace('_', ' ', $assessment->penilaian->jenis)) }}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -140,15 +114,15 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 @if($assessment->durasi_default)
                                     <div>
-                                        <span class="font-medium text-gray-500">Durasi:</span>
-                                        <span class="ml-2 text-gray-900">{{ $assessment->durasi_default }} menit</span>
+                                        <span class="font-medium text-tertiary">Durasi:</span>
+                                        <span class="ml-2 text-primary">{{ $assessment->durasi_default }} menit</span>
                                     </div>
                                 @endif
                                 
                                 @if($assessment->instruksi_khusus)
                                     <div class="md:col-span-2">
-                                        <span class="font-medium text-gray-500">Instruksi Khusus:</span>
-                                        <div class="mt-1 text-gray-900 bg-gray-50 p-2 rounded prose max-w-none">{!! $assessment->instruksi_khusus !!}</div>
+                                        <span class="font-medium text-tertiary">Instruksi Khusus:</span>
+                                        <div class="mt-1 text-primary bg-gray-50 p-2 rounded prose max-w-none">{!! $assessment->instruksi_khusus !!}</div>
                                     </div>
                                 @endif
                             </div>
@@ -157,11 +131,11 @@
                 </div>
             @else
                 <div class="text-center py-8">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="mx-auto h-12 w-12 text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">Belum ada assessment</h3>
-                    <p class="mt-1 text-sm text-gray-500">Sesi ini belum memiliki assessment yang ditetapkan.</p>
+                    <h3 class="mt-2 text-sm font-medium text-primary">Belum ada assessment</h3>
+                    <p class="mt-1 text-sm text-tertiary">Sesi ini belum memiliki assessment yang ditetapkan.</p>
                 </div>
             @endif
         </div>
@@ -169,26 +143,26 @@
 
     <!-- Participants (if any) -->
     @if($sesi->participants->count() > 0)
-        <div class="bg-white shadow rounded-lg">
+        <div class="admin-card">
             <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900">Peserta dalam Sesi</h3>
-                <p class="text-sm text-gray-600 mt-1">Daftar peserta yang berpartisipasi dalam sesi ini</p>
+                <h3 class="text-lg font-medium text-primary">Peserta dalam Sesi</h3>
+                <p class="text-sm text-tertiary mt-1">Daftar peserta yang berpartisipasi dalam sesi ini</p>
             </div>
             <div class="px-6 py-4">
-                <div class="overflow-x-auto">
+                <div class="admin-card-table-inner">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                                     Nama Peserta
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                                     Status
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                                     Waktu Mulai
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                                     Waktu Selesai
                                 </th>
                             </tr>
@@ -197,8 +171,8 @@
                             @foreach($sesi->participants as $participant)
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ $participant->peserta->nama_lengkap }}</div>
-                                        <div class="text-sm text-gray-500">{{ $participant->peserta->email }}</div>
+                                        <div class="text-sm font-medium text-primary">{{ $participant->peserta->nama_lengkap }}</div>
+                                        <div class="text-sm text-tertiary">{{ $participant->peserta->email }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
@@ -211,18 +185,18 @@
                                             {{ $participant->status_label }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-tertiary">
                                         @if($participant->waktu_mulai)
                                             {{ $participant->waktu_mulai->format('d/m/Y H:i') }}
                                         @else
-                                            <span class="text-gray-400">-</span>
+                                            <span class="text-tertiary">-</span>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-tertiary">
                                         @if($participant->waktu_selesai)
                                             {{ $participant->waktu_selesai->format('d/m/Y H:i') }}
                                         @else
-                                            <span class="text-gray-400">-</span>
+                                            <span class="text-tertiary">-</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -233,5 +207,4 @@
             </div>
         </div>
     @endif
-</div>
 @endsection
