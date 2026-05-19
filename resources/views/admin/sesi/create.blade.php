@@ -3,32 +3,20 @@
 @section('title', 'Buat Sesi Baru')
 
 @section('content')
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="mb-6">
-        <div class="flex items-center">
-            <a href="{{ route('admin.sesi.index') }}" class="text-gray-400 hover:text-gray-600 mr-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                </svg>
-            </a>
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Buat Sesi Baru</h1>
-                <p class="text-gray-600 mt-2">Buat sesi penilaian assessment baru</p>
-            </div>
-        </div>
-    </div>
+@include('admin.partials.page-header', [
+    'title' => 'Buat Sesi Baru',
+    'subtitle' => 'Buat sesi penilaian assessment baru',
+    'actions' => '<a href="' . route('admin.sesi.index') . '" class="admin-btn-secondary">Kembali</a>',
+])
 
-    <!-- Success/Error Messages -->
+@include('admin.partials.alerts')
+
     @if(session('error'))
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {{ session('error') }}
-        </div>
         <div id="flashError" data-message="{{ session('error') }}" style="display:none"></div>
     @endif
 
     @if ($errors->any())
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div class="admin-alert admin-alert-error mb-4">
             <ul class="list-disc list-inside text-sm">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -41,21 +29,21 @@
     <form action="{{ route('admin.sesi.store') }}" method="POST" id="sessionForm" enctype="multipart/form-data" novalidate>
         @csrf
         
-        <div class="bg-white shadow rounded-lg">
+        <div class="admin-card">
             <!-- Session Details -->
             <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900">Informasi Sesi</h3>
+                <h3 class="text-lg font-medium text-primary">Informasi Sesi</h3>
             </div>
             
             <div class="px-6 py-4 space-y-4">
                 <!-- Session Name -->
                 <div>
-                    <label for="nama" class="block text-sm font-medium text-gray-700">Nama Sesi *</label>
+                    <label for="nama" class="block text-sm font-medium text-primary">Nama Sesi *</label>
                     <input type="text" 
                            name="nama" 
                            id="nama" 
                            value="{{ old('nama') }}"
-                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('nama') border-red-300 @enderror"
+                           class="mt-1 block w-full admin-input @error('nama') border-red-300 @enderror"
                            placeholder="Masukkan nama sesi"
                            required>
                     @error('nama')
@@ -65,20 +53,20 @@
 
                 <!-- Duration -->
                 <div>
-                    <label for="durasi_menit" class="block text-sm font-medium text-gray-700">Durasi (opsional)</label>
+                    <label for="durasi_menit" class="block text-sm font-medium text-primary">Durasi (opsional)</label>
                     <div class="mt-1 relative rounded-md shadow-sm">
                         <input type="number" 
                                name="durasi_menit" 
                                id="durasi_menit" 
                                value="{{ old('durasi_menit') }}"
                                min="1"
-                               class="block w-full pr-12 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 @error('durasi_menit') border-red-300 @enderror"
+                               class="block w-full pr-12 admin-input @error('durasi_menit') border-red-300 @enderror"
                                placeholder="0">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 sm:text-sm">menit</span>
+                            <span class="text-tertiary sm:text-sm">menit</span>
                         </div>
                     </div>
-                    <p class="mt-1 text-sm text-gray-500">Kosongkan jika tidak ingin menetapkan durasi</p>
+                    <p class="mt-1 text-sm text-tertiary">Kosongkan jika tidak ingin menetapkan durasi</p>
                     @error('durasi_menit')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -86,11 +74,11 @@
 
                 <!-- Notes -->
                 <div>
-                    <label for="catatan" class="block text-sm font-medium text-gray-700">Catatan (opsional)</label>
+                    <label for="catatan" class="block text-sm font-medium text-primary">Catatan (opsional)</label>
                     <textarea name="catatan" 
                               id="catatan" 
                               rows="3"
-                              class="catatan-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 @error('catatan') border-red-300 @enderror"
+                              class="catatan-editor mt-1 block w-full admin-input @error('catatan') border-red-300 @enderror"
                               placeholder="Tambahkan catatan atau instruksi khusus untuk sesi ini">{{ old('catatan') }}</textarea>
                     @error('catatan')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -100,8 +88,8 @@
 
             <!-- Assessment Selection -->
             <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900">Pemilihan Assessment</h3>
-                <p class="text-sm text-gray-600 mt-1">Pilih jenis assessment yang akan dijalankan dan tentukan urutannya</p>
+                <h3 class="text-lg font-medium text-primary">Pemilihan Assessment</h3>
+                <p class="text-sm text-tertiary mt-1">Pilih jenis assessment yang akan dijalankan dan tentukan urutannya</p>
             </div>
 
             <div class="px-6 py-4">
@@ -113,7 +101,7 @@
                     <button type="button" 
                             id="addAssessmentBtn"
                             onclick="addAssessment()"
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="admin-btn-secondary disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
@@ -129,23 +117,22 @@
             <!-- Form Actions -->
             <div class="px-6 py-4 bg-gray-50 text-right rounded-b-lg">
                 <a href="{{ route('admin.sesi.index') }}" 
-                   class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mr-3">
+                   class="admin-btn-secondary mr-3">
                     Batal
                 </a>
                 <button type="submit" 
-                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="admin-btn-primary">
                     Buat Sesi
                 </button>
             </div>
         </div>
     </form>
-</div>
 
 <!-- Assessment Template (hidden) -->
 <template id="assessmentTemplate">
     <div class="assessment-item border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50">
         <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-medium text-gray-900">Assessment #<span class="assessment-number"></span></h4>
+            <h4 class="text-sm font-medium text-primary">Assessment #<span class="assessment-number"></span></h4>
             <button type="button" 
                     onclick="removeAssessment(this)"
                     class="text-red-600 hover:text-red-800">
@@ -158,9 +145,9 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Assessment Type -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Jenis Assessment *</label>
+                <label class="block text-sm font-medium text-primary">Jenis Assessment *</label>
                 <select name="assessments[INDEX][penilaian_id]" 
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        class="mt-1 block w-full admin-input"
                         required>
                     <option value="">Pilih Assessment</option>
                     @php
@@ -179,9 +166,9 @@
 
             <!-- Model In-Tray (hanya muncul jika jenis assessment adalah in_tray) -->
             <div class="intray-model-section" style="display: none;">
-                <label class="block text-sm font-medium text-gray-700">Model In-Tray *</label>
+                <label class="block text-sm font-medium text-primary">Model In-Tray *</label>
                 <select name="assessments[INDEX][model_in_tray]" 
-                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        class="mt-1 block w-full admin-input">
                     <option value="urutan">Urutan (Drag & Drop)</option>
                     <option value="prioritas">Prioritas (4 Kategori)</option>
                 </select>
@@ -190,26 +177,26 @@
 
             <!-- Order -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Urutan *</label>
+                <label class="block text-sm font-medium text-primary">Urutan *</label>
                 <input type="number" 
                        name="assessments[INDEX][urutan]" 
                        min="1"
-                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       class="mt-1 block w-full admin-input"
                        placeholder="1"
                        required>
             </div>
 
             <!-- Duration -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Durasi (opsional)</label>
+                <label class="block text-sm font-medium text-primary">Durasi (opsional)</label>
                 <div class="relative">
                     <input type="number" 
                            name="assessments[INDEX][durasi_default]" 
                            min="1"
-                           class="mt-1 block w-full pr-12 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                           class="mt-1 block w-full pr-12 admin-input"
                            placeholder="0">
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <span class="text-gray-500 sm:text-sm">menit</span>
+                        <span class="text-tertiary sm:text-sm">menit</span>
                     </div>
                 </div>
             </div>
@@ -217,11 +204,11 @@
 
         <!-- Special Instructions -->
         <div class="mt-3">
-            <label class="block text-sm font-medium text-gray-700">Instruksi Khusus (opsional)</label>
+            <label class="block text-sm font-medium text-primary">Instruksi Khusus (opsional)</label>
             <textarea name="assessments[INDEX][instruksi_khusus]" 
                       id="instruksi-editor-INDEX"
                       rows="8"
-                      class="instruksi-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      class="instruksi-editor mt-1 block w-full admin-input"
                       placeholder="Instruksi khusus untuk assessment ini"></textarea>
         </div>
 
@@ -234,22 +221,22 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
                     </div>
-                    <label class="ml-2 block text-sm font-semibold text-gray-800">Upload PDF Studi Kasus</label>
+                    <label class="ml-2 block text-sm font-semibold text-primary">Upload PDF Studi Kasus</label>
                 </div>
                 <div class="mt-1">
                     <input type="file" 
                            name="assessments[INDEX][file_pdf]" 
                            accept=".pdf"
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                           class="block w-full text-sm text-tertiary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                            onchange="handlePdfUpload(this, INDEX)">
-                    <div class="pdf-status text-sm text-gray-600 mt-1"></div>
+                    <div class="pdf-status text-sm text-tertiary mt-1"></div>
                 </div>
-                <p class="mt-2 text-xs text-gray-600">Upload file PDF untuk deskripsi soal studi kasus (max 10MB)</p>
+                <p class="mt-2 text-xs text-tertiary">Upload file PDF untuk deskripsi soal studi kasus (max 10MB)</p>
                 
                 <!-- Current PDF Display -->
                 <div class="mt-3 current-pdf-display" style="display: none;">
                     <div class="bg-white border border-gray-200 rounded-md p-3">
-                        <p class="text-sm text-gray-700 mb-2">
+                        <p class="text-sm text-primary mb-2">
                             <span class="font-medium">PDF saat ini:</span> 
                             <span class="current-pdf-name font-semibold text-blue-600"></span>
                         </p>
@@ -276,13 +263,13 @@
         <!-- Memos untuk In-Tray -->
         <div class="mt-4 memo-section" style="display:none;">
             <div class="flex items-center justify-between">
-                <label class="block text-sm font-medium text-gray-700">Memo In-Tray (bisa lebih dari 1)</label>
+                <label class="block text-sm font-medium text-primary">Memo In-Tray (bisa lebih dari 1)</label>
                 <button type="button" onclick="addMemo(this)" class="text-blue-600 hover:text-blue-800 text-sm">+ Tambah Memo</button>
             </div>
             <div class="space-y-3 memo-container">
                 <!-- memo items here -->
             </div>
-            <p class="mt-1 text-xs text-gray-500">Gunakan format text, bisa diberi styling via editor.</p>
+            <p class="mt-1 text-xs text-tertiary">Gunakan format text, bisa diberi styling via editor.</p>
         </div>
     </div>
 </template>
@@ -293,15 +280,15 @@
     <div class="relative top-4 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Preview PDF</h3>
-                <button onclick="closePdfPreview()" class="text-gray-400 hover:text-gray-600">
+                <h3 class="text-lg font-medium text-primary">Preview PDF</h3>
+                <button onclick="closePdfPreview()" class="text-tertiary hover:text-primary">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
             <div id="pdfPreviewContent" class="w-full h-[80vh] border rounded-lg overflow-hidden">
-                <div class="flex items-center justify-center h-full text-gray-500">
+                <div class="flex items-center justify-center h-full text-tertiary">
                     Memuat PDF...
                 </div>
             </div>
@@ -1003,7 +990,7 @@ function previewCurrentPdf(index) {
     }
     
     modal.classList.remove('hidden');
-    content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Memuat PDF...</div>';
+    content.innerHTML = '<div class="flex items-center justify-center h-full text-tertiary">Memuat PDF...</div>';
     
     // Build PDF URL
     const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
@@ -1133,7 +1120,7 @@ function deleteCurrentPdf(index) {
         const statusDiv = assessmentItem.querySelector('.pdf-status');
         if (statusDiv) {
             statusDiv.textContent = '';
-            statusDiv.className = 'pdf-status text-sm text-gray-600';
+            statusDiv.className = 'pdf-status text-sm text-tertiary';
         }
         
         // Show success message
@@ -1150,7 +1137,7 @@ function addMemo(button) {
     wrapper.className = 'border border-gray-200 rounded p-3 bg-white';
     wrapper.innerHTML = `
         <div class="flex justify-between items-center mb-2">
-            <span class="text-sm text-gray-600">Memo ${memoIndex + 1}</span>
+            <span class="text-sm text-tertiary">Memo ${memoIndex + 1}</span>
             <button type="button" class="text-red-600 hover:text-red-800 text-xs" onclick="this.closest('div.border').remove()">Hapus</button>
         </div>
         <textarea name="assessments[INDEX][memos][]" id="memo-editor-INDEX-${memoIndex}" class="memo-editor w-full" rows="10" placeholder="Tulis isi memo di sini..."></textarea>

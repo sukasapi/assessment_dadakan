@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Peserta extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'peserta';
 
@@ -101,5 +103,27 @@ class Peserta extends Model
     public function getJenisKelaminTextAttribute(): string
     {
         return $this->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
+    }
+
+    /**
+     * Cek apakah peserta terdaftar pada sesi assessment
+     */
+    public function isTerdaftarDiSesiAssessment(): bool
+    {
+        return $this->assessmentParticipants()->exists();
+    }
+
+    /**
+     * Daftar nama sesi assessment tempat peserta terdaftar
+     */
+    public function getNamaSesiAssessmentTerdaftar(): Collection
+    {
+        return $this->assessmentParticipants()
+            ->with('sesi')
+            ->get()
+            ->pluck('sesi.nama')
+            ->filter()
+            ->unique()
+            ->values();
     }
 }
