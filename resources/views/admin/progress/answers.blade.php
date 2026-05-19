@@ -426,10 +426,12 @@
     <div id="noResultsMessage" class="hidden text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div class="text-tertiary text-lg font-medium mb-2">Tidak ada data ditemukan</div>
         <div class="text-tertiary text-sm">Coba gunakan kata kunci pencarian yang berbeda</div>
+    </div>
 
+@push('modals')
 <!-- Modal untuk melihat detail jawaban -->
-<div id="answerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+<div id="answerModal" class="admin-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="admin-modal-panel admin-modal-panel-lg">
         <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium text-primary" id="modalTitle">Detail Jawaban</h3>
@@ -447,8 +449,8 @@
 </div>
 
 <!-- Modal untuk melihat PDF -->
-<div id="pdfViewerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-4 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white">
+<div id="pdfViewerModal" class="admin-modal hidden" role="dialog" aria-modal="true">
+    <div class="admin-modal-panel admin-modal-panel-xl">
         <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium text-primary">PDF Assessment</h3>
@@ -466,7 +468,9 @@
         </div>
     </div>
 </div>
+@endpush
 
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     // Elements
@@ -653,7 +657,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 })
                 .then(data => {
                     modalContent.innerHTML = data.content;
-                    modal.classList.remove('hidden');
+                    adminOpenModal(modal);
                     
                     // Inisialisasi form penilaian studi kasus setelah content dimuat
                     // Gunakan beberapa timeout untuk memastikan DOM sudah siap
@@ -711,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 })
                 .catch(error => {
                     modalContent.innerHTML = '<p class="text-red-500">Error loading answer details: ' + error.message + '</p>';
-                    modal.classList.remove('hidden');
+                    adminOpenModal(modal);
                 });
         }
         
@@ -739,11 +743,13 @@ document.addEventListener('DOMContentLoaded', function(){
                 return;
             }
             
-            modal.classList.remove('hidden');
+            adminOpenModal(modal);
             content.innerHTML = '<div class="flex items-center justify-center h-full text-tertiary">Memuat PDF...</div>';
             
             // Build PDF URL
-            const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
+            const pdfUrl = '{{ route('assessment.pdf.view', ['penilaianId' => '__PID__', 'filename' => '__FILE__']) }}'
+                .replace('__PID__', penilaianId)
+                .replace('__FILE__', encodeURIComponent(pdfFile));
             
             // Disable right-click context menu
             content.addEventListener('contextmenu', function(e) {
@@ -788,7 +794,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     const observer = new MutationObserver(function(mutations) {
                         mutations.forEach(function(mutation) {
                             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                                if (modal.classList.contains('hidden')) {
+                                if (!modal.classList.contains('is-open')) {
                                     URL.revokeObjectURL(blobUrl);
                                     observer.disconnect();
                                 }
@@ -803,27 +809,31 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     });
     
-    window.closeModal = function() {
-        document.getElementById('answerModal').classList.add('hidden');
+    window.closeModal = function () {
+        adminCloseModal('answerModal');
     };
-    
-    window.closePdfViewer = function() {
-        document.getElementById('pdfViewerModal').classList.add('hidden');
+
+    window.closePdfViewer = function () {
+        adminCloseModal('pdfViewerModal');
     };
-    
-    // Close modal when clicking outside
-    document.getElementById('answerModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeModal();
-        }
-    });
-    
-    // Close PDF viewer modal when clicking outside
-    document.getElementById('pdfViewerModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closePdfViewer();
-        }
-    });
+
+    const answerModalEl = document.getElementById('answerModal');
+    if (answerModalEl) {
+        answerModalEl.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    }
+
+    const pdfViewerModalEl = document.getElementById('pdfViewerModal');
+    if (pdfViewerModalEl) {
+        pdfViewerModalEl.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closePdfViewer();
+            }
+        });
+    }
     
     // Handle form penilaian studi kasus
     document.addEventListener('click', function(e) {
@@ -1247,4 +1257,5 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 });
 </script>
+@endpush
 @endsection
