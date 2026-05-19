@@ -79,4 +79,25 @@ class SesiPenilaian extends Model
             default => 'Tidak Diketahui'
         };
     }
+
+    /**
+     * Saran nama unik untuk sesi hasil duplikasi
+     */
+    public static function suggestDuplicateNama(string $namaAsli): string
+    {
+        $baseNama = preg_replace('/\s*\(Salinan(?:\s+\d+)?\)$/', '', $namaAsli);
+        $candidate = $baseNama . ' (Salinan)';
+
+        if (!static::where('nama', $candidate)->exists()) {
+            return $candidate;
+        }
+
+        $counter = 2;
+        do {
+            $candidate = $baseNama . ' (Salinan ' . $counter . ')';
+            $counter++;
+        } while (static::where('nama', $candidate)->exists());
+
+        return $candidate;
+    }
 }

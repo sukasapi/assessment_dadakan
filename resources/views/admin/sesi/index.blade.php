@@ -56,7 +56,7 @@
                              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
                                  Dibuat
                              </th>
-                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                             <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                                  Aksi
                              </th>
                              </tr>
@@ -109,33 +109,63 @@
                                  <td class="px-4 py-4 text-sm text-gray-500">
                                      {{ $sesi->created_at->format('d/m/Y') }}
                                  </td>
-                                 <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                                    <div class="space-y-2">
+                                 <td class="px-3 py-4 align-top text-sm font-medium">
+                                    <div class="flex flex-col gap-1.5 w-36">
                                         <a href="{{ route('admin.sesi.show', $sesi->id) }}" 
-                                           class="block w-full text-center bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
-                                            Lihat
+                                           class="flex items-center justify-center gap-1 w-full bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-2 py-1.5 rounded-md font-medium transition-colors duration-200">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                            <span>Lihat</span>
                                         </a>
                                         <a href="{{ route('admin.sesi.peserta', $sesi->id) }}" 
-                                           class="block w-full text-center bg-green-100 hover:bg-green-200 text-green-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
-                                            Peserta
+                                           class="flex items-center justify-center gap-1 w-full bg-green-100 hover:bg-green-200 text-green-700 text-xs px-2 py-1.5 rounded-md font-medium transition-colors duration-200">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                            </svg>
+                                            <span>Peserta</span>
                                         </a>
                                         <a href="{{ route('admin.progress.answers', ['sesi_id' => $sesi->id]) }}" 
-                                           class="block w-full text-center bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
-                                            Progres Pengisian
+                                           class="flex items-center justify-center gap-1 w-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs px-2 py-1.5 rounded-md font-medium transition-colors duration-200">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                            </svg>
+                                            <span>Progres</span>
                                         </a>
-                                                                                 <a href="{{ route('admin.sesi.edit', $sesi->id) }}" 
-                                            class="block w-full text-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
-                                             Edit
-                                         </a>
+                                        <a href="{{ route('admin.sesi.edit', $sesi->id) }}" 
+                                           class="flex items-center justify-center gap-1 w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs px-2 py-1.5 rounded-md font-medium transition-colors duration-200">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                            <span>Edit</span>
+                                        </a>
+                                        <form action="{{ route('admin.sesi.duplicate', $sesi->id) }}"
+                                              method="POST"
+                                              class="duplicate-sesi-form w-full">
+                                            @csrf
+                                            <input type="hidden" name="nama" value="">
+                                            <button type="button"
+                                                    class="btn-duplicate-sesi flex items-center justify-center gap-1 w-full bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs px-2 py-1.5 rounded-md font-medium transition-colors duration-200"
+                                                    data-default-nama="{{ \App\Models\SesiPenilaian::suggestDuplicateNama($sesi->nama) }}">
+                                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                </svg>
+                                                <span>Duplikasi</span>
+                                            </button>
+                                        </form>
                                         <form action="{{ route('admin.sesi.destroy', $sesi->id) }}" 
                                               method="POST" 
-                                              class="block"
+                                              class="w-full"
                                               onsubmit="return confirmDelete('Apakah Anda yakin ingin menghapus sesi ini?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 
-                                                    class="w-full text-center bg-red-100 hover:bg-red-200 text-red-700 text-xs px-3 py-2 rounded-md font-medium transition-colors duration-200">
-                                                Hapus
+                                                    class="flex items-center justify-center gap-1 w-full bg-red-100 hover:bg-red-200 text-red-700 text-xs px-2 py-1.5 rounded-md font-medium transition-colors duration-200">
+                                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                </svg>
+                                                <span>Hapus</span>
                                             </button>
                                         </form>
                                     </div>
@@ -168,8 +198,42 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Duplikasi sesi dengan SweetAlert
+    document.querySelectorAll('.btn-duplicate-sesi').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const form = this.closest('.duplicate-sesi-form');
+            const defaultNama = this.getAttribute('data-default-nama') || '';
+
+            Swal.fire({
+                title: 'Duplikasi Sesi',
+                html: '<p class="text-sm text-gray-600 mb-3">Masukkan judul untuk sesi duplikat beserta konten assessment-nya.</p>',
+                input: 'text',
+                inputLabel: 'Judul Sesi',
+                inputValue: defaultNama,
+                inputPlaceholder: 'Nama sesi duplikat',
+                showCancelButton: true,
+                confirmButtonText: 'Duplikasi',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#d97706',
+                cancelButtonColor: '#6b7280',
+                reverseButtons: true,
+                inputValidator: (value) => {
+                    if (!value || !value.trim()) {
+                        return 'Judul sesi wajib diisi';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.querySelector('input[name="nama"]').value = result.value.trim();
+                    form.submit();
+                }
+            });
+        });
+    });
+
     // Status update functionality
     const statusSelects = document.querySelectorAll('.status-select');
     
