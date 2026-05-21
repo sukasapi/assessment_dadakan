@@ -357,7 +357,7 @@
                                                 <button type="button"
                                                         data-action="view-pdf"
                                                         data-penilaian-id="{{ $penilaian->id }}"
-                                                        data-pdf-url="{{ route('assessment.pdf.view.id', $penilaian->id) }}"
+                                                        data-pdf-url="{{ $penilaian->file_pdf ? asset('storage/' . $penilaian->file_pdf) : '' }}"
                                                         class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded hover:bg-purple-200 transition-colors">
                                                     📄 Lihat PDF
                                                 </button>
@@ -453,21 +453,22 @@
 
 <!-- Modal untuk melihat PDF -->
 <div id="pdfViewerModal" class="admin-modal hidden" role="dialog" aria-modal="true">
-    <div class="admin-modal-panel admin-modal-panel-xl">
-        <div class="mt-3">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-primary">PDF Assessment</h3>
-                <button onclick="closePdfViewer()" class="text-tertiary hover:text-tertiary">
+    <div class="admin-modal-panel admin-modal-panel-pdf">
+        <div class="flex justify-between items-center gap-3 mb-3 flex-shrink-0">
+            <h3 class="text-lg font-medium text-primary">Preview PDF</h3>
+            <div class="flex items-center gap-2">
+                <a id="pdfViewerOpenTab" href="#" target="_blank" rel="noopener noreferrer" class="admin-btn-secondary text-sm whitespace-nowrap">
+                    Buka di Tab Baru
+                </a>
+                <button type="button" onclick="closePdfViewer()" class="p-2 text-tertiary hover:text-primary rounded-lg hover:bg-neutral" aria-label="Tutup">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div id="pdfViewerContent" class="w-full h-[80vh] border rounded-lg overflow-hidden">
-                <div class="flex items-center justify-center h-full text-tertiary">
-                    Memuat PDF...
-                </div>
-            </div>
+        </div>
+        <div id="pdfViewerContent" class="admin-pdf-preview-body">
+            <div class="admin-pdf-preview-loading">Memuat PDF...</div>
         </div>
     </div>
 </div>
@@ -736,59 +737,18 @@ document.addEventListener('DOMContentLoaded', function(){
         if (viewPdfBtn) {
             e.preventDefault();
             const pdfUrl = viewPdfBtn.getAttribute('data-pdf-url');
-            
+
             if (!pdfUrl) {
                 showNotification('URL PDF tidak tersedia.', 'error');
                 return;
             }
-            
-            // Show PDF viewer modal
-            const modal = document.getElementById('pdfViewerModal');
-            const content = document.getElementById('pdfViewerContent');
-            
-            if (!modal || !content) {
-                return;
-            }
-            
-            adminOpenModal(modal);
-            content.innerHTML = '<div class="flex items-center justify-center h-full text-tertiary">Memuat PDF...</div>';
-            
-            // Disable right-click context menu
-            content.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                return false;
+
+            adminShowPdfPreview({
+                modalId: 'pdfViewerModal',
+                contentId: 'pdfViewerContent',
+                openTabId: 'pdfViewerOpenTab',
+                pdfUrl: pdfUrl,
             });
-            
-            // Disable keyboard shortcuts for save/print
-            document.addEventListener('keydown', function(e) {
-                if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'a')) {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-            
-            // Tampilkan PDF via iframe (URL dari server, sama seperti halaman peserta)
-            const iframe = document.createElement('iframe');
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            iframe.style.minHeight = '70vh';
-            iframe.style.border = '1px solid #E2E8F0';
-            iframe.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
-            iframe.setAttribute('title', 'Preview PDF Assessment');
-            iframe.onload = function () {
-                content.innerHTML = '';
-                content.appendChild(iframe);
-            };
-            iframe.onerror = function () {
-                content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500 p-4">Gagal memuat PDF. Pastikan file masih ada di server.</div>';
-            };
-            // Fallback jika onload tidak terpicu
-            setTimeout(function () {
-                if (!content.contains(iframe)) {
-                    content.innerHTML = '';
-                    content.appendChild(iframe);
-                }
-            }, 300);
         }
     });
     
@@ -797,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function(){
     };
 
     window.closePdfViewer = function () {
-        adminCloseModal('pdfViewerModal');
+        adminClosePdfPreview('pdfViewerModal');
     };
 
     const answerModalEl = document.getElementById('answerModal');

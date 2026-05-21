@@ -90,10 +90,110 @@
      * URL preview PDF assessment (by penilaian ID — tanpa encode path).
      * Template diset dari layout admin: ADMIN_PDF_VIEW_ROUTE_TEMPLATE
      */
+    /** URL file PDF langsung dari folder storage (disarankan untuk iframe). */
+    window.adminStoragePdfUrl = function (relativePath) {
+        if (!relativePath) {
+            return '';
+        }
+        const base = (window.ADMIN_STORAGE_BASE || '/storage').replace(/\/$/, '');
+        return base + '/' + String(relativePath).replace(/^\/+/, '');
+    };
+
+    /** Fallback: route controller jika storage URL tidak dipakai */
     window.adminAssessmentPdfUrl = function (penilaianId) {
         if (window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE) {
             return window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE.replace('__ID__', String(penilaianId));
         }
         return '/admin/assessment/' + penilaianId + '/view-pdf';
+    };
+
+    /**
+     * Tampilkan PDF di modal (satu iframe, mengisi container preview).
+     */
+    window.adminShowPdfPreview = function (options) {
+        const opts = options || {};
+        const modal = document.getElementById(opts.modalId || 'pdfPreviewModal');
+        const content = document.getElementById(opts.contentId || 'pdfPreviewContent');
+        const openTab = opts.openTabId ? document.getElementById(opts.openTabId) : null;
+
+        if (!modal || !content) {
+            return;
+        }
+
+        let pdfUrl = opts.pdfUrl || '';
+        if (!pdfUrl && opts.storagePath) {
+            pdfUrl = adminStoragePdfUrl(opts.storagePath);
+        }
+        if (!pdfUrl && opts.penilaianId) {
+            pdfUrl = adminAssessmentPdfUrl(opts.penilaianId);
+        }
+
+        if (!pdfUrl) {
+            content.innerHTML = '<p class="admin-pdf-preview-error">URL PDF tidak tersedia.</p>';
+            return;
+        }
+
+        // Tab baru: gunakan URL yang sama (file storage atau route)
+        if (openTab) {
+            openTab.href = pdfUrl;
+        }
+
+        if (modal.classList.contains('admin-modal') && typeof adminOpenModal === 'function') {
+            adminOpenModal(modal);
+        } else {
+            modal.classList.remove('hidden');
+            document.body.classList.add('admin-modal-open');
+        }
+
+        content.innerHTML = '';
+
+        const loader = document.createElement('div');
+        loader.className = 'admin-pdf-preview-loading';
+        loader.setAttribute('data-pdf-loader', '1');
+        loader.textContent = 'Memuat PDF...';
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'admin-pdf-preview-iframe';
+        iframe.setAttribute('title', 'Preview PDF');
+
+        let finished = false;
+        const hideLoader = function () {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            const el = content.querySelector('[data-pdf-loader]');
+            if (el) {
+                el.remove();
+            }
+        };
+
+        iframe.addEventListener('load', hideLoader);
+        iframe.addEventListener('error', function () {
+            finished = true;
+            content.innerHTML = '<p class="admin-pdf-preview-error">Gagal memuat PDF. Pastikan <code>php artisan storage:link</code> sudah dijalankan, atau gunakan &quot;Buka di Tab Baru&quot;.</p>';
+        });
+
+        content.appendChild(iframe);
+        content.appendChild(loader);
+
+        // URL file langsung (/storage/...) — tanpa hash agar browser tidak bingung
+        iframe.src = pdfUrl;
+
+        // PDF di iframe sering tidak memicu load; sembunyikan loader setelah delay singkat
+        setTimeout(hideLoader, 600);
+    };
+
+    window.adminClosePdfPreview = function (modalId) {
+        const modal = document.getElementById(modalId || 'pdfPreviewModal');
+        if (!modal) {
+            return;
+        }
+        if (modal.classList.contains('admin-modal') && typeof adminCloseModal === 'function') {
+            adminCloseModal(modal);
+        } else {
+            modal.classList.add('hidden');
+            document.body.classList.remove('admin-modal-open');
+        }
     };
 })();
