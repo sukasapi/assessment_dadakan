@@ -85,4 +85,15 @@
             document.body.classList.remove('admin-modal-open');
         }
     };
+
+    /**
+     * URL preview PDF assessment (by penilaian ID — tanpa encode path).
+     * Template diset dari layout admin: ADMIN_PDF_VIEW_ROUTE_TEMPLATE
+     */
+    window.adminAssessmentPdfUrl = function (penilaianId) {
+        if (window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE) {
+            return window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE.replace('__ID__', String(penilaianId));
+        }
+        return '/admin/assessment/' + penilaianId + '/view-pdf';
+    };
 })();

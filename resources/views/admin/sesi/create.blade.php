@@ -992,8 +992,9 @@ function previewCurrentPdf(index) {
     modal.classList.remove('hidden');
     content.innerHTML = '<div class="flex items-center justify-center h-full text-tertiary">Memuat PDF...</div>';
     
-    // Build PDF URL
-    const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${pdfFile}`;
+    const pdfUrl = typeof adminAssessmentPdfUrl === 'function'
+        ? adminAssessmentPdfUrl(penilaianId)
+        : `/admin/assessment/${penilaianId}/view-pdf`;
     
     // Disable right-click context menu
     content.addEventListener('contextmenu', function(e) {
