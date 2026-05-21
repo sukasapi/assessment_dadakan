@@ -90,21 +90,24 @@
      * URL preview PDF assessment (by penilaian ID — tanpa encode path).
      * Template diset dari layout admin: ADMIN_PDF_VIEW_ROUTE_TEMPLATE
      */
-    /** URL file PDF langsung dari folder storage (disarankan untuk iframe). */
+    /**
+     * URL preview via Laravel (disarankan — /storage/ sering 403 di server produksi).
+     * Route: GET /admin/assessment/{id}/view-pdf
+     */
+    window.adminAssessmentPdfUrl = function (penilaianId) {
+        if (window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE) {
+            return window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE.replace('__ID__', String(penilaianId));
+        }
+        return '/admin/assessment/' + penilaianId + '/view-pdf';
+    };
+
+    /** URL /storage/... — hanya untuk lingkungan yang mengizinkan akses file publik */
     window.adminStoragePdfUrl = function (relativePath) {
         if (!relativePath) {
             return '';
         }
         const base = (window.ADMIN_STORAGE_BASE || '/storage').replace(/\/$/, '');
         return base + '/' + String(relativePath).replace(/^\/+/, '');
-    };
-
-    /** Fallback: route controller jika storage URL tidak dipakai */
-    window.adminAssessmentPdfUrl = function (penilaianId) {
-        if (window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE) {
-            return window.ADMIN_PDF_VIEW_ROUTE_TEMPLATE.replace('__ID__', String(penilaianId));
-        }
-        return '/admin/assessment/' + penilaianId + '/view-pdf';
     };
 
     /**
@@ -121,11 +124,11 @@
         }
 
         let pdfUrl = opts.pdfUrl || '';
-        if (!pdfUrl && opts.storagePath) {
-            pdfUrl = adminStoragePdfUrl(opts.storagePath);
-        }
         if (!pdfUrl && opts.penilaianId) {
             pdfUrl = adminAssessmentPdfUrl(opts.penilaianId);
+        }
+        if (!pdfUrl && opts.storagePath) {
+            pdfUrl = adminStoragePdfUrl(opts.storagePath);
         }
 
         if (!pdfUrl) {
@@ -171,7 +174,7 @@
         iframe.addEventListener('load', hideLoader);
         iframe.addEventListener('error', function () {
             finished = true;
-            content.innerHTML = '<p class="admin-pdf-preview-error">Gagal memuat PDF. Pastikan <code>php artisan storage:link</code> sudah dijalankan, atau gunakan &quot;Buka di Tab Baru&quot;.</p>';
+            content.innerHTML = '<p class="admin-pdf-preview-error">Gagal memuat PDF di preview. Gunakan tombol &quot;Buka di Tab Baru&quot; atau pastikan file ada di server.</p>';
         });
 
         content.appendChild(iframe);
