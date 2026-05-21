@@ -126,12 +126,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 });
 
 // Route untuk mengakses file PDF assessment (mendukung path bertingkat) - di luar grup admin agar dapat diakses peserta
-Route::get('/admin/assessment/{penilaianId}/pdf/{filename}', function($penilaianId, $filename) {
-    $relativePath = Str::startsWith($filename, 'assessments/pdf') ? $filename : ('assessments/pdf/' . $filename);
+Route::get('/admin/assessment/{penilaianId}/pdf/{filename}', function ($penilaianId, $filename) {
+    $filename = urldecode($filename);
+    $relativePath = Str::startsWith($filename, 'assessments/pdf')
+        ? $filename
+        : ('assessments/pdf/' . ltrim($filename, '/'));
     $path = storage_path('app/public/' . $relativePath);
 
     if (!file_exists($path)) {
-        abort(404);
+        abort(404, 'File PDF tidak ditemukan: ' . $relativePath);
     }
 
     return response()->file($path, [

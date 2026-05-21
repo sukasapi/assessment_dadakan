@@ -354,7 +354,10 @@
                                                 @endif
                                             @endif
                                             @if(($penilaian->jenis === 'studi_kasus' || $penilaian->jenis === 'roleplay' || $penilaian->jenis === 'fgd') && $penilaian->file_pdf)
-                                                <button data-action="view-pdf" data-penilaian-id="{{ $penilaian->id }}" data-pdf-file="{{ $penilaian->file_pdf }}" 
+                                                <button type="button"
+                                                        data-action="view-pdf"
+                                                        data-penilaian-id="{{ $penilaian->id }}"
+                                                        data-pdf-url="{{ route('assessment.pdf.view', ['penilaianId' => $penilaian->id, 'filename' => $penilaian->file_pdf]) }}"
                                                         class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded hover:bg-purple-200 transition-colors">
                                                     📄 Lihat PDF
                                                 </button>
@@ -732,8 +735,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const viewPdfBtn = e.target.closest('[data-action="view-pdf"]');
         if (viewPdfBtn) {
             e.preventDefault();
-            const penilaianId = viewPdfBtn.getAttribute('data-penilaian-id');
-            const pdfFile = viewPdfBtn.getAttribute('data-pdf-file');
+            const pdfUrl = viewPdfBtn.getAttribute('data-pdf-url');
+            
+            if (!pdfUrl) {
+                showNotification('URL PDF tidak tersedia.', 'error');
+                return;
+            }
             
             // Show PDF viewer modal
             const modal = document.getElementById('pdfViewerModal');
@@ -745,11 +752,6 @@ document.addEventListener('DOMContentLoaded', function(){
             
             adminOpenModal(modal);
             content.innerHTML = '<div class="flex items-center justify-center h-full text-tertiary">Memuat PDF...</div>';
-            
-            // Build PDF URL
-            const pdfUrl = '{{ route('assessment.pdf.view', ['penilaianId' => '__PID__', 'filename' => '__FILE__']) }}'
-                .replace('__PID__', penilaianId)
-                .replace('__FILE__', encodeURIComponent(pdfFile));
             
             // Disable right-click context menu
             content.addEventListener('contextmenu', function(e) {
@@ -765,47 +767,28 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
             });
             
-            // Fetch PDF as blob to prevent direct access
-            fetch(pdfUrl)
-                .then(response => response.blob())
-                .then(blob => {
-                    const blobUrl = URL.createObjectURL(blob);
-                    
-                    // Create iframe for PDF viewing
-                    const iframe = document.createElement('iframe');
-                    iframe.style.width = '100%';
-                    iframe.style.height = '500px';
-                    iframe.style.border = '1px solid #eeeeee';
-                    iframe.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=Fit';
-                    iframe.frameBorder = '0';
-                    iframe.allowFullscreen = true;
-                    
-                    iframe.onload = function() {
-                        content.innerHTML = '';
-                        content.appendChild(iframe);
-                    };
-                    
-                    iframe.onerror = function() {
-                        content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal memuat PDF</div>';
-                    };
-                    
-                    // Cleanup blob URL when modal closes
-                    const modal = document.getElementById('pdfViewerModal');
-                    const observer = new MutationObserver(function(mutations) {
-                        mutations.forEach(function(mutation) {
-                            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                                if (!modal.classList.contains('is-open')) {
-                                    URL.revokeObjectURL(blobUrl);
-                                    observer.disconnect();
-                                }
-                            }
-                        });
-                    });
-            observer.observe(modal, { attributes: true });
-        })
-        .catch(function(error) {
-            content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Error: Gagal mengambil PDF</div>';
-        });
+            // Tampilkan PDF via iframe (URL dari server, sama seperti halaman peserta)
+            const iframe = document.createElement('iframe');
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.minHeight = '70vh';
+            iframe.style.border = '1px solid #E2E8F0';
+            iframe.src = pdfUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+            iframe.setAttribute('title', 'Preview PDF Assessment');
+            iframe.onload = function () {
+                content.innerHTML = '';
+                content.appendChild(iframe);
+            };
+            iframe.onerror = function () {
+                content.innerHTML = '<div class="flex items-center justify-center h-full text-red-500 p-4">Gagal memuat PDF. Pastikan file masih ada di server.</div>';
+            };
+            // Fallback jika onload tidak terpicu
+            setTimeout(function () {
+                if (!content.contains(iframe)) {
+                    content.innerHTML = '';
+                    content.appendChild(iframe);
+                }
+            }, 300);
         }
     });
     
