@@ -357,7 +357,7 @@
                                                 <button type="button"
                                                         data-action="view-pdf"
                                                         data-penilaian-id="{{ $penilaian->id }}"
-                                                        data-pdf-url="{{ $penilaian->file_pdf ? asset('storage/' . $penilaian->file_pdf) : '' }}"
+                                                        data-pdf-url="{{ $penilaian->file_pdf ? route('assessment.pdf.view.id', $penilaian->id) : '' }}"
                                                         class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded hover:bg-purple-200 transition-colors">
                                                     📄 Lihat PDF
                                                 </button>

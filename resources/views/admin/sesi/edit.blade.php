@@ -175,7 +175,7 @@
                         });
                     @endphp
                     @foreach($filteredAssessments as $assessment)
-                        <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}" data-file="{{ $assessment->file_pdf ?? '' }}" data-url="{{ $assessment->file_pdf ? Storage::url($assessment->file_pdf) : '' }}">{{ $assessment->nama }}</option>
+                        <option value="{{ $assessment->id }}" data-jenis="{{ $assessment->jenis }}" data-file="{{ $assessment->file_pdf ?? '' }}" data-url="{{ $assessment->file_pdf ? route('assessment.pdf.view.id', $assessment->id) : '' }}">{{ $assessment->nama }}</option>
                     @endforeach
                 </select>
             </div>
@@ -1263,7 +1263,7 @@ function previewCurrentPdf(index) {
         return;
     }
     
-    const pdfUrl = selectedOption.dataset.url || adminStoragePdfUrl(pdfFile);
+    const pdfUrl = selectedOption.dataset.url || adminAssessmentPdfUrl(selectedOption.value);
 
     if (!pdfUrl) {
         alert('URL PDF tidak tersedia');
