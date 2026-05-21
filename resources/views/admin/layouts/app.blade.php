@@ -32,6 +32,12 @@
     <link href="{{ asset('css/admin-theme.css') }}?v={{ $adminThemeCssV }}" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
     <script src="{{ asset('js/admin-common.js') }}?v={{ $adminCommonJsV }}"></script>
     <script>
         window.ADMIN_STORAGE_BASE = @json(asset('storage'));
