@@ -125,13 +125,31 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
      
 });
 
-// Route untuk mengakses file PDF assessment (mendukung path bertingkat) - di luar grup admin agar dapat diakses peserta
+// Preview PDF by penilaian ID (disarankan — path file dari DB, tanpa slash di URL)
+Route::get('/admin/assessment/{penilaianId}/view-pdf', [AdminController::class, 'viewAssessmentPdf'])
+    ->name('assessment.pdf.view.id');
+
+// Route legacy: path filename di URL (untuk halaman peserta yang sudah memakai route ini)
 Route::get('/admin/assessment/{penilaianId}/pdf/{filename}', function ($penilaianId, $filename) {
     $filename = urldecode($filename);
+    $filename = str_replace(['%2F', '%2f'], '/', $filename);
+
     $relativePath = Str::startsWith($filename, 'assessments/pdf')
         ? $filename
         : ('assessments/pdf/' . ltrim($filename, '/'));
+
+    // Fallback: ambil dari database jika path di URL tidak valid
     $path = storage_path('app/public/' . $relativePath);
+    if (!file_exists($path)) {
+        $penilaian = \App\Models\Penilaian::find($penilaianId);
+        if ($penilaian && $penilaian->file_pdf) {
+            $relativePath = $penilaian->file_pdf;
+            if (!Str::startsWith($relativePath, 'assessments/pdf')) {
+                $relativePath = 'assessments/pdf/' . ltrim($relativePath, '/');
+            }
+            $path = storage_path('app/public/' . $relativePath);
+        }
+    }
 
     if (!file_exists($path)) {
         abort(404, 'File PDF tidak ditemukan: ' . $relativePath);
@@ -139,7 +157,7 @@ Route::get('/admin/assessment/{penilaianId}/pdf/{filename}', function ($penilaia
 
     return response()->file($path, [
         'Content-Type' => 'application/pdf',
-        'Content-Disposition' => 'inline; filename="' . basename($relativePath) . '"'
+        'Content-Disposition' => 'inline; filename="' . basename($relativePath) . '"',
     ]);
 })->where('filename', '.*')->name('assessment.pdf.view');
 

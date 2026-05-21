@@ -1275,8 +1275,9 @@ function previewCurrentPdf(index) {
     modal.classList.remove('hidden');
     content.innerHTML = '<div class="flex items-center justify-center h-full text-tertiary">Memuat PDF...</div>';
     
-    // Build PDF URL - use same route as participants (proven to work)
-    const pdfUrl = `/admin/assessment/${penilaianId}/pdf/${encodeURIComponent(pdfFile)}`;
+    const pdfUrl = typeof adminAssessmentPdfUrl === 'function'
+        ? adminAssessmentPdfUrl(penilaianId)
+        : `/admin/assessment/${penilaianId}/view-pdf`;
     
     // Create iframe for PDF viewing - langsung set HTML
     content.innerHTML = `

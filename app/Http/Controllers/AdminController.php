@@ -2946,6 +2946,34 @@ class AdminController extends Controller
     }
 
     /**
+     * Tampilkan PDF assessment (path diambil dari database, hindari masalah URL encode).
+     */
+    public function viewAssessmentPdf($penilaianId)
+    {
+        $penilaian = Penilaian::findOrFail($penilaianId);
+
+        if (empty($penilaian->file_pdf)) {
+            abort(404, 'PDF tidak terdaftar untuk assessment ini.');
+        }
+
+        $relativePath = $penilaian->file_pdf;
+        if (!str_starts_with($relativePath, 'assessments/pdf')) {
+            $relativePath = 'assessments/pdf/' . ltrim($relativePath, '/');
+        }
+
+        $path = storage_path('app/public/' . $relativePath);
+
+        if (!file_exists($path)) {
+            abort(404, 'File PDF tidak ditemukan di server: ' . $relativePath);
+        }
+
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . basename($relativePath) . '"',
+        ]);
+    }
+
+    /**
      * Hapus PDF assessment
      */
     public function deleteAssessmentPdf($penilaianId)
