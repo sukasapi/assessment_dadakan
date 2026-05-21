@@ -125,8 +125,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
      
 });
 
-// Preview PDF by penilaian ID (disarankan — path file dari DB, tanpa slash di URL)
+// Preview PDF (auth admin — path file dari DB)
 Route::get('/admin/assessment/{penilaianId}/view-pdf', [AdminController::class, 'viewAssessmentPdf'])
+    ->middleware(['auth', 'admin'])
     ->name('assessment.pdf.view.id');
 
 // Route legacy: path filename di URL (untuk halaman peserta yang sudah memakai route ini)

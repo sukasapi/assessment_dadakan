@@ -625,6 +625,8 @@ body.admin-modal-open {
     position: relative;
 }
 .admin-pdf-preview-body iframe,
+.admin-pdf-preview-body embed,
+.admin-pdf-preview-body object,
 .admin-pdf-preview-iframe {
     display: block;
     width: 100%;
@@ -656,6 +658,20 @@ body.admin-modal-open {
     font-size: 0.875rem;
     padding: 1rem;
     text-align: center;
+}
+.admin-pdf-js-scroll {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    background-color: #fff;
+    padding: 0.75rem 0;
+}
+.admin-pdf-js-page {
+    display: block;
+    margin: 0 auto 0.75rem;
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
 }
 
 /* Mobile sidebar overlay */

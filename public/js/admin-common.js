@@ -110,8 +110,91 @@
         return base + '/' + String(relativePath).replace(/^\/+/, '');
     };
 
+    function adminRevokePdfBlob(content) {
+        if (!content || !content._adminPdfBlobUrl) {
+            return;
+        }
+        try {
+            URL.revokeObjectURL(content._adminPdfBlobUrl);
+        } catch (e) { /* ignore */ }
+        content._adminPdfBlobUrl = null;
+    }
+
+    /** Parameter PDF Open (fallback iframe — toolbar browser). */
+    function adminPdfViewerSrc(url) {
+        if (!url) {
+            return '';
+        }
+        const base = String(url).split('#')[0];
+        return base + '#toolbar=0&navpanes=0&scrollbar=1&statusbar=0';
+    }
+
+    function adminMountPdfIframe(content, src, isBlob) {
+        content.querySelectorAll('iframe, embed, object, .admin-pdf-js-scroll').forEach(function (el) {
+            el.remove();
+        });
+        const viewer = document.createElement('iframe');
+        viewer.className = 'admin-pdf-preview-iframe';
+        viewer.setAttribute('title', 'Preview PDF');
+        viewer.src = adminPdfViewerSrc(src);
+        content.appendChild(viewer);
+        if (isBlob) {
+            content._adminPdfBlobUrl = String(src).split('#')[0];
+        }
+    }
+
+    /** Render PDF tanpa toolbar browser (PDF.js → canvas). */
+    function adminMountPdfViewer(content, src, isBlob) {
+        adminRevokePdfBlob(content);
+        content.querySelectorAll('iframe, embed, object, .admin-pdf-js-scroll').forEach(function (el) {
+            el.remove();
+        });
+
+        if (isBlob) {
+            content._adminPdfBlobUrl = String(src).split('#')[0];
+        }
+
+        if (!window.pdfjsLib) {
+            adminMountPdfIframe(content, src, isBlob);
+            return;
+        }
+
+        const scroll = document.createElement('div');
+        scroll.className = 'admin-pdf-js-scroll';
+        scroll.setAttribute('aria-label', 'Preview PDF');
+        content.appendChild(scroll);
+
+        const task = pdfjsLib.getDocument(src);
+        task.promise
+            .then(function (pdf) {
+                const containerWidth = content.clientWidth || scroll.clientWidth || 800;
+                const chain = [];
+                for (let n = 1; n <= pdf.numPages; n++) {
+                    chain.push(
+                        pdf.getPage(n).then(function (page) {
+                            const base = page.getViewport({ scale: 1 });
+                            const scale = Math.min(2, Math.max(0.5, (containerWidth - 24) / base.width));
+                            const viewport = page.getViewport({ scale: scale });
+                            const canvas = document.createElement('canvas');
+                            canvas.className = 'admin-pdf-js-page';
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            scroll.appendChild(canvas);
+                            return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                        })
+                    );
+                }
+                return Promise.all(chain);
+            })
+            .catch(function () {
+                scroll.remove();
+                adminMountPdfIframe(content, src, isBlob);
+            });
+    }
+
     /**
-     * Tampilkan PDF di modal (satu iframe, mengisi container preview).
+     * Tampilkan PDF di modal — fetch blob lalu iframe (andalan di produksi).
      */
     window.adminShowPdfPreview = function (options) {
         const opts = options || {};
@@ -136,10 +219,29 @@
             return;
         }
 
-        // Tab baru: gunakan URL yang sama (file storage atau route)
         if (openTab) {
             openTab.href = pdfUrl;
         }
+
+        adminRevokePdfBlob(content);
+        content.innerHTML = '';
+
+        const loader = document.createElement('div');
+        loader.className = 'admin-pdf-preview-loading';
+        loader.textContent = 'Memuat PDF...';
+        content.appendChild(loader);
+
+        const hideLoader = function () {
+            if (loader.parentNode) {
+                loader.remove();
+            }
+        };
+
+        const showError = function (message) {
+            hideLoader();
+            adminRevokePdfBlob(content);
+            content.innerHTML = '<p class="admin-pdf-preview-error">' + message + '</p>';
+        };
 
         if (modal.classList.contains('admin-modal') && typeof adminOpenModal === 'function') {
             adminOpenModal(modal);
@@ -148,47 +250,55 @@
             document.body.classList.add('admin-modal-open');
         }
 
-        content.innerHTML = '';
+        const loaderFallback = window.setTimeout(hideLoader, 3500);
 
-        const loader = document.createElement('div');
-        loader.className = 'admin-pdf-preview-loading';
-        loader.setAttribute('data-pdf-loader', '1');
-        loader.textContent = 'Memuat PDF...';
-
-        const iframe = document.createElement('iframe');
-        iframe.className = 'admin-pdf-preview-iframe';
-        iframe.setAttribute('title', 'Preview PDF');
-
-        let finished = false;
-        const hideLoader = function () {
-            if (finished) {
-                return;
-            }
-            finished = true;
-            const el = content.querySelector('[data-pdf-loader]');
-            if (el) {
-                el.remove();
-            }
-        };
-
-        iframe.addEventListener('load', hideLoader);
-        iframe.addEventListener('error', function () {
-            finished = true;
-            content.innerHTML = '<p class="admin-pdf-preview-error">Gagal memuat PDF di preview. Gunakan tombol &quot;Buka di Tab Baru&quot; atau pastikan file ada di server.</p>';
-        });
-
-        content.appendChild(iframe);
-        content.appendChild(loader);
-
-        // URL file langsung (/storage/...) — tanpa hash agar browser tidak bingung
-        iframe.src = pdfUrl;
-
-        // PDF di iframe sering tidak memicu load; sembunyikan loader setelah delay singkat
-        setTimeout(hideLoader, 600);
+        fetch(pdfUrl, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { Accept: 'application/pdf' },
+        })
+            .then(function (res) {
+                if (!res.ok) {
+                    throw new Error('http-' + res.status);
+                }
+                return res.blob();
+            })
+            .then(function (blob) {
+                window.clearTimeout(loaderFallback);
+                if (!blob || blob.size < 32) {
+                    throw new Error('empty');
+                }
+                if (blob.type && blob.type.indexOf('text/html') !== -1) {
+                    throw new Error('html');
+                }
+                const blobUrl = URL.createObjectURL(blob);
+                hideLoader();
+                adminMountPdfViewer(content, blobUrl, true);
+            })
+            .catch(function (err) {
+                window.clearTimeout(loaderFallback);
+                hideLoader();
+                if (err && String(err.message).indexOf('http-403') !== -1) {
+                    showError('Akses PDF ditolak (403). Gunakan tombol &quot;Buka di Tab Baru&quot;.');
+                    return;
+                }
+                if (err && String(err.message).indexOf('http-404') !== -1) {
+                    showError('File PDF tidak ditemukan. Pastikan file sudah diunggah.');
+                    return;
+                }
+                adminMountPdfViewer(content, pdfUrl, false);
+            });
     };
 
     window.adminClosePdfPreview = function (modalId) {
         const modal = document.getElementById(modalId || 'pdfPreviewModal');
+        const contentIds = ['pdfPreviewContent', 'pdfViewerContent'];
+        contentIds.forEach(function (id) {
+            const c = document.getElementById(id);
+            if (c) {
+                adminRevokePdfBlob(c);
+            }
+        });
         if (!modal) {
             return;
         }

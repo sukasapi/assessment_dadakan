@@ -291,9 +291,7 @@
                 </button>
             </div>
         </div>
-        <div id="pdfPreviewContent" class="admin-pdf-preview-body">
-            <div class="admin-pdf-preview-loading">Memuat PDF...</div>
-        </div>
+        <div id="pdfPreviewContent" class="admin-pdf-preview-body"></div>
     </div>
 </div>
 

@@ -467,9 +467,7 @@
                 </button>
             </div>
         </div>
-        <div id="pdfViewerContent" class="admin-pdf-preview-body">
-            <div class="admin-pdf-preview-loading">Memuat PDF...</div>
-        </div>
+        <div id="pdfViewerContent" class="admin-pdf-preview-body"></div>
     </div>
 </div>
 @endpush
