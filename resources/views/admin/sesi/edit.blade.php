@@ -291,22 +291,23 @@
 @endsection
 
 <!-- PDF Preview Modal -->
-<div id="pdfPreviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-4 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-primary">Preview PDF</h3>
-                <button onclick="closePdfPreview()" class="text-tertiary hover:text-primary">
+<div id="pdfPreviewModal" class="admin-modal hidden" role="dialog" aria-modal="true">
+    <div class="admin-modal-panel admin-modal-panel-pdf">
+        <div class="flex justify-between items-center gap-3 mb-3 flex-shrink-0">
+            <h3 class="text-lg font-medium text-primary">Preview PDF</h3>
+            <div class="flex items-center gap-2">
+                <a id="pdfPreviewOpenTab" href="#" target="_blank" rel="noopener noreferrer" class="admin-btn-secondary text-sm whitespace-nowrap">
+                    Buka di Tab Baru
+                </a>
+                <button type="button" onclick="closePdfPreview()" class="p-2 text-tertiary hover:text-primary rounded-lg hover:bg-neutral" aria-label="Tutup">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div id="pdfPreviewContent" class="w-full h-[80vh] border rounded-lg overflow-hidden">
-                <div class="flex items-center justify-center h-full text-tertiary">
-                    Memuat PDF...
-                </div>
-            </div>
+        </div>
+        <div id="pdfPreviewContent" class="admin-pdf-preview-body">
+            <div class="admin-pdf-preview-loading">Memuat PDF...</div>
         </div>
     </div>
 </div>
@@ -1262,47 +1263,23 @@ function previewCurrentPdf(index) {
         return;
     }
     
-    const penilaianId = selectedOption.value;
-    
-    // Show modal
-    const modal = document.getElementById('pdfPreviewModal');
-    const content = document.getElementById('pdfPreviewContent');
-    
-    if (!modal || !content) {
+    const pdfUrl = selectedOption.dataset.url || adminStoragePdfUrl(pdfFile);
+
+    if (!pdfUrl) {
+        alert('URL PDF tidak tersedia');
         return;
     }
-    
-    modal.classList.remove('hidden');
-    content.innerHTML = '<div class="flex items-center justify-center h-full text-tertiary">Memuat PDF...</div>';
-    
-    const pdfUrl = typeof adminAssessmentPdfUrl === 'function'
-        ? adminAssessmentPdfUrl(penilaianId)
-        : `/admin/assessment/${penilaianId}/view-pdf`;
-    
-    // Create iframe for PDF viewing - langsung set HTML
-    content.innerHTML = `
-        <div class="w-full h-full flex flex-col">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-sm text-tertiary">Preview PDF</span>
-                <a href="${pdfUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 text-sm">
-                    Buka di Tab Baru
-                </a>
-            </div>
-            <iframe 
-                src="${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" 
-                style="width: 100%; height: 500px; border: 1px solid #eeeeee;"
-                frameborder="0"
-                allowfullscreen="allowfullscreen">
-            </iframe>
-        </div>
-    `;
+
+    adminShowPdfPreview({
+        modalId: 'pdfPreviewModal',
+        contentId: 'pdfPreviewContent',
+        openTabId: 'pdfPreviewOpenTab',
+        pdfUrl: pdfUrl,
+    });
 }
 
 function closePdfPreview() {
-    const modal = document.getElementById('pdfPreviewModal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
+    adminClosePdfPreview('pdfPreviewModal');
 }
 
 // Close modal when clicking outside
